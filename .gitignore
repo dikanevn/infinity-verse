@@ -1,0 +1,9 @@
+# Personal & local notes
+.private/
+*.env
+*.local
+node_modules/
+
+# IDE & Editor artifacts
+.DS_Store
+Thumbs.db
