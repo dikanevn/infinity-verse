@@ -18,14 +18,15 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Масштаб регулируется строго через кнопки + и -
   const [scale, setScale] = useState<number>(0.85);
 
-  // Центр сетки отображения: привязан к игроку (5х5 вокруг него)
+  // Центр сетки отображения: привязан к игроку
   const centerX = player?.exists ? player.x : 0;
   const centerY = player?.exists ? player.y : 0;
 
-  // Динамические координаты 5х5 вокруг центра игрока
+  // Расширенное поле (например 9х9), где центр 5х5 — видимый мир, а за пределами 5х5 — бесконечный туман
+  const R_VIEW = 4; // 9х9 клеток (от -4 до +4 вокруг игрока)
   const gridCoords: { x: number; y: number }[] = [];
-  for (let y = centerY + 2; y >= centerY - 2; y--) {
-    for (let x = centerX - 2; x <= centerX + 2; x++) {
+  for (let y = centerY + R_VIEW; y >= centerY - R_VIEW; y--) {
+    for (let x = centerX - R_VIEW; x <= centerX + R_VIEW; x++) {
       gridCoords.push({ x, y });
     }
   }
@@ -187,20 +188,20 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </button>
       </div>
 
-      {/* Интерактивный слой 5х5 вокруг игрока */}
+      {/* Интерактивный слой мира без отдельной рамки */}
       <div
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: 'center center',
           transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(5, 62px)',
-          gridTemplateRows: 'repeat(5, 62px)',
-          gap: '4px',
-          backgroundColor: '#10131d',
-          padding: '6px',
-          border: '3px solid #334155',
-          boxShadow: '0 0 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 0, 0, 0.5)'
+          gridTemplateColumns: 'repeat(9, 62px)',
+          gridTemplateRows: 'repeat(9, 62px)',
+          gap: '1px',
+          backgroundColor: '#334155',
+          padding: '0px',
+          border: 'none',
+          boxShadow: 'none'
         }}
       >
         {gridCoords.map((coord) => {

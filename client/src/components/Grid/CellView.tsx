@@ -37,16 +37,16 @@ export const CellView: React.FC<CellViewProps> = ({
         width: '62px',
         height: '62px',
         background: isFog 
-          ? 'radial-gradient(circle, #0b0f19 20%, #030508 100%)' 
+          ? '#070a12' 
           : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : tInfo.bg),
-        border: isSelected ? '2px solid #38bdf8' : (isFog ? '1px dashed #1e293b' : '1px solid #334155'),
-        opacity: isFog ? 0.45 : 1,
+        border: isSelected ? '2px solid #38bdf8' : 'none',
+        opacity: isFog ? 0.35 : 1,
         borderRadius: '0px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'space-between',
-        cursor: 'pointer',
+        cursor: isFog ? 'default' : 'pointer',
         color: '#ffffff',
         fontFamily: 'inherit',
         position: 'relative',
