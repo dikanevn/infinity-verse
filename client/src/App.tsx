@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { createPublicClient, createWalletClient, http, parseAbi, defineChain } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { useState, useEffect } from 'react';
+import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 
-const CONTRACT_ADDRESS = '0x29cd5fff5b741e69c6cca55a3637d0d56791b7bd';
+// Контракт InfinityVerse V_0_0_0_0_4 (Cell Architecture)
+const CONTRACT_ADDRESS = '0x66dcd7e881078aa10b4d1e2799e5372eb03ef7ae';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
 const monadTestnet = defineChain({
@@ -23,18 +23,12 @@ const monadTestnet = defineChain({
   testnet: true,
 });
 
-// Встроенный аккаунт деплоера
-const TEST_ACCOUNT = privateKeyToAccount('0x8b397357e09a218b105672b81af7ea2ba6f5dff60353c5f76abcad691b6000a0');
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
 const VERSE_ABI = parseAbi([
   'function VERSION() view returns (string)',
-  'function getGrid() view returns (address[9])',
-  'function starCell() view returns (int8)',
-  'function starBalance(address) view returns (uint256)',
-  'function isSpawned(address) view returns (bool)',
-  'function move(uint8 targetCell) external',
-  'function spawn(uint8 targetCell) external'
+  'function TOTAL_CELLS() view returns (uint8)',
+  'function GRID_WIDTH() view returns (uint8)',
+  'function getCell(uint8 cellIndex) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved))',
+  'function getAllCells() view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved)[9])'
 ]);
 
 const publicClient = createPublicClient({
@@ -42,129 +36,84 @@ const publicClient = createPublicClient({
   transport: http(RPC_URL)
 });
 
-const walletClient = createWalletClient({
-  account: TEST_ACCOUNT,
-  chain: monadTestnet,
-  transport: http(RPC_URL)
-});
+interface CellData {
+  terrain: number;
+  object: number;
+  state: number;
+  reserved: number;
+}
+
+const TERRAIN_NAMES: Record<number, { name: string; icon: string; bg: string }> = {
+  0: { name: 'Пустота', icon: '🌌', bg: '#12141f' },
+  1: { name: 'Земля', icon: '🌱', bg: '#162b1e' },
+  2: { name: 'Лава', icon: '🌋', bg: '#3b1212' },
+  3: { name: 'Гора', icon: '⛰️', bg: '#232733' },
+};
+
+const OBJECT_NAMES: Record<number, { name: string; icon: string }> = {
+  0: { name: 'Пусто', icon: '' },
+  1: { name: 'Звезда', icon: '⭐' },
+  2: { name: 'Сундук', icon: '📦' },
+  3: { name: 'Моб', icon: '👾' },
+};
 
 function App() {
-  const [grid, setGrid] = useState<string[]>(Array(9).fill(ZERO_ADDRESS));
-  const [starCell, setStarCell] = useState<number>(-1);
-  const [starBalance, setStarBalance] = useState<number>(0);
+  const [cells, setCells] = useState<CellData[]>(
+    Array(9).fill({ terrain: 0, object: 0, state: 0, reserved: 0 })
+  );
+  const [selectedCell, setSelectedCell] = useState<number | null>(4);
   const [loading, setLoading] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [lastTxDuration, setLastTxDuration] = useState<number | null>(null);
   const [statusText, setStatusText] = useState<string>('Сетка подключена');
   const [contractVersion, setContractVersion] = useState<string>('...');
-  const CLIENT_VERSION = '0.0.0.0.2';
-  const timerRef = useRef<number | null>(null);
+  const CLIENT_VERSION = '0.0.0.0.4';
 
   const fetchState = async () => {
     try {
-      const [gridData, starIdx, balance, onchainVer] = await Promise.all([
+      setLoading(true);
+      const [ver, onchainCells] = await Promise.all([
         publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
-          functionName: 'getGrid'
+          functionName: 'VERSION',
         }),
         publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
-          functionName: 'starCell'
+          functionName: 'getAllCells',
         }),
-        publicClient.readContract({
-          address: CONTRACT_ADDRESS,
-          abi: VERSE_ABI,
-          functionName: 'starBalance',
-          args: [TEST_ACCOUNT.address]
-        }),
-        publicClient.readContract({
-          address: CONTRACT_ADDRESS,
-          abi: VERSE_ABI,
-          functionName: 'VERSION'
-        })
       ]);
 
-      setGrid([...gridData]);
-      setStarCell(Number(starIdx));
-      setStarBalance(Number(balance));
-      setContractVersion(onchainVer);
-    } catch (e: any) {
-      console.error('Fetch state error:', e);
+      setContractVersion(ver);
+      setCells(
+        onchainCells.map((c: any) => ({
+          terrain: Number(c.terrain),
+          object: Number(c.object),
+          state: Number(c.state),
+          reserved: Number(c.reserved),
+        }))
+      );
+      setStatusText('Стейт клеток синхронизирован');
+    } catch (err: any) {
+      console.error(err);
+      setStatusText('Ошибка RPC соединения');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 3000);
+    const interval = setInterval(fetchState, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleCellClick = async (targetCellIndex: number) => {
-    if (loading) return;
-
-    const myPos = grid.findIndex(addr => addr.toLowerCase() === TEST_ACCOUNT.address.toLowerCase());
-    if (myPos === targetCellIndex) {
-      setStatusText('Вы уже находитесь в этой клетке');
-      return;
-    }
-
-    if (grid[targetCellIndex] !== ZERO_ADDRESS) {
-      setStatusText(`Клетка занята другим игроком`);
-      return;
-    }
-
-    // Проверка ортогонального соседства
-    if (myPos !== -1) {
-      const fromX = myPos % 3;
-      const fromY = Math.floor(myPos / 3);
-      const toX = targetCellIndex % 3;
-      const toY = Math.floor(targetCellIndex / 3);
-      const dist = Math.abs(fromX - toX) + Math.abs(fromY - toY);
-      if (dist !== 1) {
-        setStatusText('Ход возможен только в соседнюю клетку');
-        return;
-      }
-    }
-
-    try {
-      setLoading(true);
-      setStatusText(`Ход в клетку #${targetCellIndex}...`);
-      setElapsedSeconds(0);
-      const startTime = performance.now();
-
-      timerRef.current = window.setInterval(() => {
-        setElapsedSeconds(Number(((performance.now() - startTime) / 1000).toFixed(1)));
-      }, 100);
-
-      const hash = await walletClient.writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: VERSE_ABI,
-        functionName: 'move',
-        args: [targetCellIndex]
-      });
-
-      setStatusText('Ждём Monad блок: ' + hash.slice(0, 10) + '...');
-      await publicClient.waitForTransactionReceipt({ hash });
-
-      const duration = Number(((performance.now() - startTime) / 1000).toFixed(2));
-      setLastTxDuration(duration);
-      setStatusText(`Успешный ход за ${duration}с!`);
-      await fetchState();
-    } catch (err: any) {
-      console.error(err);
-      setStatusText(err.shortMessage || err.message || 'Ошибка хода');
-    } finally {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      setLoading(false);
-    }
-  };
-
-  const myAddressLower = TEST_ACCOUNT.address.toLowerCase();
+  const curCell = selectedCell !== null ? cells[selectedCell] : null;
+  const curTerrain = curCell
+    ? (TERRAIN_NAMES[curCell.terrain] || { name: 'Тип #' + curCell.terrain, icon: '🗺️', bg: '#1a1d2e' })
+    : null;
+  const curObject = curCell
+    ? (OBJECT_NAMES[curCell.object] || { name: 'Объект #' + curCell.object, icon: '✨' })
+    : null;
 
   return (
     <div style={{
@@ -191,51 +140,30 @@ function App() {
         fontFamily: 'monospace, system-ui, sans-serif',
         userSelect: 'none',
       }}>
-        {/* Хедер и баланс */}
+        {/* Хедер */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '8px'
+          gap: '6px'
         }}>
           <div style={{
-            fontSize: '0.9rem',
+            fontSize: '0.95rem',
             color: '#a78bfa',
-            letterSpacing: '0.12em',
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
             fontWeight: 800
           }}>
-            INFINITY-VERSE &bull; 3x3 GRID
+            INFINITY-VERSE &bull; CELL ARCHITECTURE
           </div>
           <div style={{
             fontSize: '0.72rem',
-            color: '#a78bfa',
+            color: '#38bdf8',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             fontWeight: 600
           }}>
-            MONAD TESTNET
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: 'rgba(250, 204, 21, 0.1)',
-            border: '1px solid #eab308',
-            padding: '6px 14px',
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>⭐</span>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fde047' }}>
-              Баланс звёзд: {starBalance}
-            </span>
-          </div>
-
-          <div style={{
-            fontSize: '0.72rem',
-            color: '#94a3b8'
-          }}>
-            Вы: {TEST_ACCOUNT.address.slice(0, 6)}...{TEST_ACCOUNT.address.slice(-4)}
+            MONAD TESTNET &bull; 4 BYTES PER CELL
           </div>
         </div>
 
@@ -244,7 +172,7 @@ function App() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px',
+          gap: '12px',
           margin: 'auto 0'
         }}>
           <div style={{
@@ -256,39 +184,32 @@ function App() {
             padding: '10px',
             border: '2px solid #334155'
           }}>
-            {grid.map((cellAddr, idx) => {
-              const isOccupied = cellAddr !== ZERO_ADDRESS;
-              const isMe = cellAddr.toLowerCase() === myAddressLower;
-              const hasStar = starCell === idx && !isOccupied;
+            {cells.map((cell, idx) => {
+              const terrainInfo = TERRAIN_NAMES[cell.terrain] || { name: 'Terra', icon: '🗺️', bg: '#1a1d2e' };
+              const objInfo = OBJECT_NAMES[cell.object] || { name: 'Obj', icon: '✨' };
+              const isSelected = selectedCell === idx;
 
               return (
                 <button
                   key={idx}
-                  onClick={() => handleCellClick(idx)}
-                  disabled={loading}
+                  onClick={() => setSelectedCell(idx)}
                   style={{
                     boxSizing: 'border-box',
                     width: '90px',
                     height: '90px',
-                    backgroundColor: isOccupied
-                      ? (isMe ? '#7c3aed' : '#ec4899')
-                      : (hasStar ? '#1e1b4b' : '#1e2235'),
-                    border: isOccupied
-                      ? '2px solid #c084fc'
-                      : (hasStar ? '2px solid #eab308' : '1px dashed #475569'),
+                    backgroundColor: terrainInfo.bg,
+                    border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
                     borderRadius: '0px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: 'pointer',
                     color: '#ffffff',
                     fontFamily: 'inherit',
                     position: 'relative',
                     transition: 'all 0.15s ease',
-                    boxShadow: isOccupied
-                      ? '0 0 16px rgba(139, 92, 246, 0.7)'
-                      : (hasStar ? '0 0 16px rgba(234, 179, 8, 0.5)' : 'none')
+                    boxShadow: isSelected ? '0 0 16px rgba(56, 189, 248, 0.6)' : 'none'
                   }}
                 >
                   <span style={{
@@ -296,77 +217,74 @@ function App() {
                     top: '4px',
                     left: '6px',
                     fontSize: '0.62rem',
-                    color: isOccupied ? '#ddd6fe' : '#64748b'
+                    color: isSelected ? '#38bdf8' : '#64748b',
+                    fontWeight: isSelected ? 800 : 400
                   }}>
                     #{idx}
                   </span>
 
-                  {isOccupied ? (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '2px'
-                    }}>
-                      <span style={{ fontSize: '1.2rem' }}>🧑‍🚀</span>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800 }}>
-                        {isMe ? 'ВЫ' : `${cellAddr.slice(0, 4)}..`}
-                      </span>
-                      <span style={{ fontSize: '0.6rem', color: '#cbd5e1' }}>
-                        {cellAddr.slice(0, 4)}...{cellAddr.slice(-2)}
-                      </span>
-                    </div>
-                  ) : hasStar ? (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      animation: 'pulse 1.5s infinite'
-                    }}>
-                      <span style={{ fontSize: '2.2rem', lineHeight: 1 }}>⭐</span>
-                      <span style={{ fontSize: '0.6rem', color: '#fde047', fontWeight: 800 }}>
-                        STAR
-                      </span>
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: '1.2rem', color: '#475569' }}>
-                      &middot;
-                    </span>
-                  )}
+                  <span style={{ fontSize: '1.4rem' }}>
+                    {cell.object !== 0 ? objInfo.icon : terrainInfo.icon}
+                  </span>
+
+                  <span style={{
+                    fontSize: '0.58rem',
+                    color: '#94a3b8',
+                    marginTop: '4px'
+                  }}>
+                    {cell.object !== 0 ? objInfo.name : terrainInfo.name}
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Индикатор статуса */}
-          <div style={{
-            fontSize: '0.85rem',
-            color: loading ? '#38bdf8' : '#4ade80',
-            textAlign: 'center',
-            maxWidth: '300px',
-            minHeight: '20px'
-          }}>
-            {loading ? (
-              <span>⏳ {statusText} ({elapsedSeconds}s)</span>
-            ) : (
-              <span>{statusText}</span>
-            )}
-          </div>
-
-          {lastTxDuration !== null && !loading && (
+          {/* Инспектор выбранной клетки */}
+          {curCell && selectedCell !== null && (
             <div style={{
-              fontSize: '0.8rem',
-              color: '#94a3b8',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              padding: '6px 12px',
-              border: '1px solid #334155'
+              width: '280px',
+              backgroundColor: '#12141f',
+              border: '1px solid #38bdf8',
+              padding: '10px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              fontSize: '0.72rem'
             }}>
-              Реакция Monad: <span style={{ color: '#a78bfa', fontWeight: 'bold' }}>{lastTxDuration}с</span>
+              <div style={{ color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>
+                Инспектор Клетки #{selectedCell}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Ландшафт (terrain):</span>
+                <span style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.terrain} ({curTerrain?.name})</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Объект (object):</span>
+                <span style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.object} ({curObject?.name})</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Состояние (state):</span>
+                <span style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.state}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#94a3b8' }}>Резерв (reserved):</span>
+                <span style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.reserved}</span>
+              </div>
             </div>
           )}
+
+          {/* Статус */}
+          <div style={{
+            fontSize: '0.78rem',
+            color: loading ? '#38bdf8' : '#4ade80',
+            textAlign: 'center',
+            maxWidth: '300px'
+          }}>
+            {loading ? '⏳ Чтение из Monad...' : statusText}
+          </div>
         </div>
 
-        {/* Футер: раздельные версии */}
+        {/* Футер */}
         <div style={{
           fontSize: '0.75rem',
           color: '#64748b',
@@ -376,7 +294,7 @@ function App() {
           flexDirection: 'column',
           gap: '3px'
         }}>
-          <div>Контракт: <span style={{ color: '#a78bfa', fontWeight: 700 }}>v{contractVersion}</span></div>
+          <div>Контракт: <span style={{ color: '#a78bfa', fontWeight: 700 }}>v{contractVersion}</span> ({CONTRACT_ADDRESS.slice(0, 6)}...{CONTRACT_ADDRESS.slice(-4)})</div>
           <div>Фронтенд: <span style={{ color: '#38bdf8', fontWeight: 700 }}>v{CLIENT_VERSION}</span></div>
         </div>
       </div>
