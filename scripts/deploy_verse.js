@@ -30,7 +30,7 @@ async function main() {
     testnet: true,
   });
 
-  const artifact = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'artifacts', 'InfinityVerse.json'), 'utf8'));
+  const artifact = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'artifacts', 'InfinityVerseV0_0_0_0_2.json'), 'utf8'));
 
   const account = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({
@@ -48,7 +48,7 @@ async function main() {
   const bal = await publicClient.getBalance({ address: account.address });
   console.log('Balance:', Number(bal) / 1e18, netConfig.currencySymbol);
 
-  console.log('\n--- 1. DEPLOYING INFINITY-VERSE (3x3 GRID) ---');
+  console.log('\n--- 1. DEPLOYING INFINITY-VERSE V0_0_0_0_2 ---');
   const t0 = Date.now();
   const deployHash = await walletClient.deployContract({
     abi: artifact.abi,
@@ -58,10 +58,10 @@ async function main() {
   const receipt = await publicClient.waitForTransactionReceipt({ hash: deployHash });
   const deployTime = ((Date.now() - t0) / 1000).toFixed(2);
   const contractAddress = receipt.contractAddress;
-  console.log('InfinityVerse deployed at:', contractAddress);
+  console.log('InfinityVerseV0_0_0_0_2 deployed at:', contractAddress);
   console.log(`Speed: ${deployTime}s (block #${receipt.blockNumber})`);
 
-  // Spawning deployer as Player 1 in center cell (cell 4)
+  // Spawning player in cell 4 (center)
   console.log('\n--- 2. INITIAL SPAWN IN CENTER (CELL 4) ---');
   const spawnTx = await walletClient.writeContract({
     address: contractAddress,
@@ -71,14 +71,24 @@ async function main() {
   });
   console.log('Spawn Tx Hash:', spawnTx);
   await publicClient.waitForTransactionReceipt({ hash: spawnTx });
-  console.log('Spawned Player 1 in cell 4!');
+  console.log('Spawned player address in cell 4!');
 
-  const grid = await publicClient.readContract({
-    address: contractAddress,
-    abi: artifact.abi,
-    functionName: 'getGrid'
-  });
-  console.log('Initial Grid State:', grid.map(x => Number(x)));
+  const [grid, starCell] = await Promise.all([
+    publicClient.readContract({
+      address: contractAddress,
+      abi: artifact.abi,
+      functionName: 'getGrid'
+    }),
+    publicClient.readContract({
+      address: contractAddress,
+      abi: artifact.abi,
+      functionName: 'starCell'
+    })
+  ]);
+
+  console.log('Initial Grid State:');
+  console.log(grid);
+  console.log('Initial Star Cell:', starCell);
 
   // Update deployments.json in .private
   const depPath = path.resolve(__dirname, '..', '.private', 'deployments.json');
@@ -86,8 +96,9 @@ async function main() {
     const deps = JSON.parse(fs.readFileSync(depPath, 'utf8'));
     if (!deps.monad_testnet) deps.monad_testnet = {};
     if (!deps.monad_testnet.contracts) deps.monad_testnet.contracts = {};
-    deps.monad_testnet.contracts.InfinityVerse = {
+    deps.monad_testnet.contracts.InfinityVerseV0_0_0_0_2 = {
       address: contractAddress,
+      version: "0.0.0.0.2",
       deployTx: deployHash,
       deployedAtBlock: Number(receipt.blockNumber),
       deployedAtTimestamp: new Date().toISOString()

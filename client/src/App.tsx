@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPublicClient, createWalletClient, http, parseAbi, defineChain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
-const CONTRACT_ADDRESS = '0xbd418dd1b75ffbfa8f26d5ec75fece5c006d4fd0';
+const CONTRACT_ADDRESS = '0x29cd5fff5b741e69c6cca55a3637d0d56791b7bd';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
 const monadTestnet = defineChain({
@@ -23,16 +23,18 @@ const monadTestnet = defineChain({
   testnet: true,
 });
 
-// Встроенный аккаунт деплоера (Игрок 1)
+// Встроенный аккаунт деплоера
 const TEST_ACCOUNT = privateKeyToAccount('0x8b397357e09a218b105672b81af7ea2ba6f5dff60353c5f76abcad691b6000a0');
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const VERSE_ABI = parseAbi([
-  'function getGrid() view returns (uint256[9])',
-  'function addressToPlayerId(address) view returns (uint256)',
-  'function playerPosition(uint256) view returns (uint8)',
-  'function isAdjacent(uint8, uint8) pure returns (bool)',
+  'function VERSION() view returns (string)',
+  'function getGrid() view returns (address[9])',
+  'function starCell() view returns (int8)',
+  'function starBalance(address) view returns (uint256)',
+  'function isSpawned(address) view returns (bool)',
   'function move(uint8 targetCell) external',
-  'function spawn(uint8 targetCell) external returns (uint256)'
+  'function spawn(uint8 targetCell) external'
 ]);
 
 const publicClient = createPublicClient({
@@ -47,17 +49,18 @@ const walletClient = createWalletClient({
 });
 
 function App() {
-  const [grid, setGrid] = useState<number[]>(Array(9).fill(0));
-  const [playerId, setPlayerId] = useState<number | null>(null);
+  const [grid, setGrid] = useState<string[]>(Array(9).fill(ZERO_ADDRESS));
+  const [starCell, setStarCell] = useState<number>(-1);
+  const [starBalance, setStarBalance] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [lastTxDuration, setLastTxDuration] = useState<number | null>(null);
-  const [statusText, setStatusText] = useState<string>('Сетка загружена');
+  const [statusText, setStatusText] = useState<string>('Сетка подключена');
   const timerRef = useRef<number | null>(null);
 
   const fetchState = async () => {
     try {
-      const [gridData, myId] = await Promise.all([
+      const [gridData, starIdx, balance] = await Promise.all([
         publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
@@ -66,13 +69,19 @@ function App() {
         publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
-          functionName: 'addressToPlayerId',
+          functionName: 'starCell'
+        }),
+        publicClient.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: VERSE_ABI,
+          functionName: 'starBalance',
           args: [TEST_ACCOUNT.address]
         })
       ]);
 
-      setGrid(gridData.map(Number));
-      setPlayerId(Number(myId));
+      setGrid([...gridData]);
+      setStarCell(Number(starIdx));
+      setStarBalance(Number(balance));
     } catch (e: any) {
       console.error('Fetch state error:', e);
     }
@@ -87,18 +96,18 @@ function App() {
   const handleCellClick = async (targetCellIndex: number) => {
     if (loading) return;
 
-    const myPos = grid.indexOf(playerId || 1);
+    const myPos = grid.findIndex(addr => addr.toLowerCase() === TEST_ACCOUNT.address.toLowerCase());
     if (myPos === targetCellIndex) {
       setStatusText('Вы уже находитесь в этой клетке');
       return;
     }
 
-    if (grid[targetCellIndex] !== 0) {
-      setStatusText(`Клетка #${targetCellIndex} занята игроком #${grid[targetCellIndex]}`);
+    if (grid[targetCellIndex] !== ZERO_ADDRESS) {
+      setStatusText(`Клетка занята другим игроком`);
       return;
     }
 
-    // Проверяем соседство (вверх, вниз, влево, вправо)
+    // Проверка ортогонального соседства
     if (myPos !== -1) {
       const fromX = myPos % 3;
       const fromY = Math.floor(myPos / 3);
@@ -106,7 +115,7 @@ function App() {
       const toY = Math.floor(targetCellIndex / 3);
       const dist = Math.abs(fromX - toX) + Math.abs(fromY - toY);
       if (dist !== 1) {
-        setStatusText('Ход возможен только в соседнюю клетку (ортогонально)');
+        setStatusText('Ход возможен только в соседнюю клетку');
         return;
       }
     }
@@ -147,6 +156,8 @@ function App() {
     }
   };
 
+  const myAddressLower = TEST_ACCOUNT.address.toLowerCase();
+
   return (
     <div style={{
       boxSizing: 'border-box',
@@ -172,12 +183,12 @@ function App() {
         fontFamily: 'monospace, system-ui, sans-serif',
         userSelect: 'none',
       }}>
-        {/* Хедер */}
+        {/* Хедер и баланс */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '4px'
+          gap: '8px'
         }}>
           <div style={{
             fontSize: '0.9rem',
@@ -188,11 +199,26 @@ function App() {
           }}>
             INFINITY-VERSE &bull; 3x3 GRID
           </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: 'rgba(250, 204, 21, 0.1)',
+            border: '1px solid #eab308',
+            padding: '6px 14px',
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>⭐</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fde047' }}>
+              Баланс звёзд: {starBalance}
+            </span>
+          </div>
+
           <div style={{
             fontSize: '0.72rem',
             color: '#94a3b8'
           }}>
-            Monad Testnet &bull; Игрок #{playerId || 1} ({TEST_ACCOUNT.address.slice(0, 6)}...{TEST_ACCOUNT.address.slice(-4)})
+            Вы: {TEST_ACCOUNT.address.slice(0, 6)}...{TEST_ACCOUNT.address.slice(-4)}
           </div>
         </div>
 
@@ -206,16 +232,17 @@ function App() {
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 85px)',
-            gridTemplateRows: 'repeat(3, 85px)',
+            gridTemplateColumns: 'repeat(3, 90px)',
+            gridTemplateRows: 'repeat(3, 90px)',
             gap: '8px',
             backgroundColor: '#12141f',
             padding: '10px',
             border: '2px solid #334155'
           }}>
-            {grid.map((cellValue, idx) => {
-              const isPlayer = cellValue > 0;
-              const isMe = cellValue === (playerId || 1);
+            {grid.map((cellAddr, idx) => {
+              const isOccupied = cellAddr !== ZERO_ADDRESS;
+              const isMe = cellAddr.toLowerCase() === myAddressLower;
+              const hasStar = starCell === idx && !isOccupied;
 
               return (
                 <button
@@ -224,12 +251,14 @@ function App() {
                   disabled={loading}
                   style={{
                     boxSizing: 'border-box',
-                    width: '85px',
-                    height: '85px',
-                    backgroundColor: isPlayer
+                    width: '90px',
+                    height: '90px',
+                    backgroundColor: isOccupied
                       ? (isMe ? '#7c3aed' : '#ec4899')
-                      : '#1e2235',
-                    border: isPlayer ? '2px solid #c084fc' : '1px dashed #475569',
+                      : (hasStar ? '#1e1b4b' : '#1e2235'),
+                    border: isOccupied
+                      ? '2px solid #c084fc'
+                      : (hasStar ? '2px solid #eab308' : '1px dashed #475569'),
                     borderRadius: '0px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -240,30 +269,46 @@ function App() {
                     fontFamily: 'inherit',
                     position: 'relative',
                     transition: 'all 0.15s ease',
-                    boxShadow: isPlayer ? '0 0 16px rgba(139, 92, 246, 0.7)' : 'none'
+                    boxShadow: isOccupied
+                      ? '0 0 16px rgba(139, 92, 246, 0.7)'
+                      : (hasStar ? '0 0 16px rgba(234, 179, 8, 0.5)' : 'none')
                   }}
                 >
                   <span style={{
                     position: 'absolute',
                     top: '4px',
                     left: '6px',
-                    fontSize: '0.65rem',
-                    color: isPlayer ? '#ddd6fe' : '#64748b'
+                    fontSize: '0.62rem',
+                    color: isOccupied ? '#ddd6fe' : '#64748b'
                   }}>
                     #{idx}
                   </span>
 
-                  {isPlayer ? (
+                  {isOccupied ? (
                     <div style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      gap: '2px'
                     }}>
-                      <span style={{ fontSize: '2.4rem', fontWeight: 900, lineHeight: 1 }}>
-                        {cellValue}
+                      <span style={{ fontSize: '1.2rem' }}>🧑‍🚀</span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800 }}>
+                        {isMe ? 'ВЫ' : `${cellAddr.slice(0, 4)}..`}
                       </span>
-                      <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#f5d0fe' }}>
-                        {isMe ? 'ВЫ' : `P#${cellValue}`}
+                      <span style={{ fontSize: '0.6rem', color: '#cbd5e1' }}>
+                        {cellAddr.slice(0, 4)}...{cellAddr.slice(-2)}
+                      </span>
+                    </div>
+                  ) : hasStar ? (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      animation: 'pulse 1.5s infinite'
+                    }}>
+                      <span style={{ fontSize: '2.2rem', lineHeight: 1 }}>⭐</span>
+                      <span style={{ fontSize: '0.6rem', color: '#fde047', fontWeight: 800 }}>
+                        STAR
                       </span>
                     </div>
                   ) : (
@@ -311,7 +356,7 @@ function App() {
           letterSpacing: '0.05em',
           textAlign: 'center'
         }}>
-          Кликайте на соседнюю свободную клетку для хода
+          v0.0.0.0.2 &bull; Шагайте на ⭐ для сбора в он-чейн баланс
         </div>
       </div>
     </div>
