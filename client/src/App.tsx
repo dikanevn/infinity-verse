@@ -283,27 +283,10 @@ function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     flex: 1,
-                    fontSize: '2.1rem',
+                    fontSize: '2.4rem',
                     lineHeight: 1
                   }}>
                     {cell?.object ? oInfo.icon : ''}
-                  </div>
-
-                  {/* Нижняя плашка со всеми параметрами клетки: T, O, S, A */}
-                  <div style={{
-                    width: '100%',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    padding: '2px 4px',
-                    fontSize: '0.58rem',
-                    color: '#94a3b8',
-                    fontFamily: 'monospace'
-                  }}>
-                    <span>T:{cell?.terrain ?? 0}</span>
-                    <span>O:{cell?.object ?? 0}</span>
-                    <span>S:{cell?.state ?? 0}</span>
-                    <span>A:{cell?.paramA ?? 0}</span>
                   </div>
                 </button>
               );
