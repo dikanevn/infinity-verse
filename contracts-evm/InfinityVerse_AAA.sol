@@ -34,10 +34,10 @@ contract InfinityVerse_AAA {
     IInfinityVerse_Main public mainContract;
     // Неизменяемый адрес деплоера для управления привязкой Main на этапе разработки
     address public immutable deployer;
-    address public relayer;
+    // Неизменяемый адрес официального релеера-спонсора газа
+    address public immutable relayer;
 
     event MainContractUpdated(address indexed oldMain, address indexed newMain);
-    event RelayerUpdated(address indexed newRelayer);
 
     modifier onlyDeployer() {
         require(msg.sender == deployer, unicode"AAA: Вызов разрешен только деплоеру");
@@ -46,6 +46,7 @@ contract InfinityVerse_AAA {
 
     constructor(address _mainContract, address _relayer) {
         require(_mainContract != address(0), unicode"AAA: Некорректный адрес Main контракта");
+        require(_relayer != address(0), unicode"AAA: Некорректный адрес релеера");
         deployer = msg.sender;
         mainContract = IInfinityVerse_Main(_mainContract);
         relayer = _relayer;
@@ -65,17 +66,6 @@ contract InfinityVerse_AAA {
         address oldMain = address(mainContract);
         mainContract = IInfinityVerse_Main(_newMain);
         emit MainContractUpdated(oldMain, _newMain);
-    }
-
-    /**
-     * @notice Обновление адреса официального релеера-спонсора газа
-     * @dev Разрешено только деплоеру контракта
-     * @param _relayer Новый адрес релеера
-     */
-    function setRelayer(address _relayer) external onlyDeployer {
-        require(_relayer != address(0), unicode"AAA: Некорректный адрес релеера");
-        relayer = _relayer;
-        emit RelayerUpdated(_relayer);
     }
 
     // ========================================================================
