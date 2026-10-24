@@ -1,5 +1,4 @@
 # Personal & local notes
-.private/
 *.env
 *.local
 node_modules/
