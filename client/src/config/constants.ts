@@ -12,10 +12,12 @@ export const OBJECT_CONFIG: Record<number, { name: string; icon: string }> = {
   9: { name: 'Обелиск', icon: '🗿' },
 };
 
-// Сетка 5х5 от -2 до +2 (25 клеток)
+// Текущий радиус исследованного мира: R = 3 (Сетка 7х7 от -3 до +3, 49 клеток)
+export const WORLD_RADIUS = 3;
+
 export const INITIAL_COORDS: { x: number; y: number }[] = [];
-for (let y = 2; y >= -2; y--) {
-  for (let x = -2; x <= 2; x++) {
+for (let y = WORLD_RADIUS; y >= -WORLD_RADIUS; y--) {
+  for (let x = -WORLD_RADIUS; x <= WORLD_RADIUS; x++) {
     INITIAL_COORDS.push({ x, y });
   }
 }
