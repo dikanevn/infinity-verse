@@ -34,10 +34,6 @@ contract InfinityVerse_V_0_0_0_0_3 {
     // 0 = все 9 клеток свободны (двоичное: 000000000)
     uint256 public gridMask;
 
-    // Кто занимает клетки: для отображения на фронтенде
-    // индекс клетки (0..8) => адрес игрока
-    mapping(uint8 => address) public cellOccupant;
-
     // Позиция каждого игрока
     mapping(address => uint8) public playerPosition;
     mapping(address => bool) public isSpawned;
@@ -62,15 +58,6 @@ contract InfinityVerse_V_0_0_0_0_3 {
      */
     function getGridMask() external view returns (uint256) {
         return gridMask;
-    }
-
-    /**
-     * @notice Получить массив адресов игроков во всех 9 клетках для фронтенда
-     */
-    function getGrid() external view returns (address[TOTAL_CELLS] memory cells) {
-        for (uint8 i = 0; i < TOTAL_CELLS; i++) {
-            cells[i] = cellOccupant[i];
-        }
     }
 
     /**
@@ -104,7 +91,6 @@ contract InfinityVerse_V_0_0_0_0_3 {
         // Побитовая установка: ставим 1 в бит targetCell с помощью побитового ИЛИ (|)
         gridMask |= (1 << targetCell);
 
-        cellOccupant[targetCell] = msg.sender;
         playerPosition[msg.sender] = targetCell;
         isSpawned[msg.sender] = true;
 
@@ -133,9 +119,6 @@ contract InfinityVerse_V_0_0_0_0_3 {
         // 2. | (1 << targetCell) устанавливает новый бит в 1 (заняли новую клетку)
         gridMask = (gridMask & ~(1 << currentCell)) | (1 << targetCell);
 
-        // Обновляем владельцев
-        cellOccupant[currentCell] = address(0);
-        cellOccupant[targetCell] = msg.sender;
         playerPosition[msg.sender] = targetCell;
 
         emit PlayerMoved(msg.sender, currentCell, targetCell, gridMask);
