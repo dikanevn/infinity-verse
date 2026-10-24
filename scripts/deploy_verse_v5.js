@@ -61,9 +61,15 @@ async function main() {
   console.log('InfinityVerse_V_0_0_0_0_5 deployed at:', contractAddress);
   console.log(`Deploy completed in ${deployTime}s`);
 
-  // Verify view functions: read cell (0, 0) and batch of 9 cells
-  const xs = [-1, 0, 1, -1, 0, 1, -1, 0, 1];
-  const ys = [ 1, 1, 1,  0, 0, 0, -1,-1,-1];
+  // Verify view functions: read cell (0, 0) and batch of 25 cells (5x5)
+  const xs = [];
+  const ys = [];
+  for (let y = 2; y >= -2; y--) {
+    for (let x = -2; x <= 2; x++) {
+      xs.push(x);
+      ys.push(y);
+    }
+  }
 
   const [version, centerCell, batchCells] = await Promise.all([
     publicClient.readContract({

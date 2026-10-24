@@ -1,6 +1,9 @@
-name: Build & Release (On Demand)
+name: Build & Release (On Demand & Push)
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       deploy_pages:
@@ -28,7 +31,7 @@ concurrency:
 jobs:
   deploy-pages:
     name: Deploy GitHub Pages
-    if: inputs.deploy_pages == true
+    if: github.event_name == 'push' || inputs.deploy_pages == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -57,7 +60,7 @@ jobs:
 
   build-android:
     name: Build Android APK
-    if: inputs.build_apk == true
+    if: github.event_name == 'push' || inputs.build_apk == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -102,7 +105,7 @@ jobs:
 
   build-windows:
     name: Build Windows EXE (Tauri)
-    if: inputs.build_exe == true
+    if: github.event_name == 'push' || inputs.build_exe == true
     runs-on: windows-latest
     steps:
       - name: Checkout repository

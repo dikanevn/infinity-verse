@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, parseAbi, defineChain, keccak256, encodePacked } from 'viem';
 
-// Контракт InfinityVerse V_0.0.0.0.5 (Direct X,Y Coordinate Grid)
-const CONTRACT_ADDRESS = '0xda66c6a95fd9e0692771233f5de0aec18daea724';
+// Контракт InfinityVerse V_0.0.0.0.5 (Direct X,Y Coordinate Grid 5x5)
+const CONTRACT_ADDRESS = '0xb16b78e9075ef1c36a0bec220812a488687a225b';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
 const monadTestnet = defineChain({
@@ -61,12 +61,13 @@ const OBJECT_CONFIG: Record<number, { name: string; icon: string }> = {
   9: { name: 'Обелиск', icon: '🗿' },
 };
 
-// Сетка от -1 до +1
-const INITIAL_COORDS = [
-  { x: -1, y:  1 }, { x: 0, y:  1 }, { x: 1, y:  1 },
-  { x: -1, y:  0 }, { x: 0, y:  0 }, { x: 1, y:  0 },
-  { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 }
-];
+// Сетка 5х5 от -2 до +2 (25 клеток)
+const INITIAL_COORDS: { x: number; y: number }[] = [];
+for (let y = 2; y >= -2; y--) {
+  for (let x = -2; x <= 2; x++) {
+    INITIAL_COORDS.push({ x, y });
+  }
+}
 
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
@@ -184,26 +185,26 @@ function App() {
             letterSpacing: '0.06em',
             fontWeight: 600
           }}>
-            СЕТКА: ОТ (-1, -1) ДО (+1, +1) &bull; 8 БАЙТ НА КЛЕТКУ
+            СЕТКА 5х5: ОТ (-2, -2) ДО (+2, +2) &bull; 25 КЛЕТОК (8 БАЙТ КАЖДАЯ)
           </div>
         </div>
 
-        {/* Верхняя игровая область: Сетка 3х3 (крупные клетки, максимум места) */}
+        {/* Верхняя игровая область: Сетка 5х5 */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '8px',
-          margin: '10px 0 16px 0',
+          margin: '6px 0 12px 0',
           width: '100%'
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 115px)',
-            gridTemplateRows: 'repeat(3, 115px)',
-            gap: '8px',
+            gridTemplateColumns: 'repeat(5, 78px)',
+            gridTemplateRows: 'repeat(5, 78px)',
+            gap: '6px',
             backgroundColor: '#10131d',
-            padding: '8px',
+            padding: '6px',
             border: '2px solid #2e384d',
             borderRadius: '0px'
           }}>
@@ -219,8 +220,8 @@ function App() {
                   onClick={() => setSelectedCoord({ x: coord.x, y: coord.y })}
                   style={{
                     boxSizing: 'border-box',
-                    width: '115px',
-                    height: '115px',
+                    width: '78px',
+                    height: '78px',
                     backgroundColor: tInfo.bg,
                     border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
                     borderRadius: '0px',
@@ -232,9 +233,9 @@ function App() {
                     color: '#ffffff',
                     fontFamily: 'inherit',
                     position: 'relative',
-                    padding: '4px 5px',
+                    padding: '3px 4px',
                     transition: 'all 0.15s ease',
-                    boxShadow: isSelected ? '0 0 16px rgba(56, 189, 248, 0.7)' : 'none'
+                    boxShadow: isSelected ? '0 0 14px rgba(56, 189, 248, 0.7)' : 'none'
                   }}
                 >
                   {/* Верхняя строка: Координаты (слева) и Названия (вправо вверх) */}
@@ -243,11 +244,11 @@ function App() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'flex-start',
-                    lineHeight: 1.15
+                    lineHeight: 1
                   }}>
                     <span style={{
-                      fontSize: '0.66rem',
-                      color: isSelected ? '#38bdf8' : '#64748b',
+                      fontSize: '0.55rem',
+                      color: isSelected ? '#38bdf8' : '#cbd5e1',
                       fontWeight: isSelected ? 800 : 600
                     }}>
                       ({coord.x},{coord.y})
@@ -261,14 +262,14 @@ function App() {
                       textAlign: 'right'
                     }}>
                       <span style={{
-                        fontSize: '0.64rem',
+                        fontSize: '0.52rem',
                         color: '#fef08a',
                         fontWeight: 700
                       }}>
                         {tInfo.name}
                       </span>
                       <span style={{
-                        fontSize: '0.58rem',
+                        fontSize: '0.48rem',
                         color: cell?.object ? '#67e8f9' : '#64748b',
                         fontWeight: cell?.object ? 700 : 500
                       }}>
@@ -277,13 +278,13 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Центр клетки: Обелиск (крупная рожица ровно по центру) */}
+                  {/* Центр клетки: Обелиск */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flex: 1,
-                    fontSize: '2.4rem',
+                    fontSize: '1.75rem',
                     lineHeight: 1
                   }}>
                     {cell?.object ? oInfo.icon : ''}

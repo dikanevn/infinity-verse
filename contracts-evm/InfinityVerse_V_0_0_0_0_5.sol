@@ -27,12 +27,12 @@ contract InfinityVerse_V_0_0_0_0_5 {
     mapping(bytes32 => Cell) public cells;
 
     /**
-     * @notice Конструктор: при деплое создаёт 9 клеток вокруг центра:
-     * x от -1 до +1, y от -1 до +1
+     * @notice Конструктор: при деплое создаёт 25 клеток вокруг центра (5х5):
+     * x от -2 до +2, y от -2 до +2
      */
     constructor() {
-        for (int32 x = -1; x <= 1; x++) {
-            for (int32 y = -1; y <= 1; y++) {
+        for (int32 x = -2; x <= 2; x++) {
+            for (int32 y = -2; y <= 2; y++) {
                 bytes32 key = getCellKey(x, y);
 
                 if (x == 0 && y == 0) {
@@ -46,7 +46,7 @@ contract InfinityVerse_V_0_0_0_0_5 {
                         paramB: 0
                     });
                 } else {
-                    // Окружающие 8 клеток: песок (terrain: 1), пусто (object: 0)
+                    // Окружающие 24 клетки: песок (terrain: 1), пусто (object: 0)
                     cells[key] = Cell({
                         terrain: 1,
                         object: 0,
