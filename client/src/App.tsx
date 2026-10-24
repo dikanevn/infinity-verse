@@ -1,9 +1,13 @@
 ﻿import { useState, useEffect, useRef } from 'react';
-import { createPublicClient, createWalletClient, custom, http, parseAbi } from 'viem';
+import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 
 const CONTRACT_ADDRESS = '0xfbe47b73c115a5f07b72102c9ec31e2cb4739a36';
 const RPC_URL = 'https://base-sepolia.drpc.org';
+
+// Временный встроенный кошелек деплоера для мгновенных тестов без MetaMask
+const TEST_ACCOUNT = privateKeyToAccount('0x8b397357e09a218b105672b81af7ea2ba6f5dff60353c5f76abcad691b6000a0');
 
 const COUNTER_ABI = parseAbi([
   'function count() view returns (uint256)',
@@ -12,6 +16,12 @@ const COUNTER_ABI = parseAbi([
 ]);
 
 const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http(RPC_URL)
+});
+
+const walletClient = createWalletClient({
+  account: TEST_ACCOUNT,
   chain: baseSepolia,
   transport: http(RPC_URL)
 });
@@ -43,15 +53,10 @@ function App() {
 
   const handleIncrement = async () => {
     if (loading) return;
-    const eth = (window as any).ethereum;
-    if (!eth) {
-      alert('MetaMask не обнаружен в браузере!');
-      return;
-    }
 
     try {
       setLoading(true);
-      setStatusText('Ожидание подписи в MetaMask...');
+      setStatusText('Отправка транзакции в Base Sepolia...');
       setElapsedSeconds(0);
       const startTime = performance.now();
 
@@ -59,42 +64,13 @@ function App() {
         setElapsedSeconds(Number(((performance.now() - startTime) / 1000).toFixed(1)));
       }, 100);
 
-      const walletClient = createWalletClient({
-        chain: baseSepolia,
-        transport: custom(eth)
-      });
-
-      const [address] = await walletClient.requestAddresses();
-
-      try {
-        await eth.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x14a34' }]
-        });
-      } catch (switchErr: any) {
-        if (switchErr.code === 4902) {
-          await eth.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: '0x14a34',
-              chainName: 'Base Sepolia Testnet',
-              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-              rpcUrls: [RPC_URL],
-              blockExplorerUrls: ['https://sepolia.basescan.org']
-            }]
-          });
-        }
-      }
-
-      setStatusText('Отправка транзакции в сеть...');
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
         abi: COUNTER_ABI,
-        functionName: 'increment',
-        account: address
+        functionName: 'increment'
       });
 
-      setStatusText('Ожидание включения в блок...');
+      setStatusText('Ждём блок: ' + hash.slice(0, 10) + '...');
       await publicClient.waitForTransactionReceipt({ hash });
 
       const duration = Number(((performance.now() - startTime) / 1000).toFixed(2));
@@ -139,13 +115,26 @@ function App() {
         userSelect: 'none',
       }}>
         <div style={{
-          fontSize: '0.85rem',
-          color: '#a78bfa',
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          textAlign: 'center'
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '4px'
         }}>
-          Base Sepolia &bull; On-Chain Counter
+          <div style={{
+            fontSize: '0.85rem',
+            color: '#a78bfa',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            textAlign: 'center'
+          }}>
+            Base Sepolia &bull; Direct On-Chain
+          </div>
+          <div style={{
+            fontSize: '0.7rem',
+            color: '#64748b'
+          }}>
+            аккаунт: {TEST_ACCOUNT.address.slice(0, 6)}...{TEST_ACCOUNT.address.slice(-4)}
+          </div>
         </div>
 
         <div style={{
@@ -199,7 +188,7 @@ function App() {
                 <span>Ждём блок: {elapsedSeconds}s</span>
               </>
             ) : (
-              <span>+1 INCREMENT</span>
+              <span>+1 DIRECT INCREMENT</span>
             )}
           </button>
 
@@ -232,7 +221,7 @@ function App() {
           color: '#64748b',
           letterSpacing: '0.05em',
         }}>
-          версия 20261024644-3
+          версия 20261024644-4
         </div>
       </div>
     </div>
