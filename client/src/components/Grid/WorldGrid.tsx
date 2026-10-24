@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import type { CellData, PlayerData } from '../../types';
-import { INITIAL_COORDS } from '../../config/constants';
 import { CellView } from './CellView';
 
 interface WorldGridProps {
@@ -19,6 +18,18 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Масштаб регулируется строго через кнопки + и -
   const [scale, setScale] = useState<number>(0.85);
 
+  // Центр сетки отображения: привязан к игроку (5х5 вокруг него)
+  const centerX = player?.exists ? player.x : 0;
+  const centerY = player?.exists ? player.y : 0;
+
+  // Динамические координаты 5х5 вокруг центра игрока
+  const gridCoords: { x: number; y: number }[] = [];
+  for (let y = centerY + 2; y >= centerY - 2; y--) {
+    for (let x = centerX - 2; x <= centerX + 2; x++) {
+      gridCoords.push({ x, y });
+    }
+  }
+
   // Смещение поля
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -27,33 +38,9 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const posStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Размер одной клетки 62px + 4px отступ = 66px
-  const CELL_PITCH = 66;
-
-  // Автоматически удерживаем игрока строго по центру экрана при спавне или ходах
-  useEffect(() => {
-    if (player?.exists) {
-      // Игрок на (player.x, player.y). Центр мира (0,0) в центре грида.
-      // Чтобы клетка игрока была по центру экрана, смещаем контейнер на (-player.x, player.y) * CELL_PITCH * scale
-      setPosition({
-        x: -player.x * CELL_PITCH * scale,
-        y: player.y * CELL_PITCH * scale
-      });
-    } else {
-      setPosition({ x: 0, y: 0 });
-    }
-  }, [player?.x, player?.y, player?.exists, scale]);
-
   // Кнопка прицела центрирует камеру прямо на игроке
   const centerOnPlayer = () => {
-    if (player?.exists) {
-      setPosition({
-        x: -player.x * CELL_PITCH * scale,
-        y: player.y * CELL_PITCH * scale
-      });
-    } else {
-      setPosition({ x: 0, y: 0 });
-    }
+    setPosition({ x: 0, y: 0 });
   };
 
   // Drag мышью (только перемещение, без зума)
@@ -200,15 +187,15 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </button>
       </div>
 
-      {/* Интерактивный слой 7х7 */}
+      {/* Интерактивный слой 5х5 вокруг игрока */}
       <div
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: 'center center',
           transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(7, 62px)',
-          gridTemplateRows: 'repeat(7, 62px)',
+          gridTemplateColumns: 'repeat(5, 62px)',
+          gridTemplateRows: 'repeat(5, 62px)',
           gap: '4px',
           backgroundColor: '#10131d',
           padding: '6px',
@@ -216,7 +203,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           boxShadow: '0 0 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 0, 0, 0.5)'
         }}
       >
-        {INITIAL_COORDS.map((coord) => {
+        {gridCoords.map((coord) => {
           const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
           const isSelected = selectedCoord.x === coord.x && selectedCoord.y === coord.y;
 
