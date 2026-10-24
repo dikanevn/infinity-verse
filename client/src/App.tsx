@@ -98,6 +98,7 @@ function App() {
   const [player, setPlayer] = useState<{ x: number; y: number; exists: boolean } | null>(null);
   const [actionPending, setActionPending] = useState<boolean>(false);
   const CLIENT_VERSION = '0.0.0.0.12';
+  const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
 
   // Подключение кошелька (MetaMask / Rabby / Phantom)
   const connectWallet = async () => {
@@ -116,61 +117,93 @@ function App() {
     }
   };
 
-  // Рождение игрока в мире (spawn на 1, 0)
+  // Рождение игрока в мире (spawn на 1, 0) через бесплатный релеер (без газа)
   const handleSpawn = async () => {
     if (!connectedAddress) return;
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) return;
-
     setActionPending(true);
-    setStatusText('⏳ Происходит рождение игрока в мире...');
+    setStatusText('⏳ Рождение игрока через релеер (Gasless)...');
+
     try {
-      const walletClient = createWalletClient({
-        chain: monadTestnet,
-        transport: custom(ethereum)
+      // 1. Пробуем через облачный релеер (без всплывающих окон и без газа!)
+      const res = await fetch(RELAYER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'spawn', player: connectedAddress })
       });
-      const hash = await walletClient.writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: VERSE_ABI,
-        functionName: 'spawn',
-        args: [connectedAddress as `0x${string}`],
-        account: connectedAddress as `0x${string}`
-      });
-      await publicClient.waitForTransactionReceipt({ hash });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Relayer error');
+
       await fetchState();
-    } catch (err: any) {
-      console.error(err);
-      alert('Ошибка при спавне: ' + (err.shortMessage || err.message));
+    } catch (relayerErr) {
+      console.warn('Релеер недоступен, выполняем через прямое подписание кошельком:', relayerErr);
+      // 2. Fallback: прямое подписание через MetaMask
+      const ethereum = (window as any).ethereum;
+      if (ethereum) {
+        try {
+          const walletClient = createWalletClient({
+            chain: monadTestnet,
+            transport: custom(ethereum)
+          });
+          const hash = await walletClient.writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: VERSE_ABI,
+            functionName: 'spawn',
+            args: [connectedAddress as `0x${string}`],
+            account: connectedAddress as `0x${string}`
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+          await fetchState();
+        } catch (err: any) {
+          console.error(err);
+          alert('Ошибка при спавне: ' + (err.shortMessage || err.message));
+        }
+      }
     } finally {
       setActionPending(false);
     }
   };
 
-  // Перемещение игрока на выбранную клетку
+  // Перемещение игрока на выбранную клетку через бесплатный релеер (без окон)
   const handleMove = async (targetX: number, targetY: number) => {
     if (!connectedAddress || !player?.exists) return;
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) return;
-
     setActionPending(true);
-    setStatusText(`⏳ Перемещение на (${targetX}, ${targetY})...`);
+    setStatusText(`⏳ Ход на (${targetX}, ${targetY}) через релеер...`);
+
     try {
-      const walletClient = createWalletClient({
-        chain: monadTestnet,
-        transport: custom(ethereum)
+      // 1. Пробуем через облачный релеер (быстро, в один клик без окон)
+      const res = await fetch(RELAYER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'move', player: connectedAddress, targetX, targetY })
       });
-      const hash = await walletClient.writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: VERSE_ABI,
-        functionName: 'move',
-        args: [connectedAddress as `0x${string}`, targetX, targetY],
-        account: connectedAddress as `0x${string}`
-      });
-      await publicClient.waitForTransactionReceipt({ hash });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Relayer error');
+
       await fetchState();
-    } catch (err: any) {
-      console.error(err);
-      alert('Недопустимый ход: ' + (err.shortMessage || err.message));
+    } catch (relayerErr) {
+      console.warn('Релеер недоступен, выполняем через прямое подписание кошельком:', relayerErr);
+      // 2. Fallback: прямое подписание через MetaMask
+      const ethereum = (window as any).ethereum;
+      if (ethereum) {
+        try {
+          const walletClient = createWalletClient({
+            chain: monadTestnet,
+            transport: custom(ethereum)
+          });
+          const hash = await walletClient.writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: VERSE_ABI,
+            functionName: 'move',
+            args: [connectedAddress as `0x${string}`, targetX, targetY],
+            account: connectedAddress as `0x${string}`
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+          await fetchState();
+        } catch (err: any) {
+          console.error(err);
+          alert('Недопустимый ход: ' + (err.shortMessage || err.message));
+        }
+      }
     } finally {
       setActionPending(false);
     }

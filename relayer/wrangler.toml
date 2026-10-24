@@ -1,0 +1,8 @@
+name = "infinity-verse-relayer"
+main = "src/index.js"
+compatibility_date = "2026-10-24"
+
+[vars]
+CONTRACT_ADDRESS = "0x9f9f4b625bc455d0b1328f548eafd28afcc50ae7"
+RPC_URL = "https://testnet-rpc.monad.xyz"
+CHAIN_ID = 10143
