@@ -314,23 +314,15 @@ function App() {
         overflowY: 'auto'
       }}>
         {/* Заголовок */}
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ textAlign: 'center', margin: '2px 0 6px 0' }}>
           <div style={{
-            fontSize: '0.95rem',
+            fontSize: '1.05rem',
             color: '#c084fc',
-            letterSpacing: '0.12em',
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
             fontWeight: 800
           }}>
-            INFINITY-VERSE &bull; КЛЕТОЧНЫЙ МАППИНГ (X, Y)
-          </div>
-          <div style={{
-            fontSize: '0.70rem',
-            color: '#38bdf8',
-            letterSpacing: '0.06em',
-            fontWeight: 600
-          }}>
-            СЕТКА 5х5: ОТ (-2, -2) ДО (+2, +2) &bull; 25 КЛЕТОК (8 БАЙТ КАЖДАЯ)
+            INFINITY-VERSE
           </div>
         </div>
 
