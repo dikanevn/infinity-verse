@@ -1,0 +1,155 @@
+{
+  "contractName": "InfinityVerse_V_0_0_0_0_4",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "GRID_WIDTH",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TOTAL_CELLS",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "VERSION",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllCells",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint8",
+              "name": "terrain",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "object",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "state",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "reserved",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct InfinityVerse_V_0_0_0_0_4.Cell[9]",
+          "name": "",
+          "type": "tuple[9]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "cellIndex",
+          "type": "uint8"
+        }
+      ],
+      "name": "getCell",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint8",
+              "name": "terrain",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "object",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "state",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "reserved",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct InfinityVerse_V_0_0_0_0_4.Cell",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "grid",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "terrain",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "object",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "state",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "reserved",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561000f575f80fd5b506104718061001d5f395ff3fe608060405234801561000f575f80fd5b5060043610610060575f3560e01c8063112007bd14610064578063235e78eb14610082578063434515b91461009c5780634ae73cec146100bc57806351d2cc8f146100c4578063ffa1ad7414610104575b5f80fd5b61006c610139565b60405161007991906102f4565b60405180910390f35b61008a600381565b60405160ff9091168152602001610079565b6100af6100aa36600461035d565b6101b4565b6040516100799190610384565b61008a600981565b6100d76100d23660046103c5565b61027b565b6040805160ff95861681529385166020850152918416918301919091529091166060820152608001610079565b61012c604051806040016040528060098152602001680c0b8c0b8c0b8c0b8d60ba1b81525081565b60405161007991906103dc565b6101416102af565b6040805161012081019091525f600981835b828210156101ab57604080516080810182528386015460ff8082168352610100820481166020808501919091526201000083048216948401949094526301000000909104166060820152825260019092019101610153565b50505050905090565b604080516080810182525f808252602082018190529181018290526060810191909152600960ff8316106102225760405162461bcd60e51b8152602060048201526011602482015270092dcecc2d8d2c840c6cad8d892dcc8caf607b1b604482015260640160405180910390fd5b5f8260ff166009811061023757610237610427565b60408051608081018252929091015460ff80821684526101008204811660208501526201000082048116928401929092526301000000900416606082015292915050565b5f8160098110610289575f80fd5b015460ff8082169250610100820481169162010000810482169163010000009091041684565b6040518061012001604052806009905b604080516080810182525f8082526020808301829052928201819052606082015282525f199092019101816102bf5790505090565b610480810181835f5b60098110156103545761033e83835160ff815116825260ff602082015116602083015260ff604082015116604083015260ff60608201511660608301525050565b60809290920191602091909101906001016102fd565b50505092915050565b5f6020828403121561036d575f80fd5b813560ff8116811461037d575f80fd5b9392505050565b608081016103bf828460ff815116825260ff602082015116602083015260ff604082015116604083015260ff60608201511660608301525050565b92915050565b5f602082840312156103d5575f80fd5b5035919050565b5f6020808352835180828501525f5b81811015610407578581018301518582016040015282016103eb565b505f604082860101526040601f19601f8301168501019250505092915050565b634e487b7160e01b5f52603260045260245ffdfea2646970667358221220f75c9392f0d80ad71310478221fe8631cbed1e3f3863c5ab47d9d765ac9039fe64736f6c63430008140033"
+}
