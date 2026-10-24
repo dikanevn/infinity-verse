@@ -165,6 +165,12 @@ contract InfinityVerse_Main_G_3 {
         prevMain = _prevMain;
         deployedAt = uint64(block.timestamp);
 
+        // Предоставляем администратору прямые права в allowedContracts с рождения хранилища
+        // (для прямого оперативного управления миром, строительства объектов и быстрого тестирования)
+        allowedContracts[admin] = true;
+        allowedContractsList.push(admin);
+        emit ContractAllowed(admin);
+
         // Инициализируем стартовую сетку 5х5 (от -2 до +2)
 
         for (int32 x = -2; x <= 2; x++) {
