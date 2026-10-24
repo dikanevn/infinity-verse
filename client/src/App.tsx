@@ -77,7 +77,7 @@ const SYNC_INTERVAL_MS = 6000; // Частота опроса блокчейна
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [statusText, setStatusText] = useState<string>('Настройка связи со Вселенной...');
+  const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'connected' | 'slow' | 'error' | 'connecting'>('connecting');
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.5');
   const CLIENT_VERSION = '0.0.0.0.11';
@@ -87,7 +87,7 @@ function App() {
     // Таймер задержки: если за 3 секунды ответ не пришёл — сигнализируем о задержке связи
     const slowTimer = setTimeout(() => {
       setStatusState('slow');
-      setStatusText('⚠️ Задержка отклика: слабый сигнал сквозь ткань Вселенной (>3с)...');
+      setStatusText('⚠️ Задержка отклика: слабый межпространственный сигнал (>3с)...');
     }, UNIVERSE_LATENCY_THRESHOLD_MS);
 
     try {
@@ -132,12 +132,12 @@ function App() {
 
       setCells(parsed);
       setStatusState('connected');
-      setStatusText(`✨ Связь со Вселенной стабильна (${durationMs}мс)`);
+      setStatusText(`✨ Межпространственная связь стабильна (${durationMs}мс)`);
     } catch (err: any) {
       clearTimeout(slowTimer);
       console.error(err);
       setStatusState('error');
-      setStatusText('🚨 Ошибка связи со Вселенной: сигнал потерян');
+      setStatusText('🚨 Ошибка: межпространственная связь потеряна');
     }
   };
 
