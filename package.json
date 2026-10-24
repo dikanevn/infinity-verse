@@ -1,0 +1,24 @@
+{
+  "name": "infinity-verse",
+  "version": "1.0.0",
+  "description": "An Autonomous World (AW) / Fully On-chain Game (FOCG) designed for longevity and modular upgradeability.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dikanevn/infinity-verse.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dikanevn/infinity-verse/issues"
+  },
+  "homepage": "https://github.com/dikanevn/infinity-verse#readme",
+  "dependencies": {
+    "solc": "^0.8.20",
+    "viem": "^2.57.10"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Decrement",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Increment",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "count",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "decrement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "increment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561000f575f80fd5b506103018061001d5f395ff3fe608060405234801561000f575f80fd5b506004361061003f575f3560e01c806306661abd146100435780632baeceb714610061578063d09de08a1461006b575b5f80fd5b61004b610075565b60405161005891906101a7565b60405180910390f35b61006961007a565b005b610073610126565b005b5f5481565b5f8054116100bd576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016100b49061021a565b60405180910390fd5b60015f808282546100ce9190610265565b925050819055503373ffffffffffffffffffffffffffffffffffffffff167f6b7e3c491cf1853ed43c9cc473d0dbfa8a17d1c836321655f35b48cf00faee035f5460405161011c91906101a7565b60405180910390a2565b60015f808282546101379190610298565b925050819055503373ffffffffffffffffffffffffffffffffffffffff167fb182275171042022ff972a26edbd0171bccc74463bd22e56dbbeba4e93b7a6685f5460405161018591906101a7565b60405180910390a2565b5f819050919050565b6101a18161018f565b82525050565b5f6020820190506101ba5f830184610198565b92915050565b5f82825260208201905092915050565b7f436f756e7465723a20756e646572666c6f7700000000000000000000000000005f82015250565b5f6102046012836101c0565b915061020f826101d0565b602082019050919050565b5f6020820190508181035f830152610231816101f8565b9050919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f61026f8261018f565b915061027a8361018f565b925082820390508181111561029257610291610238565b5b92915050565b5f6102a28261018f565b91506102ad8361018f565b92508282019050808211156102c5576102c4610238565b5b9291505056fea264697066735822122086c732af020d9e220cac289ee8fc2c4c4191cb9a212b64c3b32fdd9d29b5b89964736f6c63430008140033"
+}
