@@ -7,8 +7,6 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 export const MAIN_CONTRACT_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
 // Исполнительная логика (AAA Module):
 export const AAA_CONTRACT_ADDRESS = '0x2a8d707aa28f35596805d5668bc531afec9eeafd';
-// Обратная совместимость для модулей чтения мира:
-export const CONTRACT_ADDRESS = MAIN_CONTRACT_ADDRESS;
 
 export const RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
@@ -67,8 +65,6 @@ export const AAA_ABI = parseAbi([
   'function revokeSessionGasless(address player, bytes sig)'
 ]);
 
-// Псевдоним для совместимости старого кода чтения мира
-export const VERSE_ABI = MAIN_ABI;
 
 export const publicClient = createPublicClient({
   chain: monadTestnet,
