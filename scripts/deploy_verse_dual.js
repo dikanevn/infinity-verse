@@ -45,12 +45,12 @@ async function main() {
   const mainArtifact = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'artifacts', 'InfinityVerse_Main.json'), 'utf8'));
   const aaaArtifact = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'artifacts', 'InfinityVerse_AAA.json'), 'utf8'));
 
-  // 1. Деплой InfinityVerse_Main (Хранилище)
-  console.log('\n1. Отправка транзакции деплоя InfinityVerse_Main...');
+  // 1. Деплой InfinityVerse_Main (Хранилище - Поколение 1, без предка)
+  console.log('\n1. Отправка транзакции деплоя InfinityVerse_Main (Generation 1)...');
   const mainDeployHash = await walletClient.deployContract({
     abi: mainArtifact.abi,
     bytecode: mainArtifact.bytecode,
-    args: []
+    args: [1n, '0x0000000000000000000000000000000000000000']
   });
   console.log('Main Tx Hash:', mainDeployHash);
   const mainReceipt = await publicClient.waitForTransactionReceipt({ hash: mainDeployHash });

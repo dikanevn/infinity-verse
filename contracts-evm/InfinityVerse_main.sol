@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+interface IInfinityVerse_PrevMain {
+    function admin() external view returns (address);
+    function contractAAA() external view returns (address);
+    function nextMain() external view returns (address);
+}
+
 /**
  * @title InfinityVerse_Main
  * @notice Вечное хранилище состояния мира (State Keeper).
@@ -26,12 +32,21 @@ contract InfinityVerse_Main {
         uint256 lastMoveBlock;
         address sessionKey;
         uint256 sessionExpiry;
+        uint64 registeredAtBlock;     // Номер блока Monad при спавне
+        uint64 registeredAtTimestamp; // Точное время регистрации (unix timestamp)
     }
 
     // Постоянное ончейн-состояние мира
     mapping(bytes32 => Cell) public cells;
     mapping(address => Player) public players;
     mapping(address => uint256) public nonces;
+
+    // Иерархия поколений хранилища Main
+    uint256 public immutable generation;    // Номер поколения (1, 2, ..., N)
+    uint64 public immutable deployedAt;     // Timestamp создания этого контракта
+    address public immutable prevMain;      // Адрес предка (для Gen 1 = address(0) или dead)
+
+    address public nextMain;                // Адрес следующего поколения (наследника)
 
     // Адрес активного логического контракта AAA
     address public contractAAA;
@@ -41,8 +56,9 @@ contract InfinityVerse_Main {
 
     event ContractAAASet(address indexed newContractAAA);
     event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+    event NextMainSet(address indexed nextMainAddress);
     event CellUpdated(int32 indexed x, int32 indexed y, uint8 terrain, uint8 object);
-    event PlayerSpawned(address indexed player, int32 x, int32 y);
+    event PlayerSpawned(address indexed player, int32 x, int32 y, uint64 registeredAtBlock, uint64 registeredAtTimestamp);
     event PlayerMoved(address indexed player, int32 fromX, int32 fromY, int32 toX, int32 toY);
     event SessionAuthorized(address indexed player, address indexed sessionKey, uint256 expiry);
     event SessionRevoked(address indexed player);
@@ -60,8 +76,28 @@ contract InfinityVerse_Main {
     }
 
 
-    constructor() {
+    constructor(uint256 _generation, address _prevMain) {
+        if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
+            // Проверка запечатывания предыдущего поколения:
+            // 1. Админ старого контракта должен быть сожжен на Dead-адрес
+            address prevAdmin = IInfinityVerse_PrevMain(_prevMain).admin();
+            require(
+                prevAdmin == 0x000000000000000000000000000000000000dEaD,
+                unicode"Main: Админ предыдущего поколения еще не сожжен (не dead)"
+            );
+
+            // 2. Все контракты логики старого контракта должны быть отключены
+            address prevAAA = IInfinityVerse_PrevMain(_prevMain).contractAAA();
+            require(
+                prevAAA == address(0),
+                unicode"Main: Логика предыдущего поколения еще не отключена"
+            );
+        }
+
         admin = msg.sender;
+        generation = _generation;
+        prevMain = _prevMain;
+        deployedAt = uint64(block.timestamp);
 
         // Инициализируем стартовую сетку 5х5 (от -2 до +2)
 
@@ -98,19 +134,39 @@ contract InfinityVerse_Main {
      * @param _contractAAA Адрес нового развернутого контракта логики
      */
     function setContractAAA(address _contractAAA) external onlyAdmin {
-        require(_contractAAA != address(0), unicode"Main: Некорректный адрес контракта AAA");
         contractAAA = _contractAAA;
         emit ContractAAASet(_contractAAA);
     }
 
     /**
+     * @notice Установка адреса следующего поколения Main (наследника)
+     * @dev Вызывается администратором при миграции на новое поколение мира
+     * @param _nextMain Адрес контракта-наследника Main
+     */
+    function setNextMain(address _nextMain) external onlyAdmin {
+        require(_nextMain != address(0), unicode"Main: Некорректный адрес следующего Main");
+        require(nextMain == address(0), unicode"Main: Следующий Main уже зафиксирован");
+        nextMain = _nextMain;
+        emit NextMainSet(_nextMain);
+    }
+
+    /**
      * @notice Передача прав администратора на новый адрес
-     * @dev В будущем используется для передачи управления смарт-контракту DAO или 0x...dead
+     * @dev При финализации миграции передается на 0x...dEaD. Для защиты от ошибок сжечь админа
+     * можно только если:
+     * 1) Следующее поколение зафиксировано (nextMain != address(0)).
+     * 2) Логика текущего поколения полностью отключена (contractAAA == address(0)).
      * @param newAdmin Адрес нового администратора
      */
     function changeAdmin(address newAdmin) external onlyAdmin {
         require(newAdmin != address(0), unicode"Main: Новый админ не может быть нулевым адресом");
         require(newAdmin != admin, unicode"Main: Адрес уже является текущим админом");
+
+        if (newAdmin == 0x000000000000000000000000000000000000dEaD) {
+            require(nextMain != address(0), unicode"Main: Сначала зафиксируйте nextMain перед сжиганием админа");
+            require(contractAAA == address(0), unicode"Main: Отключите contractAAA (установите в 0) перед сжиганием админа");
+        }
+
         emit AdminChanged(admin, newAdmin);
         admin = newAdmin;
     }
@@ -168,16 +224,20 @@ contract InfinityVerse_Main {
      * @return exists Флаг, рожден ли игрок в мире
      * @return sessionKey Адрес временного сессионного ключа
      * @return sessionExpiry Время истечения сессии (unix timestamp)
+     * @return registeredAtBlock Номер блока Monad при рождении
+     * @return registeredAtTimestamp Время регистрации игрока
      */
     function getPlayer(address player) external view returns (
         int32 x,
         int32 y,
         bool exists,
         address sessionKey,
-        uint256 sessionExpiry
+        uint256 sessionExpiry,
+        uint64 registeredAtBlock,
+        uint64 registeredAtTimestamp
     ) {
         Player memory p = players[player];
-        return (p.x, p.y, p.exists, p.sessionKey, p.sessionExpiry);
+        return (p.x, p.y, p.exists, p.sessionKey, p.sessionExpiry, p.registeredAtBlock, p.registeredAtTimestamp);
     }
 
     // ========================================================================
@@ -210,7 +270,9 @@ contract InfinityVerse_Main {
         players[player].y = startY;
         players[player].exists = true;
         players[player].lastMoveBlock = block.number;
-        emit PlayerSpawned(player, startX, startY);
+        players[player].registeredAtBlock = uint64(block.number);
+        players[player].registeredAtTimestamp = uint64(block.timestamp);
+        emit PlayerSpawned(player, startX, startY, uint64(block.number), uint64(block.timestamp));
     }
 
     /**

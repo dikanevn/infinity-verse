@@ -10,7 +10,15 @@ interface IInfinityVerse_Main {
     }
 
     function nonces(address player) external view returns (uint256);
-    function getPlayer(address player) external view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry);
+    function getPlayer(address player) external view returns (
+        int32 x,
+        int32 y,
+        bool exists,
+        address sessionKey,
+        uint256 sessionExpiry,
+        uint64 registeredAtBlock,
+        uint64 registeredAtTimestamp
+    );
     function getCell(int32 x, int32 y) external view returns (Cell memory);
     
     function setCell(int32 x, int32 y, Cell calldata cellData) external;
@@ -79,7 +87,7 @@ contract InfinityVerse_AAA {
      * @return true если сессионный ключ совпадает с записанным в Main и срок еще не истек
      */
     function isSessionValid(address player, address sessionKey) public view returns (bool) {
-        (, , bool exists, address activeKey, uint256 expiry) = mainContract.getPlayer(player);
+        (, , bool exists, address activeKey, uint256 expiry, , ) = mainContract.getPlayer(player);
         if (!exists && activeKey == address(0)) {
             // Разрешаем проверку сессии для нерожденного игрока (чтобы он мог заспавниться через сессию)
             return (sessionKey != address(0) && activeKey == sessionKey && block.timestamp < expiry);
@@ -164,7 +172,7 @@ contract InfinityVerse_AAA {
      * @return (x, y) Начальные координаты появления (1, 0)
      */
     function spawn(address player) external returns (int32, int32) {
-        (, , , address activeSessionKey, ) = mainContract.getPlayer(player);
+        (, , , address activeSessionKey, , , ) = mainContract.getPlayer(player);
         require(msg.sender == player || isSessionValid(player, activeSessionKey), unicode"AAA: Для спавна требуется действующая сессия");
         return _executeSpawn(player);
     }
@@ -182,7 +190,7 @@ contract InfinityVerse_AAA {
         int32 targetY,
         bytes calldata moveSig
     ) external {
-        (, , bool exists, address sessionKey, ) = mainContract.getPlayer(player);
+        (, , bool exists, address sessionKey, , , ) = mainContract.getPlayer(player);
         require(exists, unicode"AAA: Сначала необходимо родиться в мире");
         require(isSessionValid(player, sessionKey), unicode"AAA: Сессия истекла или недействительна");
 
@@ -207,7 +215,7 @@ contract InfinityVerse_AAA {
      * @param targetY Целевая координата Y
      */
     function moveDirect(int32 targetX, int32 targetY) external {
-        (, , bool exists, , ) = mainContract.getPlayer(msg.sender);
+        (, , bool exists, , , , ) = mainContract.getPlayer(msg.sender);
         require(exists, unicode"AAA: Сначала необходимо родиться в мире");
         _validateAndExecuteMove(msg.sender, targetX, targetY);
     }
@@ -237,7 +245,7 @@ contract InfinityVerse_AAA {
      * @dev Внутренняя валидация физики мира (шаг не более 1 клетки, запрет наступать на Обелиск)
      */
     function _validateAndExecuteMove(address player, int32 targetX, int32 targetY) internal {
-        (int32 currentX, int32 currentY, , , ) = mainContract.getPlayer(player);
+        (int32 currentX, int32 currentY, , , , , ) = mainContract.getPlayer(player);
 
         int32 dx = targetX - currentX;
         int32 dy = targetY - currentY;
