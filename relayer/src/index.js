@@ -22,6 +22,47 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+// ============================================================================
+// === ОЧЕРЕДЬ ТРАНЗАКЦИЙ И УПРАВЛЕНИЕ NONCE СПОНСОРА (FIFO TRANSACTION QUEUE) ===
+// ============================================================================
+// Исключает гонку потоков и ошибки "nonce too low" / "replacement underpriced"
+// при одновременных ходах нескольких игроков.
+let txQueuePromise = Promise.resolve();
+let localNonce = null;
+let lastNonceSyncTime = 0;
+
+async function executeQueuedTx(publicClient, walletClient, sponsorAddress, writeAction) {
+  // Сериализуем выполнение в строгую очередь FIFO
+  const result = new Promise((resolve, reject) => {
+    txQueuePromise = txQueuePromise.then(async () => {
+      try {
+        const now = Date.now();
+        // Синхронизируем базовый nonce из сети, если прошло больше 15 секунд или локальный nonce пуст
+        if (localNonce === null || (now - lastNonceSyncTime) > 15000) {
+          const onchainNonce = await publicClient.getTransactionCount({
+            address: sponsorAddress,
+            blockTag: 'pending'
+          });
+          localNonce = Number(onchainNonce);
+          lastNonceSyncTime = now;
+        }
+
+        const currentNonce = localNonce;
+        localNonce++; // Локально резервируем следующий nonce для параллельных запросов в очереди
+
+        const hash = await writeAction(currentNonce);
+        resolve(hash);
+      } catch (err) {
+        // При ошибке рассинхрона nonce сбрасываем локальный кэш
+        localNonce = null;
+        reject(err);
+      }
+    });
+  });
+
+  return await result;
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -85,12 +126,15 @@ export default {
             return jsonResponse({ error: 'sessionKey, expiry, sig required' }, 400);
           }
 
-          const hash = await walletClient.writeContract({
-            address: env.CONTRACT_ADDRESS,
-            abi: VERSE_ABI,
-            functionName: 'authorizeSessionWithSig',
-            args: [player, sessionKey, BigInt(expiry), sig]
-          });
+          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+            walletClient.writeContract({
+              address: env.CONTRACT_ADDRESS,
+              abi: VERSE_ABI,
+              functionName: 'authorizeSessionWithSig',
+              args: [player, sessionKey, BigInt(expiry), sig],
+              nonce
+            })
+          );
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
@@ -101,24 +145,30 @@ export default {
             return jsonResponse({ error: 'sig required for revoke' }, 400);
           }
 
-          const hash = await walletClient.writeContract({
-            address: env.CONTRACT_ADDRESS,
-            abi: VERSE_ABI,
-            functionName: 'revokeSessionWithSig',
-            args: [player, sig]
-          });
+          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+            walletClient.writeContract({
+              address: env.CONTRACT_ADDRESS,
+              abi: VERSE_ABI,
+              functionName: 'revokeSessionWithSig',
+              args: [player, sig],
+              nonce
+            })
+          );
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
 
         // 2. Спавн игрока в мир
         if (action === 'spawn') {
-          const hash = await walletClient.writeContract({
-            address: env.CONTRACT_ADDRESS,
-            abi: VERSE_ABI,
-            functionName: 'spawn',
-            args: [player]
-          });
+          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+            walletClient.writeContract({
+              address: env.CONTRACT_ADDRESS,
+              abi: VERSE_ABI,
+              functionName: 'spawn',
+              args: [player],
+              nonce
+            })
+          );
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
@@ -129,12 +179,15 @@ export default {
             return jsonResponse({ error: 'targetX, targetY and moveSig required' }, 400);
           }
 
-          const hash = await walletClient.writeContract({
-            address: env.CONTRACT_ADDRESS,
-            abi: VERSE_ABI,
-            functionName: 'moveWithSession',
-            args: [player, Number(targetX), Number(targetY), moveSig]
-          });
+          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+            walletClient.writeContract({
+              address: env.CONTRACT_ADDRESS,
+              abi: VERSE_ABI,
+              functionName: 'moveWithSession',
+              args: [player, Number(targetX), Number(targetY), moveSig],
+              nonce
+            })
+          );
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
