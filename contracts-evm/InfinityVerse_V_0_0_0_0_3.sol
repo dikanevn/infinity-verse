@@ -53,25 +53,4 @@ contract InfinityVerse_V_0_0_0_0_3 {
         return ((gridMask >> cell) & 1) == 0;
     }
 
-    // Занять клетку по её номеру от 0 до 8 (ставим её бит в 1)
-    function occupyCell(uint8 cell) external {
-        require(cell < TOTAL_CELLS, "Invalid cell");
-        // Шаг 2: Нельзя занять клетку, если она уже занята
-        require(isCellFree(cell), "Cell already occupied");
-
-        // Шаг 3: Магия битов: (1 << cell) ставит 1 в нужный бит через побитовое ИЛИ (|=)
-        gridMask |= (1 << cell);
-
-    }
-
-    // Освободить клетку по её номеру от 0 до 8 (сбрасываем её бит в 0)
-    function freeCell(uint8 cell) external {
-        require(cell < TOTAL_CELLS, "Invalid cell");
-        // Шаг 2: Нельзя освободить клетку, если она и так свободна
-        require(!isCellFree(cell), "Cell already free");
-
-        // Шаг 3: Сброс бита в 0: &= ~(1 << cell) обнуляет этот бит, не трогая остальные
-        gridMask &= ~(1 << cell);
-
-    }
 }
