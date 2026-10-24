@@ -2,19 +2,19 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "infinity-verse",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.dikanevn.infinityverse",
   "build": {
-    "frontendDist": "../build",
-    "devUrl": "http://localhost:3000",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
       {
-        "title": "Infinity",
-        "width": 800,
-        "height": 600,
+        "title": "Infinity Verse",
+        "width": 1000,
+        "height": 750,
         "resizable": true,
         "fullscreen": false
       }
@@ -32,9 +32,6 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
-    }
+    ]
   }
 }
