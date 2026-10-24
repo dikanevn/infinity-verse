@@ -25,7 +25,7 @@ pragma solidity ^0.8.20;
  */
 contract InfinityVerse_V {
     // Версия этого смарт-контракта
-    string public constant VERSION = "0.0.0.0.3";
+    string public constant VERSION = "0.0.0.0.4";
 
     // Ширина сетки: 3 клетки
     uint8 public constant GRID_WIDTH = 3;
