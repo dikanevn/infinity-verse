@@ -49,9 +49,10 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
         display: 'flex',
         justifyContent: 'space-between'
       }}>
-        <span>ИНСПЕКТОР: КЛЕТКА ({curCell.x}, {curCell.y})</span>
+        <span>ДАННЫЕ БЛОКЧЕЙНА: ({curCell.x}, {curCell.y})</span>
         <span style={{ color: '#a78bfa' }}>8 БАЙТ (64 БИТА)</span>
       </div>
+
 
       <div style={{
         display: 'grid',

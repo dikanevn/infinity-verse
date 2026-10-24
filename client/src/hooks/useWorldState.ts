@@ -80,8 +80,9 @@ export function useWorldState(connectedAddress: string) {
         setStatusText(`⚠️ Замедление связи (${ageSec} сек назад)`);
       } else {
         setStatusState('green');
-        setStatusText(`📡 Межпространственная связь стабильна (${ageSec} сек назад)`);
+        setStatusText(`📡 Межпространственная связь (${ageSec} сек назад)`);
       }
+
     };
 
     updateStatus();
