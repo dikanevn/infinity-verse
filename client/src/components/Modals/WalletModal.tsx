@@ -22,10 +22,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 }) => {
   const googleBtnRef = React.useRef<HTMLDivElement>(null);
   const isRenderedRef = React.useRef<boolean>(false);
+  const [showAdvanced, setShowAdvanced] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (!isOpen) {
       isRenderedRef.current = false;
+      setShowAdvanced(false);
       return;
     }
 
@@ -45,7 +47,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             }
           });
 
-          // Вычисляем точную ширину модального контейнера для стабильной отрисовки
           const containerWidth = googleBtnRef.current.parentElement?.clientWidth || 340;
           const targetWidth = Math.min(340, Math.max(260, containerWidth));
 
@@ -100,7 +101,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         maxWidth: '380px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '14px',
         padding: '16px',
         color: '#f8fafc',
         fontFamily: 'monospace, system-ui, sans-serif',
@@ -131,7 +132,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </button>
         </div>
 
-        {/* Быстрый вход через Google с жестко зафиксированным размером слота */}
+        {/* Основной быстрый вход через Google */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>
             🚀 БЫСТРЫЙ ВХОД (БЕЗ УСТАНОВКИ КОШЕЛЬКА):
@@ -156,6 +157,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </div>
         </div>
 
+        {/* Разделитель / Кнопка раскрытия дополнительных способов */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -165,16 +167,62 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           fontSize: '0.62rem'
         }}>
           <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
-          <span>ИЛИ ВНЕШНИЙ КОШЕЛЕК</span>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: showAdvanced ? '#a78bfa' : '#64748b',
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 6px'
+            }}
+          >
+            <span>{showAdvanced ? '▼' : '▶'}</span>
+            <span>ДОПОЛНИТЕЛЬНЫЕ СПОСОБЫ ВХОДА</span>
+          </button>
           <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
-          {walletProviders.length > 0 ? (
-            walletProviders.map((w) => (
+        {/* Блок дополнительных способов входа: Внешний кошелек (MetaMask) + Вход по ключу */}
+        {showAdvanced && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+            {/* Кнопка браузерного кошелька */}
+            {walletProviders.length > 0 ? (
+              walletProviders.map((w) => (
+                <button
+                  key={w.info.uuid}
+                  onClick={() => onConnectProvider(w)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    backgroundColor: '#161b26',
+                    border: '1px solid #334155',
+                    padding: '10px 12px',
+                    color: '#f8fafc',
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {w.info.icon ? (
+                    <img src={w.info.icon} alt={w.info.name} style={{ width: '24px', height: '24px' }} />
+                  ) : (
+                    <span>💼</span>
+                  )}
+                  <span>{w.info.name}</span>
+                </button>
+              ))
+            ) : (
               <button
-                key={w.info.uuid}
-                onClick={() => onConnectProvider(w)}
+                onClick={() => onConnectProvider()}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -186,80 +234,43 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   cursor: 'pointer',
                   fontSize: '0.78rem',
                   fontWeight: 700,
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease'
+                  textAlign: 'left'
                 }}
               >
-                {w.info.icon ? (
-                  <img src={w.info.icon} alt={w.info.name} style={{ width: '24px', height: '24px' }} />
-                ) : (
-                  <span>💼</span>
-                )}
-                <span>{w.info.name}</span>
+                <span style={{ fontSize: '1.2rem' }}>🦊</span>
+                <div>
+                  <div>Браузерный кошелек</div>
+                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>MetaMask / Rabby / Phantom</div>
+                </div>
               </button>
-            ))
-          ) : (
+            )}
+
+            {/* Кнопка входа по ключу */}
             <button
-              onClick={() => onConnectProvider()}
+              onClick={onOpenPkModal}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                backgroundColor: '#161b26',
-                border: '1px solid #334155',
+                backgroundColor: '#1a1836',
+                border: '1px solid #6366f1',
                 padding: '10px 12px',
-                color: '#f8fafc',
+                color: '#c7d2fe',
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 fontWeight: 700,
-                textAlign: 'left'
+                textAlign: 'left',
+                boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>🦊</span>
+              <span style={{ fontSize: '1.2rem' }}>🔐</span>
               <div>
-                <div>Браузерный кошелек</div>
-                <div style={{ fontSize: '0.62rem', color: '#64748b' }}>MetaMask / Rabby / Phantom</div>
+                <div>Вход по ключу (Шифрование в RAM)</div>
+                <div style={{ fontSize: '0.62rem', color: '#818cf8' }}>Прямой ончейн без релееров, AES-GCM-256</div>
               </div>
             </button>
-          )}
-        </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          margin: '2px 0',
-          color: '#64748b',
-          fontSize: '0.62rem'
-        }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
-          <span>АВТОНОМНЫЙ РЕЖИМ</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
-        </div>
-
-        <button
-          onClick={onOpenPkModal}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            backgroundColor: '#1a1836',
-            border: '1px solid #6366f1',
-            padding: '10px 12px',
-            color: '#c7d2fe',
-            cursor: 'pointer',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            textAlign: 'left',
-            boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)'
-          }}
-        >
-          <span style={{ fontSize: '1.2rem' }}>🔐</span>
-          <div>
-            <div>Вход по ключу (Шифрование в RAM)</div>
-            <div style={{ fontSize: '0.62rem', color: '#818cf8' }}>Прямой ончейн без релееров, AES-GCM-256</div>
           </div>
-        </button>
+        )}
       </div>
     </div>
   );
