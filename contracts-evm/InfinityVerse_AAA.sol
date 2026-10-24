@@ -27,6 +27,7 @@ interface IInfinityVerse_Main {
     function setPlayerSession(address player, address sessionKey, uint256 expiry) external;
     function revokePlayerSession(address player) external;
     function incrementNonce(address player) external returns (uint256);
+    function setContractAAA(address _contractAAA) external;
 }
 
 /**
@@ -78,6 +79,15 @@ contract InfinityVerse_AAA {
         require(_newMain != address(0), unicode"AAA: Некорректный адрес Main контракта");
         address oldMain = address(mainContract);
         mainContract = IInfinityVerse_Main(_newMain);
+        
+        // 🚀 АВТОМАТИЧЕСКАЯ РЕГИСТРАЦИЯ:
+        // Пытаемся автоматически авторизовать себя в новом Main (если он поддерживает авто-авторизацию деплоером)
+        try IInfinityVerse_Main(_newMain).setContractAAA(address(this)) {
+            // Успешно авторизован в Main за один вызов!
+        } catch {
+            // Если Main старой версии — не блокируем смену адреса
+        }
+
         emit MainContractUpdated(oldMain, _newMain);
     }
 

@@ -199,7 +199,13 @@ contract InfinityVerse_Main_G_3 {
      * @dev Для обратной совместимости. Также автоматически добавляет/заменяет адрес в allowedContracts
      * @param _contractAAA Адрес нового развернутого контракта логики AAA
      */
-    function setContractAAA(address _contractAAA) external onlyAdmin {
+    /**
+     * @notice Установка адреса контракта логики AAA (или авто-регистрация вызовом из самого AAA)
+     * @dev Разрешено: 1) администратору напрямую (msg.sender == admin);
+     * 2) контракту логики, если транзакцию инициировал администратор (tx.origin == admin).
+     */
+    function setContractAAA(address _contractAAA) external {
+        require(msg.sender == admin || (tx.origin == admin && msg.sender == _contractAAA), unicode"Main: Вызов разрешен только администратору");
         if (contractAAA != address(0) && allowedContracts[contractAAA]) {
             allowedContracts[contractAAA] = false;
             _removeAllowedContract(contractAAA);
