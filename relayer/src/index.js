@@ -1,5 +1,6 @@
-import { createWalletClient, createPublicClient, http, defineChain, parseAbi } from 'viem';
+import { createWalletClient, createPublicClient, http, defineChain, parseAbi, keccak256, encodePacked } from 'viem';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+
 
 const VERSE_ABI = parseAbi([
   'function spawn(address player) returns (int32, int32)',
@@ -256,33 +257,17 @@ export default {
           args: [playerAccount.address]
         });
 
-        const domain = {
-          name: 'InfinityVerse',
-          version: '1',
-          chainId: BigInt(env.CHAIN_ID || 10143),
-          verifyingContract: env.CONTRACT_ADDRESS
-        };
+        const innerHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'address', 'uint256', 'uint256', 'uint256'],
+            ['AuthorizeSession', playerAccount.address, sessionKey, BigInt(expiry), playerNonce, BigInt(env.CHAIN_ID || 10143)]
+          )
+        );
 
-        const types = {
-          AuthorizeSession: [
-            { name: 'player', type: 'address' },
-            { name: 'sessionKey', type: 'address' },
-            { name: 'expiry', type: 'uint256' },
-            { name: 'nonce', type: 'uint256' }
-          ]
-        };
-
-        const sig = await playerAccount.signTypedData({
-          domain,
-          types,
-          primaryType: 'AuthorizeSession',
-          message: {
-            player: playerAccount.address,
-            sessionKey,
-            expiry: BigInt(expiry),
-            nonce: playerNonce
-          }
+        const sig = await playerAccount.signMessage({
+          message: { raw: innerHash }
         });
+
 
         // Отправляем транзакцию через спонсора релеера
         const sponsorAccount = privateKeyToAccount(env.SPONSOR_PRIVATE_KEY);
