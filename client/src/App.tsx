@@ -86,9 +86,10 @@ function App() {
   })[0];
 
   useEffect(() => {
-    if (!player?.exists || !connectedAddress || actionPending || discoveringRef.inFlight) return;
+    // Ждём пока загрузятся клетки (минимум 25 клеток вокруг игрока)
+    if (!player?.exists || !connectedAddress || actionPending || discoveringRef.inFlight || cells.length === 0) return;
 
-    // Ищем все клетки 3х3 вокруг игрока, где terrain == 0 (пустота / космос)
+    // Ищем только те клетки 3х3 вокруг игрока, которые РЕАЛЬНО есть в загруженных cells и у которых terrain === 0
     const neededXs: number[] = [];
     const neededYs: number[] = [];
 
@@ -98,12 +99,11 @@ function App() {
         const ty = player.y + dy;
         const coordKey = `${tx},${ty}`;
 
-        // Если эта клетка уже успешно открыта или сейчас отправляется
         if (discoveringRef.visited.has(coordKey)) continue;
 
         const cell = cells.find(c => c.x === tx && c.y === ty);
-        // Если клетки нет в списке или её terrain === 0 (пустота)
-        if (!cell || cell.terrain === 0) {
+        // Запускаем разведку ТОЛЬКО если клетка уже загружена из блокчейна и подтверждено что terrain === 0 (пустота)
+        if (cell && cell.terrain === 0) {
           neededXs.push(tx);
           neededYs.push(ty);
         }
