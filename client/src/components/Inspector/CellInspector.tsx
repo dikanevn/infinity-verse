@@ -29,14 +29,18 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
       backgroundColor: '#0d111a',
       border: '1px solid #38bdf8',
       borderRadius: '0px',
-      padding: '10px 14px',
+      padding: '8px 10px',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px',
       fontSize: '0.72rem',
-      margin: '0 auto 12px auto'
+      margin: '0 auto 8px auto',
+      boxSizing: 'border-box',
+      overflowX: 'auto',
+      WebkitOverflowScrolling: 'touch'
     }}>
       <div style={{
+        minWidth: '320px',
         color: '#38bdf8',
         fontWeight: 800,
         textTransform: 'uppercase',
@@ -52,8 +56,10 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '8px'
+        gap: '8px',
+        minWidth: '320px'
       }}>
+
         {/* Колонка 1: Координаты в EVM */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{
@@ -72,7 +78,17 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
               <span style={{ color: '#64748b', fontSize: '0.60rem' }}>Two's Complement</span>
             </div>
 
-            <div style={{ fontFamily: 'monospace', fontSize: '0.62rem', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+            <div style={{
+              fontFamily: 'monospace',
+              fontSize: '0.62rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1px',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: '2px'
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: curCell.x < 0 ? '#c084fc' : '#4ade80' }}>
                   X = {curCell.x} {curCell.x < 0 ? '(минус)' : ''}:
@@ -84,7 +100,17 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
               </div>
             </div>
 
-            <div style={{ fontFamily: 'monospace', fontSize: '0.62rem', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+            <div style={{
+              fontFamily: 'monospace',
+              fontSize: '0.62rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1px',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: '2px'
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: curCell.y < 0 ? '#c084fc' : '#4ade80' }}>
                   Y = {curCell.y} {curCell.y < 0 ? '(минус)' : ''}:
@@ -95,6 +121,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
                 BIN: {yBin.slice(0, 8)} {yBin.slice(8, 16)} {yBin.slice(16, 24)} {yBin.slice(24, 32)}
               </div>
             </div>
+
 
             <div style={{
               marginTop: '2px',
@@ -146,8 +173,12 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
             padding: '5px 8px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            overflowX: 'auto',
+            whiteSpace: 'nowrap',
+            WebkitOverflowScrolling: 'touch'
           }}>
+
             <span style={{ color: '#94a3b8' }}>8B HEX:</span>
             <span style={{ color: '#f8fafc', fontWeight: 700 }}>
               <span style={{ color: '#38bdf8' }}>0x</span>
