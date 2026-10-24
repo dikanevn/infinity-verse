@@ -65,7 +65,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string>('Сетка подключена');
   const [contractVersion, setContractVersion] = useState<string>('...');
-  const CLIENT_VERSION = '0.0.0.0.5';
+  const CLIENT_VERSION = '0.0.0.0.8';
 
   const fetchState = async () => {
     try {
