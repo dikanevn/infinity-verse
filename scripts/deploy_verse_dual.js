@@ -70,11 +70,11 @@ async function main() {
   console.log('✅ InfinityVerse_AAA развернут по адресу:', aaaAddress);
 
   // 3. Связывание: регистрация AAA в Main
-  console.log('\n3. Связывание: вызов main.setLogicContract(AAA)...');
+  console.log('\n3. Связывание: вызов main.setContractAAA(AAA)...');
   const linkHash = await walletClient.writeContract({
     address: mainAddress,
     abi: mainArtifact.abi,
-    functionName: 'setLogicContract',
+    functionName: 'setContractAAA',
     args: [aaaAddress]
   });
   await publicClient.waitForTransactionReceipt({ hash: linkHash });

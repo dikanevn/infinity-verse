@@ -33,13 +33,13 @@ contract InfinityVerse_Main {
     mapping(address => Player) public players;
     mapping(address => uint256) public nonces;
 
-    // Адрес активного исполняющего контракта (AAA)
-    address public logicContract;
+    // Адрес активного логического контракта AAA
+    address public contractAAA;
 
     // Адрес администратора (в будущем передается на DAO или Dead-адрес)
     address public admin;
 
-    event LogicContractSet(address indexed newLogic);
+    event ContractAAASet(address indexed newContractAAA);
     event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
     event CellUpdated(int32 indexed x, int32 indexed y, uint8 terrain, uint8 object);
     event PlayerSpawned(address indexed player, int32 x, int32 y);
@@ -53,11 +53,12 @@ contract InfinityVerse_Main {
         _;
     }
 
-    // Модификатор: вызовы разрешены только текущему логическому контракту
-    modifier onlyLogic() {
-        require(msg.sender == logicContract, unicode"Main: Вызов разрешен только логическому контракту");
+    // Модификатор: вызовы разрешены только текущему контракту AAA
+    modifier onlyContractAAA() {
+        require(msg.sender == contractAAA, unicode"Main: Вызов разрешен только контракту AAA");
         _;
     }
+
 
     constructor() {
         admin = msg.sender;
@@ -88,13 +89,14 @@ contract InfinityVerse_Main {
     }
 
     /**
-     * @notice Установка логического контракта администратором (или DAO)
+     * @notice Установка адреса контракта AAA администратором (или DAO)
      */
-    function setLogicContract(address _logicContract) external onlyAdmin {
-        require(_logicContract != address(0), unicode"Main: Некорректный адрес логики");
-        logicContract = _logicContract;
-        emit LogicContractSet(_logicContract);
+    function setContractAAA(address _contractAAA) external onlyAdmin {
+        require(_contractAAA != address(0), unicode"Main: Некорректный адрес контракта AAA");
+        contractAAA = _contractAAA;
+        emit ContractAAASet(_contractAAA);
     }
+
 
     /**
      * @notice Передача прав администратора на новый адрес (например, на контракт DAO или 0x...dead)
@@ -144,16 +146,16 @@ contract InfinityVerse_Main {
     }
 
     // ========================================================================
-    // === STATE MUTATION (ТОЛЬКО ДЛЯ АКТИВНОГО ЛОГИЧЕСКОГО КОНТРАКТА) ===
+    // === STATE MUTATION (ТОЛЬКО ДЛЯ АКТИВНОГО КОНТРАКТА AAA) ===
     // ========================================================================
 
-    function setCell(int32 x, int32 y, Cell calldata cellData) external onlyLogic {
+    function setCell(int32 x, int32 y, Cell calldata cellData) external onlyContractAAA {
         bytes32 key = getCellKey(x, y);
         cells[key] = cellData;
         emit CellUpdated(x, y, cellData.terrain, cellData.object);
     }
 
-    function spawnPlayer(address player, int32 startX, int32 startY) external onlyLogic {
+    function spawnPlayer(address player, int32 startX, int32 startY) external onlyContractAAA {
         require(!players[player].exists, unicode"Main: Игрок уже родился в этом мире");
         players[player].x = startX;
         players[player].y = startY;
@@ -162,8 +164,7 @@ contract InfinityVerse_Main {
         emit PlayerSpawned(player, startX, startY);
     }
 
-
-    function movePlayer(address player, int32 toX, int32 toY) external onlyLogic {
+    function movePlayer(address player, int32 toX, int32 toY) external onlyContractAAA {
         Player storage p = players[player];
         int32 fromX = p.x;
         int32 fromY = p.y;
@@ -174,19 +175,20 @@ contract InfinityVerse_Main {
         emit PlayerMoved(player, fromX, fromY, toX, toY);
     }
 
-    function setPlayerSession(address player, address sessionKey, uint256 expiry) external onlyLogic {
+    function setPlayerSession(address player, address sessionKey, uint256 expiry) external onlyContractAAA {
         players[player].sessionKey = sessionKey;
         players[player].sessionExpiry = expiry;
         emit SessionAuthorized(player, sessionKey, expiry);
     }
 
-    function revokePlayerSession(address player) external onlyLogic {
+    function revokePlayerSession(address player) external onlyContractAAA {
         players[player].sessionKey = address(0);
         players[player].sessionExpiry = 0;
         emit SessionRevoked(player);
     }
 
-    function incrementNonce(address player) external onlyLogic returns (uint256) {
+    function incrementNonce(address player) external onlyContractAAA returns (uint256) {
         return nonces[player]++;
     }
+
 }
