@@ -33,10 +33,7 @@ export const CellView: React.FC<CellViewProps> = ({
         boxSizing: 'border-box',
         width: '62px',
         height: '62px',
-        backgroundColor: tInfo.bg,
-        backgroundImage: sandBgPattern ? `url("${sandBgPattern}")` : undefined,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        background: sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : tInfo.bg,
         border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
         borderRadius: '0px',
         display: 'flex',
@@ -52,6 +49,7 @@ export const CellView: React.FC<CellViewProps> = ({
         boxShadow: isSelected ? '0 0 14px rgba(56, 189, 248, 0.7)' : 'none'
       }}
     >
+
 
       {/* Верхняя строка: Координаты и Названия */}
       <div style={{
