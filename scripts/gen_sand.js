@@ -1,18 +1,31 @@
 const fs = require('fs');
 
+// Создаем 6 естественных вариантов строго в понравившемся стиле:
+// Теплый песок #ba8534, мелкие золотые песчинки, редкие темные камешки и легкая песчаная волна дюны в разных местах
 const svgs = [
-  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#b47e2c"/><path d="M0,15 Q15,8 30,16 T62,12 M0,35 Q20,28 40,36 T62,32 M0,52 Q18,46 38,54 T62,50" stroke="#78350f" stroke-width="2" fill="none" opacity="0.6"/><circle cx="12" cy="24" r="2" fill="#fde047" opacity="0.8"/><circle cx="48" cy="42" r="2.5" fill="#451a03" opacity="0.7"/><circle cx="34" cy="18" r="1.5" fill="#fef08a" opacity="0.9"/></svg>',
-  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#a87426"/><circle cx="8" cy="12" r="2.5" fill="#451a03" opacity="0.8"/><circle cx="52" cy="18" r="3" fill="#291102" opacity="0.8"/><circle cx="28" cy="45" r="2.5" fill="#451a03" opacity="0.8"/><circle cx="42" cy="52" r="2" fill="#fef08a" opacity="0.9"/><circle cx="16" cy="38" r="1.5" fill="#fde047" opacity="0.8"/><circle cx="38" cy="22" r="2" fill="#78350f" opacity="0.7"/><path d="M5,48 Q18,44 32,49" stroke="#451a03" stroke-width="2" fill="none" opacity="0.6"/></svg>',
-  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#b88230"/><path d="M-5,10 Q15,18 35,8 T68,14" stroke="#fde047" stroke-width="2.5" fill="none" opacity="0.7"/><path d="M-5,12 Q15,20 35,10 T68,16" stroke="#451a03" stroke-width="2.2" fill="none" opacity="0.7"/><path d="M-5,42 Q20,50 42,38 T68,44" stroke="#fde047" stroke-width="2.5" fill="none" opacity="0.6"/><path d="M-5,44 Q20,52 42,40 T68,46" stroke="#451a03" stroke-width="2.2" fill="none" opacity="0.7"/><circle cx="22" cy="28" r="2" fill="#fef08a" opacity="0.8"/></svg>',
-  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ba8534"/><circle cx="14" cy="8" r="2" fill="#fef08a" opacity="0.9"/><circle cx="26" cy="19" r="2.5" fill="#451a03" opacity="0.7"/><circle cx="48" cy="12" r="1.5" fill="#fde047" opacity="0.9"/><circle cx="10" cy="50" r="2.5" fill="#451a03" opacity="0.8"/><circle cx="36" cy="38" r="2" fill="#fef08a" opacity="0.9"/><circle cx="54" cy="46" r="2.5" fill="#291102" opacity="0.8"/><circle cx="24" cy="32" r="1.5" fill="#fde047" opacity="0.8"/><path d="M12,28 Q28,24 45,30" stroke="#78350f" stroke-width="1.8" fill="none" opacity="0.6"/></svg>',
-  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ae7a29"/><path d="M0,0 L62,62 M-10,25 L45,80 M20,-10 L75,45" stroke="#451a03" stroke-width="1.8" fill="none" opacity="0.5"/><path d="M1,0 L63,62 M-9,25 L46,80 M21,-10 L76,45" stroke="#fef08a" stroke-width="1.5" fill="none" opacity="0.5"/><circle cx="45" cy="20" r="2.5" fill="#291102" opacity="0.8"/><circle cx="20" cy="48" r="2" fill="#fde047" opacity="0.9"/></svg>',
-  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#b07c2b"/><ellipse cx="32" cy="30" rx="12" ry="7" fill="#451a03" opacity="0.7"/><ellipse cx="32" cy="29" rx="8" ry="4" fill="#1e0b02" opacity="0.6"/><path d="M14,31 Q32,40 50,31" stroke="#fef08a" stroke-width="1.8" fill="none" opacity="0.6"/><circle cx="12" cy="14" r="2" fill="#fde047" opacity="0.9"/><circle cx="50" cy="48" r="2.5" fill="#291102" opacity="0.8"/></svg>'
+  // 1. Волна сверху-по центру (как на (2, 0))
+  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ba8534"/><circle cx="26" cy="10" r="2.2" fill="#451a03" opacity="0.75"/><circle cx="24" cy="22" r="1.5" fill="#fef08a" opacity="0.95"/><circle cx="35" cy="25" r="1.8" fill="#fde047" opacity="0.9"/><circle cx="11" cy="38" r="2.2" fill="#451a03" opacity="0.75"/><circle cx="51" cy="34" r="2" fill="#291102" opacity="0.7"/><path d="M13,20 Q32,15 49,21" stroke="#78350f" stroke-width="1.8" fill="none" opacity="0.65"/></svg>',
+
+  // 2. Волна снизу (как на (2, -1))
+  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ba8534"/><circle cx="10" cy="11" r="2.2" fill="#451a03" opacity="0.75"/><circle cx="50" cy="13" r="2.5" fill="#291102" opacity="0.75"/><circle cx="36" cy="17" r="1.8" fill="#78350f" opacity="0.65"/><circle cx="16" cy="38" r="1.5" fill="#fde047" opacity="0.9"/><circle cx="28" cy="41" r="2.2" fill="#451a03" opacity="0.75"/><circle cx="40" cy="47" r="1.8" fill="#fef08a" opacity="0.95"/><path d="M6,44 Q19,40 33,45" stroke="#78350f" stroke-width="1.8" fill="none" opacity="0.65"/></svg>',
+
+  // 3. Волна по диагонали справа-налево
+  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ba8534"/><circle cx="15" cy="15" r="1.6" fill="#fef08a" opacity="0.95"/><circle cx="48" cy="18" r="2.4" fill="#451a03" opacity="0.75"/><circle cx="20" cy="30" r="2.2" fill="#291102" opacity="0.7"/><circle cx="38" cy="36" r="1.5" fill="#fde047" opacity="0.9"/><circle cx="52" cy="46" r="1.8" fill="#fef08a" opacity="0.9"/><circle cx="12" cy="50" r="2.2" fill="#451a03" opacity="0.7"/><path d="M18,34 Q36,28 54,35" stroke="#78350f" stroke-width="1.8" fill="none" opacity="0.65"/></svg>',
+
+  // 4. Две легкие мягкие дуги волн + рассыпанные песчинки
+  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ba8534"/><circle cx="20" cy="12" r="1.8" fill="#fde047" opacity="0.9"/><circle cx="45" cy="14" r="2.2" fill="#451a03" opacity="0.75"/><circle cx="14" cy="32" r="2.2" fill="#291102" opacity="0.7"/><circle cx="32" cy="38" r="1.6" fill="#fef08a" opacity="0.95"/><circle cx="48" cy="44" r="2" fill="#451a03" opacity="0.7"/><path d="M8,24 Q24,19 40,25" stroke="#78350f" stroke-width="1.7" fill="none" opacity="0.6"/><path d="M22,48 Q38,43 54,49" stroke="#78350f" stroke-width="1.7" fill="none" opacity="0.6"/></svg>',
+
+  // 5. Волна в центре с песчинками вокруг
+  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ba8534"/><circle cx="12" cy="14" r="2.2" fill="#451a03" opacity="0.75"/><circle cx="38" cy="12" r="1.6" fill="#fef08a" opacity="0.95"/><circle cx="52" cy="26" r="2.4" fill="#291102" opacity="0.7"/><circle cx="22" cy="40" r="1.8" fill="#fde047" opacity="0.9"/><circle cx="44" cy="48" r="2" fill="#451a03" opacity="0.7"/><path d="M10,30 Q30,24 50,31" stroke="#78350f" stroke-width="1.8" fill="none" opacity="0.65"/></svg>',
+
+  // 6. Волна справа внизу + золотые песчинки
+  '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62"><rect width="62" height="62" fill="#ba8534"/><circle cx="25" cy="15" r="2.4" fill="#451a03" opacity="0.75"/><circle cx="42" cy="18" r="1.6" fill="#fef08a" opacity="0.95"/><circle cx="14" cy="28" r="1.8" fill="#fde047" opacity="0.9"/><circle cx="52" cy="38" r="2.2" fill="#291102" opacity="0.7"/><circle cx="18" cy="48" r="2" fill="#451a03" opacity="0.75"/><path d="M20,44 Q36,38 52,45" stroke="#78350f" stroke-width="1.8" fill="none" opacity="0.65"/></svg>'
 ];
 
 const b64 = svgs.map(s => 'data:image/svg+xml;base64,' + Buffer.from(s).toString('base64'));
 
 const fileContent = `// client/src/config/sandTextures.ts
-// 6 контрастных процедурных текстур песка (Base64 SVG Data URI)
+// 6 аккуратных процедурных текстур песка (в едином минималистичном стиле: дюна + песчинки)
 
 export const SAND_PATTERNS: string[] = ${JSON.stringify(b64, null, 2)};
 
@@ -25,4 +38,4 @@ export function getSandTextureForCoord(x: number, y: number): string {
 `;
 
 fs.writeFileSync('C:/Users/dikan/projects/windows-infinity-verse/client/src/config/sandTextures.ts', fileContent, 'utf8');
-console.log('sandTextures.ts updated with high-contrast Base64 patterns!');
+console.log('sandTextures.ts successfully updated with 6 matching dune-style textures!');
