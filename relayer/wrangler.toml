@@ -3,7 +3,8 @@ main = "src/index.js"
 compatibility_date = "2026-10-24"
 
 [vars]
-CONTRACT_ADDRESS = "0x171814e6567896597dc79311b48f70ab6a79ced6"
+MAIN_CONTRACT_ADDRESS = "0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B"
+AAA_CONTRACT_ADDRESS = "0x2a8d707aa28f35596805d5668bc531afec9eeafd"
 RPC_URL = "https://testnet-rpc.monad.xyz"
 CHAIN_ID = 10143
 GOOGLE_CLIENT_ID = "302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com"
@@ -11,4 +12,3 @@ GOOGLE_CLIENT_ID = "302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleuse
 [[kv_namespaces]]
 binding = "GOOGLE_WALLETS"
 id = "38c312a173fd4b70bd112e77e2f7fbb0"
-

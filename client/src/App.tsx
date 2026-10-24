@@ -52,8 +52,10 @@ function App() {
     player,
     isPlayerLoading,
     actionPending,
+    authMode,
     isDirectSignerMode,
     isGoogleMode,
+    isMetaMaskMode,
     connectProvider,
     connectWithPrivateKey,
     connectWithGoogle,
@@ -76,8 +78,6 @@ function App() {
       connectWithPrivateKey(devKey, 'xor');
     }
   }, [connectedAddress]);
-
-
 
   const curCell = cells.find(c => c.x === selectedCoord.x && c.y === selectedCoord.y) || null;
 
@@ -126,18 +126,18 @@ function App() {
           player={player}
           isPlayerLoading={isPlayerLoading}
           actionPending={actionPending}
+          authMode={authMode}
           isDirectSignerMode={isDirectSignerMode}
           isGoogleMode={isGoogleMode}
+          isMetaMaskMode={isMetaMaskMode}
           selectedCoord={selectedCoord}
           walletProvidersCount={walletProviders.length}
           onOpenWalletModal={() => setIsWalletModalOpen(true)}
           onSpawn={handleSpawn}
           onMove={handleMove}
-          onRevokeSession={() => handleRevokeSession(walletProviders)}
+          onRevokeSession={handleRevokeSession}
           onExitRam={handleExitRam}
         />
-
-
 
         {/* 64-битный инспектор выбранной клетки */}
         <CellInspector curCell={curCell} />
@@ -174,7 +174,6 @@ function App() {
           connectWithGoogle(idToken, () => setIsWalletModalOpen(false));
         }}
       />
-
 
       {/* Модальное окно ввода ключа с Dev-кнопками */}
       <PkModal

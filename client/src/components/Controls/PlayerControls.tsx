@@ -1,13 +1,15 @@
 import React from 'react';
-import type { PlayerData } from '../../types';
+import type { PlayerData, AuthMode } from '../../types';
 
 interface PlayerControlsProps {
   connectedAddress: string;
   player: PlayerData | null;
   isPlayerLoading: boolean;
   actionPending: boolean;
+  authMode?: AuthMode;
   isDirectSignerMode: boolean;
   isGoogleMode?: boolean;
+  isMetaMaskMode?: boolean;
   selectedCoord: { x: number; y: number };
   walletProvidersCount: number;
   onOpenWalletModal: () => void;
@@ -24,6 +26,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   actionPending,
   isDirectSignerMode,
   isGoogleMode,
+  isMetaMaskMode,
   selectedCoord,
   walletProvidersCount,
   onOpenWalletModal,
@@ -32,8 +35,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onRevokeSession,
   onExitRam
 }) => {
-
-
   return (
     <div style={{
       display: 'flex',
@@ -95,7 +96,13 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             boxShadow: '0 0 15px rgba(16, 185, 129, 0.5)'
           }}
         >
-          {actionPending ? 'РОЖДЕНИЕ В МИРЕ...' : '✨ РОДИТЬСЯ В МИРЕ (НА 1, 0)'}
+          {actionPending
+            ? 'РОЖДЕНИЕ В МИРЕ...'
+            : isMetaMaskMode
+            ? '🦊 РОДИТЬСЯ (METAMASK DIRECT)'
+            : isDirectSignerMode
+            ? '⚡ РОДИТЬСЯ (RAM DIRECT)'
+            : '✨ РОДИТЬСЯ (GOOGLE GASLESS)'}
         </button>
       ) : (
         <div style={{
@@ -104,32 +111,33 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           gap: '8px',
           fontSize: '0.72rem',
           backgroundColor: '#131826',
-          border: '1px solid #38bdf8',
+          border: `1px solid ${isMetaMaskMode ? '#f59e0b' : isDirectSignerMode ? '#38bdf8' : '#a855f7'}`,
           padding: '6px 12px'
         }}>
           <span>
-            🧑‍🚀 <span style={{ color: '#94a3b8', fontSize: '0.62rem' }}>{connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}</span>: <b>({player.x}, {player.y})</b>
+            {isMetaMaskMode ? '🦊' : isDirectSignerMode ? '⚡' : '🌐'}{' '}
+            <span style={{ color: '#94a3b8', fontSize: '0.62rem' }}>
+              {connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}
+            </span>
+            : <b>({player.x}, {player.y})</b>
           </span>
-          {isDirectSignerMode ? (
+
+          {/* Режим кошелька */}
+          <span style={{
+            fontSize: '0.58rem',
+            padding: '2px 5px',
+            backgroundColor: isMetaMaskMode ? '#78350f' : isDirectSignerMode ? '#0c4a6e' : '#581c87',
+            color: '#f8fafc',
+            fontWeight: 700
+          }}>
+            {isMetaMaskMode ? 'METAMASK' : isDirectSignerMode ? 'RAM' : 'GOOGLE'}
+          </span>
+
+          {/* Кнопка выхода или сброса */}
+          {isDirectSignerMode || isMetaMaskMode || isGoogleMode ? (
             <button
               onClick={onExitRam}
-              title="Выйти и стереть зашифрованный ключ из оперативной памяти"
-              style={{
-                backgroundColor: 'transparent',
-                color: '#fbbf24',
-                border: '1px solid #d97706',
-                padding: '2px 6px',
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                marginLeft: '4px'
-              }}
-            >
-              ВЫЙТИ
-            </button>
-          ) : isGoogleMode ? (
-            <button
-              onClick={onExitRam}
+              title="Отключить кошелек"
               style={{
                 backgroundColor: 'transparent',
                 color: '#94a3b8',
@@ -144,7 +152,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               ВЫЙТИ
             </button>
           ) : (
-
             <button
               onClick={onRevokeSession}
               disabled={actionPending}
@@ -164,8 +171,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             </button>
           )}
 
-
-
           {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
           {(() => {
             const dx = Math.abs(selectedCoord.x - player.x);
@@ -179,7 +184,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   onClick={() => onMove(selectedCoord.x, selectedCoord.y)}
                   disabled={actionPending}
                   style={{
-                    backgroundColor: '#38bdf8',
+                    backgroundColor: isMetaMaskMode ? '#f59e0b' : '#38bdf8',
                     color: '#07080d',
                     border: 'none',
                     borderRadius: '0px',
@@ -190,7 +195,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     marginLeft: '6px'
                   }}
                 >
-                  {actionPending ? 'ХОД...' : `ШАГНУТЬ НА (${selectedCoord.x}, ${selectedCoord.y}) ➔`}
+                  {actionPending
+                    ? 'ХОД...'
+                    : `ШАГ НА (${selectedCoord.x}, ${selectedCoord.y}) ${isMetaMaskMode ? '🦊' : '➔'}`}
                 </button>
               );
             }

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { keccak256, encodePacked } from 'viem';
 import type { CellData } from '../types';
-import { CONTRACT_ADDRESS, VERSE_ABI, publicClient } from '../config/contracts';
+import { MAIN_CONTRACT_ADDRESS, MAIN_ABI, publicClient } from '../config/contracts';
 import { INITIAL_COORDS, CONNECTION_CONFIG } from '../config/constants';
 
 export function useWorldState(connectedAddress: string) {
   const [cells, setCells] = useState<CellData[]>([]);
-  const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.7');
+  const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.9-MAIN-G-2');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
@@ -18,13 +18,13 @@ export function useWorldState(connectedAddress: string) {
 
       const [ver, onchainCells, latestBlock] = await Promise.all([
         publicClient.readContract({
-          address: CONTRACT_ADDRESS,
-          abi: VERSE_ABI,
+          address: MAIN_CONTRACT_ADDRESS,
+          abi: MAIN_ABI,
           functionName: 'VERSION',
         }),
         publicClient.readContract({
-          address: CONTRACT_ADDRESS,
-          abi: VERSE_ABI,
+          address: MAIN_CONTRACT_ADDRESS,
+          abi: MAIN_ABI,
           functionName: 'getCellsBatch',
           args: [xs, ys]
         }),
@@ -46,8 +46,8 @@ export function useWorldState(connectedAddress: string) {
           object: Number(c.object),
           state: Number(c.state),
           reserved: Number(c.reserved),
-          paramA: Number(c.paramA),
-          paramB: Number(c.paramB),
+          paramA: 0,
+          paramB: 0
         };
       });
 
@@ -82,7 +82,6 @@ export function useWorldState(connectedAddress: string) {
         setStatusState('green');
         setStatusText(`📡 Межпространственная связь (${ageSec} сек назад)`);
       }
-
     };
 
     updateStatus();

@@ -1,3 +1,5 @@
+export type AuthMode = 'none' | 'google' | 'private_key' | 'metamask';
+
 export interface CellData {
   x: number;
   y: number;
@@ -14,6 +16,10 @@ export interface PlayerData {
   x: number;
   y: number;
   exists: boolean;
+  sessionKey?: string;
+  sessionExpiry?: number;
+  registeredAtBlock?: number;
+  registeredAtTimestamp?: number;
 }
 
 export interface EIP6963ProviderDetail {
@@ -31,4 +37,3 @@ export interface GoogleSessionData {
   email?: string;
   address: `0x${string}`;
 }
-

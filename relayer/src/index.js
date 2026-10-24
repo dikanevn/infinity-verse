@@ -1,14 +1,24 @@
 import { createWalletClient, createPublicClient, http, defineChain, parseAbi, keccak256, encodePacked } from 'viem';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 
+// ============================================================================
+// === АКТУАЛЬНЫЕ АДРЕСА ПОКОЛЕНИЯ 2 (MAIN_G_2 + СИММЕТРИЧНЫЙ AAA) ===
+// ============================================================================
+const MAIN_G2_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
+const AAA_ADDRESS = '0x2a8d707aa28f35596805d5668bc531afec9eeafd';
 
-const VERSE_ABI = parseAbi([
-  'function spawn(address player) returns (int32, int32)',
-  'function authorizeSessionWithSig(address player, address sessionKey, uint256 expiry, bytes sig)',
-  'function revokeSessionWithSig(address player, bytes sig)',
-  'function moveWithSession(address player, int32 targetX, int32 targetY, bytes moveSig)',
-  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry)',
-  'function nonces(address player) view returns (uint256)'
+// ABI для чтения нонсов и состояния из хранилища Main_G_2
+const MAIN_ABI = parseAbi([
+  'function nonces(address player) view returns (uint256)',
+  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry, uint256 registeredAtBlock, uint256 registeredAtTimestamp)'
+]);
+
+// Симметричный ABI логического модуля AAA (все спонсируемые действия: ...Gasless)
+const AAA_ABI = parseAbi([
+  'function spawnGasless(address player)',
+  'function moveGasless(address player, int32 targetX, int32 targetY, bytes sig)',
+  'function authorizeSessionGasless(address player, address sessionKey, uint256 expiry, bytes sig)',
+  'function revokeSessionGasless(address player, bytes sig)'
 ]);
 
 function jsonResponse(data, status = 200) {
@@ -89,23 +99,18 @@ async function verifyGoogleIdToken(idToken, expectedClientId) {
   return payload;
 }
 
-
 // ============================================================================
 // === ОЧЕРЕДЬ ТРАНЗАКЦИЙ И УПРАВЛЕНИЕ NONCE СПОНСОРА (FIFO TRANSACTION QUEUE) ===
 // ============================================================================
-// Исключает гонку потоков и ошибки "nonce too low" / "replacement underpriced"
-// при одновременных ходах нескольких игроков.
 let txQueuePromise = Promise.resolve();
 let localNonce = null;
 let lastNonceSyncTime = 0;
 
-async function executeQueuedTx(publicClient, walletClient, sponsorAddress, writeAction) {
-  // Сериализуем выполнение в строгую очередь FIFO
+async function executeQueuedTx(publicClient, sponsorAddress, writeAction) {
   const result = new Promise((resolve, reject) => {
     txQueuePromise = txQueuePromise.then(async () => {
       try {
         const now = Date.now();
-        // Синхронизируем базовый nonce из сети, если прошло больше 15 секунд или локальный nonce пуст
         if (localNonce === null || (now - lastNonceSyncTime) > 15000) {
           const onchainNonce = await publicClient.getTransactionCount({
             address: sponsorAddress,
@@ -116,12 +121,11 @@ async function executeQueuedTx(publicClient, walletClient, sponsorAddress, write
         }
 
         const currentNonce = localNonce;
-        localNonce++; // Локально резервируем следующий nonce для параллельных запросов в очереди
+        localNonce++;
 
         const hash = await writeAction(currentNonce);
         resolve(hash);
       } catch (err) {
-        // При ошибке рассинхрона nonce сбрасываем локальный кэш
         localNonce = null;
         reject(err);
       }
@@ -146,11 +150,29 @@ export default {
 
     const url = new URL(request.url);
 
+    const mainContractAddress = env.MAIN_CONTRACT_ADDRESS || MAIN_G2_ADDRESS;
+    const aaaContractAddress = env.AAA_CONTRACT_ADDRESS || AAA_ADDRESS;
+    const rpcUrl = env.RPC_URL || 'https://testnet-rpc.monad.xyz';
+    const chainId = Number(env.CHAIN_ID || 10143);
+
+    const monadTestnet = defineChain({
+      id: chainId,
+      name: 'Monad Testnet',
+      nativeCurrency: { decimals: 18, name: 'MON', symbol: 'MON' },
+      rpcUrls: { default: { http: [rpcUrl] } }
+    });
+
+    const publicClient = createPublicClient({
+      chain: monadTestnet,
+      transport: http(rpcUrl)
+    });
+
     if (request.method === 'GET' && url.pathname === '/') {
       return jsonResponse({
         status: 'online',
         service: 'Infinity-Verse Cryptographic Session Relayer',
-        contract: env.CONTRACT_ADDRESS,
+        mainContract: mainContractAddress,
+        aaaContract: aaaContractAddress,
         timestamp: Date.now()
       });
     }
@@ -162,29 +184,19 @@ export default {
       try {
         const body = await request.json();
         const { idToken } = body;
-        if (!idToken) {
-          return jsonResponse({ error: 'idToken is required' }, 400);
-        }
+        if (!idToken) return jsonResponse({ error: 'idToken is required' }, 400);
 
         const clientId = env.GOOGLE_CLIENT_ID;
-        if (!clientId) {
-          return jsonResponse({ error: 'GOOGLE_CLIENT_ID not configured in worker' }, 500);
-        }
-
         const masterKeyHex = env.WALLET_MASTER_KEY;
-        if (!masterKeyHex) {
-          return jsonResponse({ error: 'WALLET_MASTER_KEY secret not configured in worker' }, 500);
+        if (!clientId || !masterKeyHex) {
+          return jsonResponse({ error: 'Worker secrets not configured' }, 500);
         }
 
-        // Проверяем токен у Google
         const googleUser = await verifyGoogleIdToken(idToken, clientId);
-        const sub = googleUser.sub; // Уникальный неизменный ID пользователя Google
-        const kvKey = `google_user:${sub}`;
-
+        const kvKey = `google_user:${googleUser.sub}`;
         let walletRecord = await env.GOOGLE_WALLETS.get(kvKey, { type: 'json' });
 
         if (!walletRecord) {
-          // Пользователь первый раз — генерируем новый EVM приватник
           const newPrivateKey = generatePrivateKey();
           const newAccount = privateKeyToAccount(newPrivateKey);
           const encrypted = await encryptPrivateKey(newPrivateKey, masterKeyHex);
@@ -199,7 +211,6 @@ export default {
           await env.GOOGLE_WALLETS.put(kvKey, JSON.stringify(walletRecord));
         }
 
-        // Возвращаем фронтенду публичный адрес игрока (приватник НЕ передается)
         return jsonResponse({
           success: true,
           address: walletRecord.address,
@@ -215,8 +226,6 @@ export default {
     // ============================================================================
     // === АВТОРИЗАЦИЯ СЕССИИ ДЛЯ GOOGLE WALLET ===
     // ============================================================================
-    // Браузер генерирует RAM-сессию, шлет idToken + sessionKey, Worker сам подписывает
-    // onchain-авторизацию сессии расшифрованным в памяти приватником и отправляет tx.
     if (request.method === 'POST' && url.pathname === '/auth/google/authorize-session') {
       try {
         const body = await request.json();
@@ -233,26 +242,12 @@ export default {
           return jsonResponse({ error: 'Wallet not found for this Google account' }, 404);
         }
 
-        // Расшифровываем ключ строго в оперативной памяти воркера для подписи
         const playerPrivateKey = await decryptPrivateKey(walletRecord.encryptedKey, env.WALLET_MASTER_KEY);
         const playerAccount = privateKeyToAccount(playerPrivateKey);
 
-        const monadTestnet = defineChain({
-          id: Number(env.CHAIN_ID || 10143),
-          name: 'Monad Testnet',
-          nativeCurrency: { decimals: 18, name: 'MON', symbol: 'MON' },
-          rpcUrls: { default: { http: [env.RPC_URL] } }
-        });
-
-        const publicClient = createPublicClient({
-          chain: monadTestnet,
-          transport: http(env.RPC_URL)
-        });
-
-        // Получаем nonce игрока для безопасной подписи EIP-191
         const playerNonce = await publicClient.readContract({
-          address: env.CONTRACT_ADDRESS,
-          abi: VERSE_ABI,
+          address: mainContractAddress,
+          abi: MAIN_ABI,
           functionName: 'nonces',
           args: [playerAccount.address]
         });
@@ -260,7 +255,7 @@ export default {
         const innerHash = keccak256(
           encodePacked(
             ['string', 'address', 'address', 'uint256', 'uint256', 'uint256'],
-            ['AuthorizeSession', playerAccount.address, sessionKey, BigInt(expiry), playerNonce, BigInt(env.CHAIN_ID || 10143)]
+            ['AuthorizeSession', playerAccount.address, sessionKey, BigInt(expiry), playerNonce, BigInt(chainId)]
           )
         );
 
@@ -268,20 +263,18 @@ export default {
           message: { raw: innerHash }
         });
 
-
-        // Отправляем транзакцию через спонсора релеера
         const sponsorAccount = privateKeyToAccount(env.SPONSOR_PRIVATE_KEY);
         const walletClient = createWalletClient({
           account: sponsorAccount,
           chain: monadTestnet,
-          transport: http(env.RPC_URL)
+          transport: http(rpcUrl)
         });
 
-        const hash = await executeQueuedTx(publicClient, walletClient, sponsorAccount.address, (nonce) =>
+        const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
           walletClient.writeContract({
-            address: env.CONTRACT_ADDRESS,
-            abi: VERSE_ABI,
-            functionName: 'authorizeSessionWithSig',
+            address: aaaContractAddress,
+            abi: AAA_ABI,
+            functionName: 'authorizeSessionGasless',
             args: [playerAccount.address, sessionKey, BigInt(expiry), sig],
             nonce
           })
@@ -301,7 +294,7 @@ export default {
     }
 
     // ============================================================================
-    // === ВЫВОД МОНЕТ (TRANSFER MON) С GOOGLE EMBEDDED WALLET НА СВОЙ КОШЕЛЕК ===
+    // === ВЫВОД МОНЕТ (TRANSFER MON) С GOOGLE EMBEDDED WALLET ===
     // ============================================================================
     if (request.method === 'POST' && url.pathname === '/auth/google/withdraw') {
       try {
@@ -322,35 +315,17 @@ export default {
         const playerPrivateKey = await decryptPrivateKey(walletRecord.encryptedKey, env.WALLET_MASTER_KEY);
         const playerAccount = privateKeyToAccount(playerPrivateKey);
 
-        const monadTestnet = defineChain({
-          id: Number(env.CHAIN_ID || 10143),
-          name: 'Monad Testnet',
-          nativeCurrency: { decimals: 18, name: 'MON', symbol: 'MON' },
-          rpcUrls: { default: { http: [env.RPC_URL] } }
-        });
-
-        const publicClient = createPublicClient({
-          chain: monadTestnet,
-          transport: http(env.RPC_URL)
-        });
-
         const balance = await publicClient.getBalance({ address: playerAccount.address });
-        if (balance <= 0n) {
-          return jsonResponse({ error: 'Balance is 0 MON' }, 400);
-        }
-
-        // Оставляем запас на gas (например ~0.005 MON), остальное отправляем
         const gasBuffer = 5000000000000000n; // 0.005 MON
         if (balance <= gasBuffer) {
           return jsonResponse({ error: 'Balance too low to cover transaction gas fee' }, 400);
         }
 
         const amountToSend = balance - gasBuffer;
-
         const playerWalletClient = createWalletClient({
           account: playerAccount,
           chain: monadTestnet,
-          transport: http(env.RPC_URL)
+          transport: http(rpcUrl)
         });
 
         const hash = await playerWalletClient.sendTransaction({
@@ -372,8 +347,10 @@ export default {
       }
     }
 
+    // ============================================================================
+    // === УНИВЕРСАЛЬНЫЕ СПОНСИРУЕМЫЕ ОНЧЕЙН-ДЕЙСТВИЯ (GASLESS) ===
+    // ============================================================================
     if (request.method === 'POST') {
-
       try {
         const body = await request.json();
         const { action, player, sessionKey, expiry, sig, targetX, targetY, moveSig } = body;
@@ -387,36 +364,24 @@ export default {
           return jsonResponse({ error: 'SPONSOR_PRIVATE_KEY secret is not set in Worker' }, 500);
         }
 
-        const monadTestnet = defineChain({
-          id: Number(env.CHAIN_ID || 10143),
-          name: 'Monad Testnet',
-          nativeCurrency: { decimals: 18, name: 'MON', symbol: 'MON' },
-          rpcUrls: { default: { http: [env.RPC_URL] } }
-        });
-
-        const account = privateKeyToAccount(sponsorPk);
-        const publicClient = createPublicClient({
-          chain: monadTestnet,
-          transport: http(env.RPC_URL)
-        });
-
+        const sponsorAccount = privateKeyToAccount(sponsorPk);
         const walletClient = createWalletClient({
-          account,
+          account: sponsorAccount,
           chain: monadTestnet,
-          transport: http(env.RPC_URL)
+          transport: http(rpcUrl)
         });
 
-        // 1. Авторизация сессии игрока (кошелёк игрока подписывает сессионный ключ)
+        // 1. Авторизация сессии игрока (authorizeSessionGasless)
         if (action === 'authorize_session') {
           if (!sessionKey || !expiry || !sig) {
             return jsonResponse({ error: 'sessionKey, expiry, sig required' }, 400);
           }
 
-          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+          const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
             walletClient.writeContract({
-              address: env.CONTRACT_ADDRESS,
-              abi: VERSE_ABI,
-              functionName: 'authorizeSessionWithSig',
+              address: aaaContractAddress,
+              abi: AAA_ABI,
+              functionName: 'authorizeSessionGasless',
               args: [player, sessionKey, BigInt(expiry), sig],
               nonce
             })
@@ -425,17 +390,15 @@ export default {
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
 
-        // 1.1 Отзыв сессии игрока (кошелёк игрока подписывает команду отзыва)
+        // 2. Отзыв сессии игрока (revokeSessionGasless)
         if (action === 'revoke_session') {
-          if (!sig) {
-            return jsonResponse({ error: 'sig required for revoke' }, 400);
-          }
+          if (!sig) return jsonResponse({ error: 'sig required for revoke' }, 400);
 
-          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+          const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
             walletClient.writeContract({
-              address: env.CONTRACT_ADDRESS,
-              abi: VERSE_ABI,
-              functionName: 'revokeSessionWithSig',
+              address: aaaContractAddress,
+              abi: AAA_ABI,
+              functionName: 'revokeSessionGasless',
               args: [player, sig],
               nonce
             })
@@ -444,13 +407,13 @@ export default {
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
 
-        // 2. Спавн игрока в мир
+        // 3. Спавн игрока в мир (spawnGasless)
         if (action === 'spawn') {
-          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+          const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
             walletClient.writeContract({
-              address: env.CONTRACT_ADDRESS,
-              abi: VERSE_ABI,
-              functionName: 'spawn',
+              address: aaaContractAddress,
+              abi: AAA_ABI,
+              functionName: 'spawnGasless',
               args: [player],
               nonce
             })
@@ -459,17 +422,17 @@ export default {
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
 
-        // 3. Защищённый криптографический ход с подписью сессионного ключа
+        // 4. Криптографический ход с подписью сессии (moveGasless)
         if (action === 'move') {
           if (targetX === undefined || targetY === undefined || !moveSig) {
             return jsonResponse({ error: 'targetX, targetY and moveSig required' }, 400);
           }
 
-          const hash = await executeQueuedTx(publicClient, walletClient, account.address, (nonce) =>
+          const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
             walletClient.writeContract({
-              address: env.CONTRACT_ADDRESS,
-              abi: VERSE_ABI,
-              functionName: 'moveWithSession',
+              address: aaaContractAddress,
+              abi: AAA_ABI,
+              functionName: 'moveGasless',
               args: [player, Number(targetX), Number(targetY), moveSig],
               nonce
             })
