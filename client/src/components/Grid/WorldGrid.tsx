@@ -130,7 +130,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         gap: '6px'
       }}>
         <button
-          onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(1.8, s + 0.15)); }}
+          onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(2.0, s + 0.15)); }}
           title="Приблизить"
           style={{
             width: '32px',
@@ -149,7 +149,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           +
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(0.4, s - 0.15)); }}
+          onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(0.08, s - 0.1)); }}
           title="Отдалить"
           style={{
             width: '32px',

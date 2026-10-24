@@ -19,8 +19,8 @@ export const CellView: React.FC<CellViewProps> = ({
   player,
   onSelect
 }) => {
-  // Если клетки вообще нет в кеше (за пределами 5х5 вокруг игрока) — это неизведанный туман войны
-  const isFog = !cell;
+  // Клетка считается неразведанной (туман войны), если её нет в ответе или её terrain === 0 (пустота космоса)
+  const isFog = !cell || cell.terrain === 0;
 
   const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: `T:${cell.terrain}`, icon: '', bg: '#14291e' }) : TERRAIN_CONFIG[0];
   const oInfo = cell ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : OBJECT_CONFIG[0];
@@ -37,7 +37,7 @@ export const CellView: React.FC<CellViewProps> = ({
         width: '62px',
         height: '62px',
         background: isFog 
-          ? '#070a12' 
+          ? 'radial-gradient(circle, #0e1322 0%, #05070d 100%)' 
           : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : tInfo.bg),
         border: isSelected ? '2px solid #38bdf8' : 'none',
         opacity: isFog ? 0.35 : 1,
