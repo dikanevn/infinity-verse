@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 
-// Контракт InfinityVerse V_0_0_0_0_4 (Cell Architecture)
+// Контракт InfinityVerse V_0.0.0.0.5 (Cell Architecture)
 const CONTRACT_ADDRESS = '0x66dcd7e881078aa10b4d1e2799e5372eb03ef7ae';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
@@ -65,7 +65,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string>('Сетка подключена');
   const [contractVersion, setContractVersion] = useState<string>('...');
-  const CLIENT_VERSION = '0.0.0.0.4';
+  const CLIENT_VERSION = '0.0.0.0.5';
 
   const fetchState = async () => {
     try {
