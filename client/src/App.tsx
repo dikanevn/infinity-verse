@@ -117,6 +117,7 @@ function App() {
   const [walletProviders, setWalletProviders] = useState<EIP6963ProviderDetail[]>([]);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState<boolean>(false);
   const [player, setPlayer] = useState<{ x: number; y: number; exists: boolean } | null>(null);
+  const [isPlayerLoading, setIsPlayerLoading] = useState<boolean>(false);
   const [actionPending, setActionPending] = useState<boolean>(false);
   const CLIENT_VERSION = '0.0.0.0.12';
   const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
@@ -167,9 +168,9 @@ function App() {
       const userAddress = accounts[0];
       setConnectedAddress(userAddress);
       setIsWalletModalOpen(false);
+      setIsPlayerLoading(true);
 
-      // Проверяем статус игрока и сессии
-      const sessionAccount = getOrCreateSessionAccount();
+      // 1. Сразу считываем ончейн-состояние игрока, чтобы фронтенд знал статус
       const pData: any = await publicClient.readContract({
         address: CONTRACT_ADDRESS,
         abi: VERSE_ABI,
@@ -177,6 +178,15 @@ function App() {
         args: [userAddress as `0x${string}`]
       });
 
+      const playerExists = Boolean(pData[2]);
+      setPlayer({
+        x: Number(pData[0]),
+        y: Number(pData[1]),
+        exists: playerExists
+      });
+      setIsPlayerLoading(false);
+
+      const sessionAccount = getOrCreateSessionAccount();
       const nowSec = Math.floor(Date.now() / 1000);
       const isSessionActive = pData[3] && pData[3].toLowerCase() === sessionAccount.address.toLowerCase() && Number(pData[4]) > nowSec;
 
@@ -441,12 +451,12 @@ function App() {
     }
   };
 
-  // 1. Постоянный опрос смарт-контракта и ноды
+  // 1. Постоянный опрос смарт-контракта и ноды (зависит от connectedAddress)
   useEffect(() => {
     fetchState();
     const interval = setInterval(fetchState, CONNECTION_CONFIG.SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [connectedAddress]);
 
   // 2. Ежесекундный живой таймер свежести блока и светофор
   useEffect(() => {
@@ -667,6 +677,17 @@ function App() {
                   {walletProviders.length > 0 ? `${walletProviders.length} найдено` : 'МЕНЮ'}
                 </span>
               </button>
+            ) : isPlayerLoading ? (
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#38bdf8',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                padding: '8px 16px',
+                border: '1px dashed #38bdf8'
+              }}>
+                ⏳ ПОИСК ПЕРСОНАЖА В БЛОКЧЕЙНЕ...
+              </div>
             ) : !player?.exists ? (
               <button
                 onClick={handleSpawn}
