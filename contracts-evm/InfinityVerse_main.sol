@@ -20,9 +20,8 @@ contract InfinityVerse_main {
         uint8 object;
         uint8 state;
         uint8 reserved;
-        uint16 paramA;
-        uint16 paramB;
     }
+
 
     struct Player {
         int32 x;
@@ -68,20 +67,17 @@ contract InfinityVerse_main {
                         terrain: 1,
                         object: 1,
                         state: 0,
-                        reserved: 0,
-                        paramA: 0,
-                        paramB: 0
+                        reserved: 0
                     });
                 } else {
                     cells[key] = Cell({
                         terrain: 1,
                         object: 0,
                         state: 0,
-                        reserved: 0,
-                        paramA: 0,
-                        paramB: 0
+                        reserved: 0
                     });
                 }
+
             }
         }
     }
