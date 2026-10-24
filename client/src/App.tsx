@@ -369,10 +369,10 @@ function App() {
                       {/* Разбор X */}
                       <div style={{ fontFamily: 'monospace', fontSize: '0.62rem', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: curCell.x < 0 ? '#f43f5e' : '#4ade80' }}>
+                          <span style={{ color: curCell.x < 0 ? '#c084fc' : '#4ade80' }}>
                             X = {curCell.x} {curCell.x < 0 ? '(минус)' : ''}:
                           </span>
-                          <span>HEX: <b style={{ color: curCell.x < 0 ? '#f43f5e' : '#38bdf8' }}>{xHex}</b></span>
+                          <span>HEX: <b style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex}</b></span>
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
                           BIN: {xBin.slice(0, 8)} {xBin.slice(8, 16)} {xBin.slice(16, 24)} {xBin.slice(24, 32)}
@@ -382,10 +382,10 @@ function App() {
                       {/* Разбор Y */}
                       <div style={{ fontFamily: 'monospace', fontSize: '0.62rem', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: curCell.y < 0 ? '#f43f5e' : '#4ade80' }}>
+                          <span style={{ color: curCell.y < 0 ? '#c084fc' : '#4ade80' }}>
                             Y = {curCell.y} {curCell.y < 0 ? '(минус)' : ''}:
                           </span>
-                          <span>HEX: <b style={{ color: curCell.y < 0 ? '#f43f5e' : '#38bdf8' }}>{yHex}</b></span>
+                          <span>HEX: <b style={{ color: curCell.y < 0 ? '#c084fc' : '#38bdf8' }}>{yHex}</b></span>
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
                           BIN: {yBin.slice(0, 8)} {yBin.slice(8, 16)} {yBin.slice(16, 24)} {yBin.slice(24, 32)}
@@ -402,8 +402,8 @@ function App() {
                       }}>
                         <div style={{ color: '#fbbf24' }}>abi.encodePacked(x, y) [8 байт]:</div>
                         <div style={{ color: '#e2e8f0', wordBreak: 'break-all' }}>
-                          0x<span style={{ color: curCell.x < 0 ? '#f43f5e' : '#38bdf8' }}>{xHex.slice(2)}</span>
-                          <span style={{ color: curCell.y < 0 ? '#f43f5e' : '#a78bfa' }}>{yHex.slice(2)}</span>
+                          0x<span style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex.slice(2)}</span>
+                          <span style={{ color: curCell.y < 0 ? '#c084fc' : '#a78bfa' }}>{yHex.slice(2)}</span>
                         </div>
                       </div>
                     </div>
