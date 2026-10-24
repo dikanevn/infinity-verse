@@ -198,8 +198,8 @@ function App() {
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 90px)',
-            gridTemplateRows: 'repeat(3, 90px)',
+            gridTemplateColumns: 'repeat(3, 102px)',
+            gridTemplateRows: 'repeat(3, 102px)',
             gap: '8px',
             backgroundColor: '#10131d',
             padding: '8px',
@@ -209,8 +209,8 @@ function App() {
             {INITIAL_COORDS.map((coord) => {
               const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
               const isSelected = selectedCoord.x === coord.x && selectedCoord.y === coord.y;
-              const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: 'Земля', icon: '🌱', bg: '#14291e' }) : TERRAIN_CONFIG[0];
-              const oInfo = cell ? (OBJECT_CONFIG[cell.object] || { name: '', icon: '' }) : OBJECT_CONFIG[0];
+              const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: `T:${cell.terrain}`, icon: '', bg: '#14291e' }) : TERRAIN_CONFIG[0];
+              const oInfo = cell ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : OBJECT_CONFIG[0];
 
               return (
                 <button
@@ -218,45 +218,83 @@ function App() {
                   onClick={() => setSelectedCoord({ x: coord.x, y: coord.y })}
                   style={{
                     boxSizing: 'border-box',
-                    width: '90px',
-                    height: '90px',
+                    width: '102px',
+                    height: '102px',
                     backgroundColor: tInfo.bg,
                     border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
                     borderRadius: '0px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    justifyContent: 'space-between',
                     cursor: 'pointer',
                     color: '#ffffff',
                     fontFamily: 'inherit',
                     position: 'relative',
+                    padding: '3px 4px',
                     transition: 'all 0.15s ease',
                     boxShadow: isSelected ? '0 0 16px rgba(56, 189, 248, 0.7)' : 'none'
                   }}
                 >
-                  <span style={{
-                    position: 'absolute',
-                    top: '3px',
-                    left: '5px',
-                    fontSize: '0.62rem',
-                    color: isSelected ? '#38bdf8' : '#64748b',
-                    fontWeight: isSelected ? 800 : 600
+                  {/* Верхняя строка: Координаты + иконка объекта */}
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    lineHeight: 1
                   }}>
-                    ({coord.x},{coord.y})
-                  </span>
+                    <span style={{
+                      fontSize: '0.60rem',
+                      color: isSelected ? '#38bdf8' : '#64748b',
+                      fontWeight: isSelected ? 800 : 600
+                    }}>
+                      ({coord.x},{coord.y})
+                    </span>
+                    <span style={{ fontSize: '1.05rem', minHeight: '18px' }}>
+                      {cell?.object ? oInfo.icon : ''}
+                    </span>
+                  </div>
 
-                  <span style={{ fontSize: '1.45rem', marginTop: '4px' }}>
-                    {cell?.object ? oInfo.icon : tInfo.icon}
-                  </span>
+                  {/* Названия: Ландшафт и Объект */}
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    lineHeight: 1.15
+                  }}>
+                    <span style={{
+                      fontSize: '0.62rem',
+                      color: '#fef08a',
+                      fontWeight: 700
+                    }}>
+                      {tInfo.name}
+                    </span>
+                    <span style={{
+                      fontSize: '0.58rem',
+                      color: cell?.object ? '#67e8f9' : '#475569',
+                      fontWeight: cell?.object ? 700 : 500
+                    }}>
+                      {cell?.object ? oInfo.name : '—'}
+                    </span>
+                  </div>
 
-                  <span style={{
-                    fontSize: '0.58rem',
+                  {/* Нижняя плашка со всеми параметрами клетки: T, O, S, A */}
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    backgroundColor: 'rgba(0,0,0,0.45)',
+                    padding: '1px 3px',
+                    fontSize: '0.52rem',
                     color: '#94a3b8',
-                    marginTop: '2px'
+                    fontFamily: 'monospace'
                   }}>
-                    {cell?.object ? oInfo.name : tInfo.name}
-                  </span>
+                    <span>T:{cell?.terrain ?? 0}</span>
+                    <span>O:{cell?.object ?? 0}</span>
+                    <span>S:{cell?.state ?? 0}</span>
+                    <span>A:{cell?.paramA ?? 0}</span>
+                  </div>
                 </button>
               );
             })}
