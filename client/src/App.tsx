@@ -69,10 +69,19 @@ for (let y = 2; y >= -2; y--) {
   }
 }
 
-// === НАСТРОЙКА ВРЕМЕНИ ЗАДЕРЖКИ (В МИЛЛИСЕКУНДАХ) ===
-// Если запрос к блокчейну длится дольше этого времени, загорается ошибка связи со Вселенной:
-const UNIVERSE_LATENCY_THRESHOLD_MS = 3000; // 3 секунды (меняй это значение для тестов!)
-const SYNC_INTERVAL_MS = 6000; // Частота опроса блокчейна (6 секунд)
+// ============================================================================
+// === ЕДИНЫЙ ПУЛЬТ НАСТРОЙКИ СВЯЗИ СО ВСЕЛЕННОЙ (ВСЕ ТАЙМАУТЫ В ОДНОМ МЕСТЕ) ===
+// ============================================================================
+const CONNECTION_CONFIG = {
+  // 1. Порог предупреждения (мс): если RPC отвечает дольше — надпись загорается красным
+  LATENCY_THRESHOLD_MS: 3000, 
+
+  // 2. Интервал синхронизации (мс): как часто клиент запрашивает данные из блокчейна
+  SYNC_INTERVAL_MS: 6000,     
+
+  // 3. Таймаут полного обрыва связи (мс): если блокчейн вообще не отвечает
+  TIMEOUT_MS: 10000,          
+};
 
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
@@ -84,11 +93,13 @@ function App() {
 
   const fetchState = async () => {
     const startTime = Date.now();
-    // Таймер задержки: если за 3 секунды ответ не пришёл — сигнализируем о задержке связи
+    const thresholdSec = (CONNECTION_CONFIG.LATENCY_THRESHOLD_MS / 1000).toFixed(1).replace('.0', '');
+
+    // Таймер задержки: если за установленный порог ответ не пришёл — загорается предупреждение
     const slowTimer = setTimeout(() => {
       setStatusState('slow');
-      setStatusText('⚠️ Задержка отклика: слабый межпространственный сигнал (>3с)...');
-    }, UNIVERSE_LATENCY_THRESHOLD_MS);
+      setStatusText(`⚠️ Задержка отклика: слабый межпространственный сигнал (>${thresholdSec}с)...`);
+    }, CONNECTION_CONFIG.LATENCY_THRESHOLD_MS);
 
     try {
       const xs = INITIAL_COORDS.map(c => c.x);
@@ -143,7 +154,7 @@ function App() {
 
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, SYNC_INTERVAL_MS);
+    const interval = setInterval(fetchState, CONNECTION_CONFIG.SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
