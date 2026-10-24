@@ -122,7 +122,7 @@ contract InfinityVerse_AAA {
      * @notice Мгновенный прямой отзыв сессии (вызывается игроком со своего кошелька)
      */
     function revokeSessionDirect() external {
-        mainContract.revokePlayerSession(msg.sender);
+        _executeRevokeSession(msg.sender);
     }
 
     /**
@@ -143,7 +143,7 @@ contract InfinityVerse_AAA {
         address signer = recoverSigner(messageHash, sig);
         require(signer == player, unicode"AAA: Неверная подпись отзыва сессии");
 
-        mainContract.revokePlayerSession(player);
+        _executeRevokeSession(player);
     }
 
     // ========================================================================
@@ -155,8 +155,7 @@ contract InfinityVerse_AAA {
      * @return (x, y) Начальные координаты появления (1, 0)
      */
     function spawnDirect() external returns (int32, int32) {
-        mainContract.spawnPlayer(msg.sender, 1, 0);
-        return (1, 0);
+        return _executeSpawn(msg.sender);
     }
 
     /**
@@ -167,8 +166,7 @@ contract InfinityVerse_AAA {
     function spawn(address player) external returns (int32, int32) {
         (, , , address activeSessionKey, ) = mainContract.getPlayer(player);
         require(msg.sender == player || isSessionValid(player, activeSessionKey), unicode"AAA: Для спавна требуется действующая сессия");
-        mainContract.spawnPlayer(player, 1, 0);
-        return (1, 0);
+        return _executeSpawn(player);
     }
 
     /**
@@ -215,8 +213,25 @@ contract InfinityVerse_AAA {
     }
 
     // ========================================================================
-    // === ПРОВЕРКА ПРАВИЛ И ВЫПОЛНЕНИЕ ДЕЙСТВИЯ ===
+    // === ЕДИНОЕ ВНУТРЕННЕЕ ЯДРО ВЫПОЛНЕНИЯ (INTERNAL CORE) ===
     // ========================================================================
+
+    /**
+     * @dev Внутренняя логика спавна нового игрока. Все режимы входа вызывают исключительно её.
+     */
+    function _executeSpawn(address player) internal returns (int32, int32) {
+        int32 startX = 1;
+        int32 startY = 0;
+        mainContract.spawnPlayer(player, startX, startY);
+        return (startX, startY);
+    }
+
+    /**
+     * @dev Внутренняя логика отзыва сессии. Все режимы отзыва вызывают исключительно её.
+     */
+    function _executeRevokeSession(address player) internal {
+        mainContract.revokePlayerSession(player);
+    }
 
     /**
      * @dev Внутренняя валидация физики мира (шаг не более 1 клетки, запрет наступать на Обелиск)
