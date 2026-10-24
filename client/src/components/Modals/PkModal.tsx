@@ -130,42 +130,23 @@ export const PkModal: React.FC<PkModalProps> = ({
             gap: '4px'
           }}>
             <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700 }}>
-              🛠️ РЕЖИМ РАЗРАБОТЧИКА (ДЛЯ ТЕСТА С ТЕЛЕФОНА НА HTTP 192.168...):
+              🛠️ РЕЖИМ ДЛЯ ТЕСТА С ТЕЛЕФОНА НА HTTP 192.168...:
             </div>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                onClick={() => onConnect(undefined, 'xor')}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#78350f',
-                  border: '1px solid #d97706',
-                  color: '#fef3c7',
-                  padding: '6px 10px',
-                  fontSize: '0.66rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  textAlign: 'center'
-                }}
-              >
-                2. ВОЙТИ ЧЕРЕЗ XOR-MASK (ДЛЯ HTTP 192.168) ➔
-              </button>
-              <button
-                onClick={() => onConnect('0x078b37047c4110ebfcb35fdc91ce95a697e8c975f5aa1a06deb5d563ed6e3bfd', 'xor')}
-                title="Мгновенный вход под тестовым Игроком 1 в 1 клик без копирования"
-                style={{
-                  backgroundColor: '#065f46',
-                  border: '1px solid #10b981',
-                  color: '#ecfdf5',
-                  padding: '6px 10px',
-                  fontSize: '0.66rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                ⚡ ИГРОК 1 В 1 КЛИК
-              </button>
-            </div>
+            <button
+              onClick={() => onConnect(undefined, 'xor')}
+              style={{
+                backgroundColor: '#78350f',
+                border: '1px solid #d97706',
+                color: '#fef3c7',
+                padding: '6px 10px',
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              2. ВОЙТИ ЧЕРЕЗ XOR-MASK (ДЛЯ HTTP 192.168) ➔
+            </button>
           </div>
         </div>
       </div>
