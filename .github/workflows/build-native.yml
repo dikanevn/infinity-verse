@@ -1,9 +1,7 @@
 name: Build Android APK and Windows EXE
 
 on:
-  push:
-    branches: ["main"]
-  workflow_dispatch:
+  workflow_dispatch: # Сборка запускается только вручную по запросу пользователя (или по тегу релиза)
 
 jobs:
   build-android:
