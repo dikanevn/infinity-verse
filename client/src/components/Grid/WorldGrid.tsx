@@ -144,13 +144,15 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         cursor: isDraggingRef.current ? 'grabbing' : 'grab',
         touchAction: 'none',
         userSelect: 'none',
-        backgroundColor: '#05070a',
-        /* Бесконечный процедурный космический туман без создания лишних DOM-элементов */
+        /* Бесконечный процедурный космический туман с облаками и сеткой */
+        backgroundColor: '#070a14',
         backgroundImage: `
-          radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.4) 0%, rgba(5, 7, 10, 0.95) 100%),
-          repeating-linear-gradient(0deg, transparent, transparent ${62 * scale}px, rgba(51, 65, 85, 0.25) ${62 * scale}px, rgba(51, 65, 85, 0.25) ${63 * scale}px),
-          repeating-linear-gradient(90deg, transparent, transparent ${62 * scale}px, rgba(51, 65, 85, 0.25) ${62 * scale}px, rgba(51, 65, 85, 0.25) ${63 * scale}px)
+          radial-gradient(circle, rgba(148, 163, 184, 0.12) 1.5px, transparent 1.5px),
+          repeating-linear-gradient(0deg, transparent, transparent ${62 * scale}px, rgba(71, 85, 105, 0.35) ${62 * scale}px, rgba(71, 85, 105, 0.35) ${63 * scale}px),
+          repeating-linear-gradient(90deg, transparent, transparent ${62 * scale}px, rgba(71, 85, 105, 0.35) ${62 * scale}px, rgba(71, 85, 105, 0.35) ${63 * scale}px),
+          radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.6) 0%, rgba(5, 7, 10, 0.98) 100%)
         `,
+        backgroundSize: `${31.5 * scale}px ${31.5 * scale}px, 100% 100%, 100% 100%, 100% 100%`,
         border: '1px solid #475569',
         borderRadius: '0px',
         boxSizing: 'border-box'
