@@ -48,8 +48,8 @@ interface CellData {
 }
 
 const TERRAIN_CONFIG: Record<number, { name: string; icon: string; bg: string }> = {
-  0: { name: 'Пустота', icon: '🌌', bg: '#0d1117' },
-  1: { name: 'Песок', icon: '🏜️', bg: '#2b2311' },
+  0: { name: 'Пустота', icon: '', bg: '#0d1117' },
+  1: { name: 'Песок', icon: '', bg: '#b58941' },
   2: { name: 'Вода', icon: '🌊', bg: '#0f2744' },
   3: { name: 'Скала', icon: '⛰️', bg: '#272b38' },
 };
@@ -58,7 +58,7 @@ const OBJECT_CONFIG: Record<number, { name: string; icon: string }> = {
   0: { name: 'Пусто', icon: '' },
   1: { name: 'Обелиск', icon: '🗿' },
   2: { name: 'Камень', icon: '🪨' },
-  9: { name: 'Древний Обелиск', icon: '🏛️' },
+  9: { name: 'Обелиск', icon: '🗿' },
 };
 
 // Сетка от -1 до +1

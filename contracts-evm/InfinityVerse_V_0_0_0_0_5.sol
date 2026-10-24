@@ -15,12 +15,12 @@ contract InfinityVerse_V_0_0_0_0_5 {
     string public constant VERSION = "0.0.0.0.5";
 
     struct Cell {
-        uint8 terrain;   // Ландшафт: 1 = песок, 2 = вода, 3 = скала
-        uint8 object;    // Объект: 0 = пусто, 1 = обелиск, 2 = камень
-        uint8 state;     // Состояние / прочность
-        uint8 reserved;  // Резерв на будущее
-        uint16 paramA;   // Расширенный параметр A
-        uint16 paramB;   // Расширенный параметр B
+        uint8 terrain; // Ландшафт: 1 = песок, 2 = вода, 3 = скала
+        uint8 object; // Объект: 0 = пусто, 1 = обелиск, 2 = камень
+        uint8 state; // Состояние / прочность
+        uint8 reserved; // Резерв на будущее
+        uint16 paramA; // Расширенный параметр A
+        uint16 paramB; // Расширенный параметр B
     }
 
     // Хранилище клеток: ключ keccak256(x, y) => Клетка
@@ -40,9 +40,9 @@ contract InfinityVerse_V_0_0_0_0_5 {
                     cells[key] = Cell({
                         terrain: 1,
                         object: 1,
-                        state: 100,
+                        state: 0,
                         reserved: 0,
-                        paramA: 777,
+                        paramA: 0,
                         paramB: 0
                     });
                 } else {
@@ -50,7 +50,7 @@ contract InfinityVerse_V_0_0_0_0_5 {
                     cells[key] = Cell({
                         terrain: 1,
                         object: 0,
-                        state: 100,
+                        state: 0,
                         reserved: 0,
                         paramA: 0,
                         paramB: 0
@@ -77,7 +77,10 @@ contract InfinityVerse_V_0_0_0_0_5 {
     /**
      * @notice Прочитать сразу несколько клеток по списку координат (для фронтенда)
      */
-    function getCellsBatch(int32[] calldata xs, int32[] calldata ys) external view returns (Cell[] memory) {
+    function getCellsBatch(
+        int32[] calldata xs,
+        int32[] calldata ys
+    ) external view returns (Cell[] memory) {
         require(xs.length == ys.length, "Arrays length mismatch");
         uint256 total = xs.length;
         Cell[] memory result = new Cell[](total);
