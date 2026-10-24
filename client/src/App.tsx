@@ -37,10 +37,10 @@ function App() {
     };
   }, []);
 
-  // Состояние мира и игрока
-  const [playerSurroundingCoords, setPlayerSurroundingCoords] = useState<{ x: number; y: number }[]>([]);
+  // Координаты игрока для окна видимости 5х5 вокруг него
+  const [playerCenterCoord, setPlayerCenterCoord] = useState<{ x: number; y: number } | null>(null);
 
-  // 2. Ончейн-состояние мира
+  // 2. Ончейн-состояние мира (считывает только 5х5 вокруг игрока, остальное - туман войны)
   const {
     cells,
     contractVersion,
@@ -48,7 +48,7 @@ function App() {
     statusState,
     setStatusText,
     fetchState
-  } = useWorldState(connectedAddress, playerSurroundingCoords);
+  } = useWorldState(connectedAddress, playerCenterCoord);
 
   // 3. Состояние игрока и механики ходов
   const {
@@ -70,16 +70,12 @@ function App() {
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
 
-  // Обновляем список координат вокруг игрока
+  // Обновляем координаты центра для опроса 5х5 вокруг игрока
   useEffect(() => {
     if (player?.exists) {
-      setPlayerSurroundingCoords([
-        { x: player.x - 1, y: player.y + 1 }, { x: player.x, y: player.y + 1 }, { x: player.x + 1, y: player.y + 1 },
-        { x: player.x - 1, y: player.y },     { x: player.x, y: player.y },     { x: player.x + 1, y: player.y },
-        { x: player.x - 1, y: player.y - 1 }, { x: player.x, y: player.y - 1 }, { x: player.x + 1, y: player.y - 1 },
-      ]);
+      setPlayerCenterCoord({ x: player.x, y: player.y });
     } else {
-      setPlayerSurroundingCoords([]);
+      setPlayerCenterCoord(null);
     }
   }, [player?.x, player?.y, player?.exists]);
 

@@ -19,11 +19,14 @@ export const CellView: React.FC<CellViewProps> = ({
   player,
   onSelect
 }) => {
+  // Если клетки вообще нет в кеше (за пределами 5х5 вокруг игрока) — это неизведанный туман войны
+  const isFog = !cell;
+
   const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: `T:${cell.terrain}`, icon: '', bg: '#14291e' }) : TERRAIN_CONFIG[0];
   const oInfo = cell ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : OBJECT_CONFIG[0];
 
-  // Если это песок (terrain === 1 или дефолт), берем уникальную процедурную текстуру по координатам (x, y)
-  const isSand = !cell || cell.terrain === 1;
+  // Если это песок (terrain === 1), берем уникальную процедурную текстуру по координатам (x, y)
+  const isSand = !isFog && cell.terrain === 1;
   const sandBgPattern = isSand ? getSandTextureForCoord(coord.x, coord.y) : undefined;
 
   return (
@@ -33,8 +36,11 @@ export const CellView: React.FC<CellViewProps> = ({
         boxSizing: 'border-box',
         width: '62px',
         height: '62px',
-        background: sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : tInfo.bg,
-        border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
+        background: isFog 
+          ? 'radial-gradient(circle, #0b0f19 20%, #030508 100%)' 
+          : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : tInfo.bg),
+        border: isSelected ? '2px solid #38bdf8' : (isFog ? '1px dashed #1e293b' : '1px solid #334155'),
+        opacity: isFog ? 0.45 : 1,
         borderRadius: '0px',
         display: 'flex',
         flexDirection: 'column',
@@ -61,7 +67,7 @@ export const CellView: React.FC<CellViewProps> = ({
       }}>
         <span style={{
           fontSize: '0.55rem',
-          color: isSelected ? '#38bdf8' : '#cbd5e1',
+          color: isSelected ? '#38bdf8' : (isFog ? '#475569' : '#cbd5e1'),
           fontWeight: isSelected ? 800 : 600
         }}>
           ({coord.x},{coord.y})
@@ -73,15 +79,15 @@ export const CellView: React.FC<CellViewProps> = ({
           alignItems: 'flex-end',
           textAlign: 'right'
         }}>
-          <span style={{ fontSize: '0.52rem', color: '#fef08a', fontWeight: 700 }}>
-            {tInfo.name}
+          <span style={{ fontSize: '0.52rem', color: isFog ? '#64748b' : '#fef08a', fontWeight: 700 }}>
+            {isFog ? '🌫️ Туман' : tInfo.name}
           </span>
           <span style={{
             fontSize: '0.48rem',
-            color: cell?.object ? '#67e8f9' : '#64748b',
-            fontWeight: cell?.object ? 700 : 500
+            color: (!isFog && cell?.object) ? '#67e8f9' : '#64748b',
+            fontWeight: (!isFog && cell?.object) ? 700 : 500
           }}>
-            {cell?.object ? oInfo.name : '—'}
+            {(!isFog && cell?.object) ? oInfo.name : '—'}
           </span>
         </div>
       </div>
@@ -101,7 +107,7 @@ export const CellView: React.FC<CellViewProps> = ({
             🧑‍🚀
           </span>
         ) : (
-          cell?.object ? oInfo.icon : ''
+          (!isFog && cell?.object) ? oInfo.icon : (isFog ? '☁️' : '')
         )}
       </div>
     </button>

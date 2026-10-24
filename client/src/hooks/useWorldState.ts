@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { keccak256, encodePacked } from 'viem';
 import type { CellData } from '../types';
 import { MAIN_CONTRACT_ADDRESS, MAIN_ABI, publicClient } from '../config/contracts';
-import { INITIAL_COORDS, CONNECTION_CONFIG } from '../config/constants';
+import { CONNECTION_CONFIG } from '../config/constants';
 
-export function useWorldState(connectedAddress: string, extraCoords: { x: number; y: number }[] = []) {
+export function useWorldState(connectedAddress: string, playerCoords: { x: number; y: number } | null) {
   const [cells, setCells] = useState<CellData[]>([]);
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.9-MAIN-G-2');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
@@ -13,21 +13,22 @@ export function useWorldState(connectedAddress: string, extraCoords: { x: number
 
   const fetchState = async () => {
     try {
-      // Объединяем дефолтную сетку INITIAL_COORDS и любые динамические координаты вокруг игрока
-      const coordMap = new Map<string, { x: number; y: number }>();
-      INITIAL_COORDS.forEach(c => coordMap.set(`${c.x},${c.y}`, c));
-      extraCoords.forEach(c => coordMap.set(`${c.x},${c.y}`, c));
-      const activeCoords = Array.from(coordMap.values());
+      // Вычисляем строго сетку 5х5 (радиус 2 = 25 клеток) вокруг текущего положения игрока (или (0,0) если не заспавнен)
+      const centerX = playerCoords ? playerCoords.x : 0;
+      const centerY = playerCoords ? playerCoords.y : 0;
+
+      const activeCoords: { x: number; y: number }[] = [];
+      for (let dy = 2; dy >= -2; dy--) {
+        for (let dx = -2; dx <= 2; dx++) {
+          activeCoords.push({ x: centerX + dx, y: centerY + dy });
+        }
+      }
 
       const xs = activeCoords.map(c => c.x);
       const ys = activeCoords.map(c => c.y);
 
-      const [ver, onchainCells, latestBlock] = await Promise.all([
-        publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
-          functionName: 'VERSION',
-        }),
+      // Запрашиваем из ноды только getCellsBatch (25 ячеек) и latestBlock
+      const [onchainCells, latestBlock] = await Promise.all([
         publicClient.readContract({
           address: MAIN_CONTRACT_ADDRESS,
           abi: MAIN_ABI,
@@ -37,7 +38,6 @@ export function useWorldState(connectedAddress: string, extraCoords: { x: number
         publicClient.getBlock({ blockTag: 'latest' })
       ]);
 
-      setContractVersion(ver);
       setLastBlockTimestamp(Number(latestBlock.timestamp));
 
       const parsed: CellData[] = activeCoords.map((coord, i) => {
@@ -65,11 +65,20 @@ export function useWorldState(connectedAddress: string, extraCoords: { x: number
     }
   };
 
+  // Однократно считываем версию контракта при старте, чтобы не спамить ноду
+  useEffect(() => {
+    publicClient.readContract({
+      address: MAIN_CONTRACT_ADDRESS,
+      abi: MAIN_ABI,
+      functionName: 'VERSION',
+    }).then(ver => setContractVersion(ver)).catch(console.error);
+  }, []);
+
   useEffect(() => {
     fetchState();
     const interval = setInterval(fetchState, CONNECTION_CONFIG.SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [connectedAddress, JSON.stringify(extraCoords)]);
+  }, [connectedAddress, playerCoords?.x, playerCoords?.y]);
 
   useEffect(() => {
     if (!lastBlockTimestamp) return;
