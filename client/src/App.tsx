@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPublicClient, http, parseAbi, defineChain, keccak256, encodePacked } from 'viem';
 
 // Контракт InfinityVerse V_0.0.0.0.5 (Direct X,Y Coordinate Grid)
-const CONTRACT_ADDRESS = '0xfc124a1962b0d2c3493f1aa9d5ddeb6f6fdab01e';
+const CONTRACT_ADDRESS = '0xda66c6a95fd9e0692771233f5de0aec18daea724';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
 const monadTestnet = defineChain({
@@ -237,13 +237,13 @@ function App() {
                     boxShadow: isSelected ? '0 0 16px rgba(56, 189, 248, 0.7)' : 'none'
                   }}
                 >
-                  {/* Верхняя строка: Координаты + иконка объекта */}
+                  {/* Верхняя строка: Координаты (слева) и Названия (вправо вверх) */}
                   <div style={{
                     width: '100%',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
-                    lineHeight: 1
+                    alignItems: 'flex-start',
+                    lineHeight: 1.15
                   }}>
                     <span style={{
                       fontSize: '0.66rem',
@@ -252,32 +252,41 @@ function App() {
                     }}>
                       ({coord.x},{coord.y})
                     </span>
-                    <span style={{ fontSize: '1.25rem', minHeight: '20px' }}>
-                      {cell?.object ? oInfo.icon : ''}
-                    </span>
+
+                    {/* Названия: Ландшафт и Объект вправо вверх */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      textAlign: 'right'
+                    }}>
+                      <span style={{
+                        fontSize: '0.64rem',
+                        color: '#fef08a',
+                        fontWeight: 700
+                      }}>
+                        {tInfo.name}
+                      </span>
+                      <span style={{
+                        fontSize: '0.58rem',
+                        color: cell?.object ? '#67e8f9' : '#64748b',
+                        fontWeight: cell?.object ? 700 : 500
+                      }}>
+                        {cell?.object ? oInfo.name : '—'}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Названия: Ландшафт и Объект */}
+                  {/* Центр клетки: Обелиск (крупная рожица ровно по центру) */}
                   <div style={{
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    lineHeight: 1.2
+                    justifyContent: 'center',
+                    flex: 1,
+                    fontSize: '2.1rem',
+                    lineHeight: 1
                   }}>
-                    <span style={{
-                      fontSize: '0.70rem',
-                      color: '#fef08a',
-                      fontWeight: 700
-                    }}>
-                      {tInfo.name}
-                    </span>
-                    <span style={{
-                      fontSize: '0.64rem',
-                      color: cell?.object ? '#67e8f9' : '#475569',
-                      fontWeight: cell?.object ? 700 : 500
-                    }}>
-                      {cell?.object ? oInfo.name : '—'}
-                    </span>
+                    {cell?.object ? oInfo.icon : ''}
                   </div>
 
                   {/* Нижняя плашка со всеми параметрами клетки: T, O, S, A */}
