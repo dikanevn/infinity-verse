@@ -4,7 +4,7 @@ import type { CellData } from '../types';
 import { MAIN_CONTRACT_ADDRESS, MAIN_ABI, publicClient } from '../config/contracts';
 import { INITIAL_COORDS, CONNECTION_CONFIG } from '../config/constants';
 
-export function useWorldState(connectedAddress: string) {
+export function useWorldState(connectedAddress: string, extraCoords: { x: number; y: number }[] = []) {
   const [cells, setCells] = useState<CellData[]>([]);
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.9-MAIN-G-2');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
@@ -13,8 +13,14 @@ export function useWorldState(connectedAddress: string) {
 
   const fetchState = async () => {
     try {
-      const xs = INITIAL_COORDS.map(c => c.x);
-      const ys = INITIAL_COORDS.map(c => c.y);
+      // Объединяем дефолтную сетку INITIAL_COORDS и любые динамические координаты вокруг игрока
+      const coordMap = new Map<string, { x: number; y: number }>();
+      INITIAL_COORDS.forEach(c => coordMap.set(`${c.x},${c.y}`, c));
+      extraCoords.forEach(c => coordMap.set(`${c.x},${c.y}`, c));
+      const activeCoords = Array.from(coordMap.values());
+
+      const xs = activeCoords.map(c => c.x);
+      const ys = activeCoords.map(c => c.y);
 
       const [ver, onchainCells, latestBlock] = await Promise.all([
         publicClient.readContract({
@@ -34,7 +40,7 @@ export function useWorldState(connectedAddress: string) {
       setContractVersion(ver);
       setLastBlockTimestamp(Number(latestBlock.timestamp));
 
-      const parsed: CellData[] = INITIAL_COORDS.map((coord, i) => {
+      const parsed: CellData[] = activeCoords.map((coord, i) => {
         const c = onchainCells[i];
         const localKey = keccak256(encodePacked(['int32', 'int32'], [coord.x, coord.y]));
 
@@ -63,7 +69,7 @@ export function useWorldState(connectedAddress: string) {
     fetchState();
     const interval = setInterval(fetchState, CONNECTION_CONFIG.SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [connectedAddress]);
+  }, [connectedAddress, JSON.stringify(extraCoords)]);
 
   useEffect(() => {
     if (!lastBlockTimestamp) return;

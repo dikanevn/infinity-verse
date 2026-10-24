@@ -490,6 +490,93 @@ export function usePlayerState(
   };
 
   // ============================================================================
+  // 7.1 АВТО-РАЗВЕДКА ТЕРРИТОРИИ ПАЧКОЙ (DIRECT vs GASLESS)
+  // ============================================================================
+  const handleDiscoverBatch = async (xs: number[], ys: number[]) => {
+    if (!connectedAddress || !player?.exists || xs.length === 0 || xs.length !== ys.length) return;
+    setActionPending(true);
+    setStatusText(`✨ Разведка космоса (${xs.length} клеток)...`);
+
+    try {
+      // РЕЖИМ 1: ПРИВАТНЫЙ КЛЮЧ (Direct)
+      if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
+        await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
+          const hash = await walletClient.writeContract({
+            address: AAA_CONTRACT_ADDRESS,
+            abi: AAA_ABI,
+            functionName: 'discoverCellsBatchDirect',
+            args: [xs, ys]
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+        });
+      }
+      // РЕЖИМ 2: METAMASK DIRECT
+      else if (authMode === 'metamask_direct') {
+        setStatusText(`🦊 Подтвердите разведку ${xs.length} клеток в MetaMask...`);
+        const prov = activeMetaMaskProvider || (window as any).ethereum;
+        const walletClient = createWalletClient({
+          chain: monadTestnet,
+          transport: custom(prov)
+        });
+        const hash = await walletClient.writeContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'discoverCellsBatchDirect',
+          args: [xs, ys],
+          account: connectedAddress as `0x${string}`
+        });
+        setStatusText('⏳ Материализация клеток в Monad...');
+        await publicClient.waitForTransactionReceipt({ hash });
+      }
+      // РЕЖИМ 3 & 4: GOOGLE или METAMASK СЕССИЯ (Gasless через релеер)
+      else {
+        const sessionAccount = getOrCreateSessionAccount();
+        const nonce = await publicClient.readContract({
+          address: MAIN_CONTRACT_ADDRESS,
+          abi: MAIN_ABI,
+          functionName: 'nonces',
+          args: [connectedAddress as `0x${string}`]
+        });
+
+        const batchInnerHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'int32[]', 'int32[]', 'uint256', 'uint256'],
+            ['DiscoverBatch', connectedAddress as `0x${string}`, xs, ys, nonce, BigInt(10143)]
+          )
+        );
+
+        const sig = await sessionAccount.signMessage({
+          message: { raw: batchInnerHash }
+        });
+
+        const res = await fetch(RELAYER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'discover_batch',
+            player: connectedAddress,
+            xs,
+            ys,
+            sig
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Discover batch error');
+      }
+
+      setStatusText(`✨ Разведано клеток: ${xs.length}!`);
+      await onStateRefresh();
+      await fetchPlayer();
+    } catch (err: any) {
+      console.error('Discover batch error:', err);
+      // Не прерываем игру алертами если что-то пошло не так при фоновой разведке
+      setStatusText('⚠️ Ошибка авто-разведки: ' + (err.shortMessage || err.message || err));
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  // ============================================================================
   // 8. АННУЛИРОВАНИЕ СЕССИИ (DIRECT vs GASLESS)
   // ============================================================================
   const handleRevokeSession = async () => {
@@ -635,6 +722,7 @@ export function usePlayerState(
     handleWithdrawGoogleWallet,
     handleSpawn,
     handleMove,
+    handleDiscoverBatch,
     handleRevokeSession,
     handleExitRam,
     fetchPlayer

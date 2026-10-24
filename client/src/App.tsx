@@ -37,6 +37,9 @@ function App() {
     };
   }, []);
 
+  // Состояние мира и игрока
+  const [playerSurroundingCoords, setPlayerSurroundingCoords] = useState<{ x: number; y: number }[]>([]);
+
   // 2. Ончейн-состояние мира
   const {
     cells,
@@ -45,7 +48,7 @@ function App() {
     statusState,
     setStatusText,
     fetchState
-  } = useWorldState(connectedAddress);
+  } = useWorldState(connectedAddress, playerSurroundingCoords);
 
   // 3. Состояние игрока и механики ходов
   const {
@@ -62,9 +65,65 @@ function App() {
     connectWithGoogle,
     handleSpawn,
     handleMove,
+    handleDiscoverBatch,
     handleRevokeSession,
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
+
+  // Обновляем список координат вокруг игрока
+  useEffect(() => {
+    if (player?.exists) {
+      setPlayerSurroundingCoords([
+        { x: player.x - 1, y: player.y + 1 }, { x: player.x, y: player.y + 1 }, { x: player.x + 1, y: player.y + 1 },
+        { x: player.x - 1, y: player.y },     { x: player.x, y: player.y },     { x: player.x + 1, y: player.y },
+        { x: player.x - 1, y: player.y - 1 }, { x: player.x, y: player.y - 1 }, { x: player.x + 1, y: player.y - 1 },
+      ]);
+    } else {
+      setPlayerSurroundingCoords([]);
+    }
+  }, [player?.x, player?.y, player?.exists]);
+
+  // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 3x3 ВОКРУГ ИГРОКА
+  const discoveringRef = useState<{ inFlight: boolean; visited: Set<string> }>({
+    inFlight: false,
+    visited: new Set()
+  })[0];
+
+  useEffect(() => {
+    if (!player?.exists || !connectedAddress || actionPending || discoveringRef.inFlight) return;
+
+    // Ищем все клетки 3х3 вокруг игрока, где terrain == 0 (пустота / космос)
+    const neededXs: number[] = [];
+    const neededYs: number[] = [];
+
+    for (let dy = 1; dy >= -1; dy--) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const tx = player.x + dx;
+        const ty = player.y + dy;
+        const coordKey = `${tx},${ty}`;
+
+        // Если эта клетка уже успешно открыта или сейчас отправляется
+        if (discoveringRef.visited.has(coordKey)) continue;
+
+        const cell = cells.find(c => c.x === tx && c.y === ty);
+        // Если клетки нет в списке или её terrain === 0 (пустота)
+        if (!cell || cell.terrain === 0) {
+          neededXs.push(tx);
+          neededYs.push(ty);
+        }
+      }
+    }
+
+    if (neededXs.length > 0) {
+      console.log(`🌌 [AUTO-DISCOVER] Обнаружена пустота! Разведываем ${neededXs.length} клеток:`, neededXs, neededYs);
+      discoveringRef.inFlight = true;
+      neededXs.forEach((x, i) => discoveringRef.visited.add(`${x},${neededYs[i]}`));
+
+      handleDiscoverBatch(neededXs, neededYs).finally(() => {
+        discoveringRef.inFlight = false;
+      });
+    }
+  }, [player?.x, player?.y, player?.exists, cells, actionPending, connectedAddress]);
 
   // 4. АВТО-ВХОД ДЛЯ ЛОКАЛЬНОГО ДЕВ-ОКРУЖЕНИЯ (192.168.x.x или localhost)
   useEffect(() => {
