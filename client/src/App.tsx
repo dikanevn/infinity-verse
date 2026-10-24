@@ -1,10 +1,27 @@
-﻿import { useState, useEffect, useRef } from 'react';
-import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
+import { useState, useEffect, useRef } from 'react';
+import { createPublicClient, createWalletClient, http, parseAbi, defineChain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
 
 const CONTRACT_ADDRESS = '0xfbe47b73c115a5f07b72102c9ec31e2cb4739a36';
-const RPC_URL = 'https://base-sepolia.drpc.org';
+const RPC_URL = 'https://testnet-rpc.monad.xyz';
+
+const monadTestnet = defineChain({
+  id: 10143,
+  name: 'Monad Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'MON',
+    symbol: 'MON',
+  },
+  rpcUrls: {
+    default: { http: [RPC_URL] },
+    public: { http: [RPC_URL] },
+  },
+  blockExplorers: {
+    default: { name: 'MonadVision', url: 'https://testnet.monadvision.com' },
+  },
+  testnet: true,
+});
 
 // Временный встроенный кошелек деплоера для мгновенных тестов без MetaMask
 const TEST_ACCOUNT = privateKeyToAccount('0x8b397357e09a218b105672b81af7ea2ba6f5dff60353c5f76abcad691b6000a0');
@@ -16,13 +33,13 @@ const COUNTER_ABI = parseAbi([
 ]);
 
 const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: monadTestnet,
   transport: http(RPC_URL)
 });
 
 const walletClient = createWalletClient({
   account: TEST_ACCOUNT,
-  chain: baseSepolia,
+  chain: monadTestnet,
   transport: http(RPC_URL)
 });
 
@@ -56,7 +73,7 @@ function App() {
 
     try {
       setLoading(true);
-      setStatusText('Отправка транзакции в Base Sepolia...');
+      setStatusText('Отправка транзакции в Monad Testnet...');
       setElapsedSeconds(0);
       const startTime = performance.now();
 
@@ -127,7 +144,7 @@ function App() {
             textTransform: 'uppercase',
             textAlign: 'center'
           }}>
-            Base Sepolia &bull; Direct On-Chain
+            Monad Testnet &bull; Direct On-Chain
           </div>
           <div style={{
             fontSize: '0.7rem',
@@ -221,7 +238,7 @@ function App() {
           color: '#64748b',
           letterSpacing: '0.05em',
         }}>
-          версия 20261024644-4
+          версия monad-testnet-0.1
         </div>
       </div>
     </div>

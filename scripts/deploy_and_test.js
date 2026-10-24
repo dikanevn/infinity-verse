@@ -1,9 +1,8 @@
 // deploy_and_test.js
 const fs = require('fs');
 const path = require('path');
-const { createWalletClient, createPublicClient, http } = require('viem');
+const { createWalletClient, createPublicClient, http, defineChain } = require('viem');
 const { privateKeyToAccount } = require('viem/accounts');
-const { baseSepolia } = require('viem/chains');
 
 async function main() {
   const envFile = fs.readFileSync(path.resolve(__dirname, '..', '.private', 'wallet.env'), 'utf8');
@@ -12,27 +11,44 @@ async function main() {
   const privateKey = pkMatch[1];
 
   const netConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'network.config.json'), 'utf8'));
-  const rpcUrl = netConfig.rpcUrl;
+
+  const monadTestnet = defineChain({
+    id: netConfig.chainId,
+    name: netConfig.networkName,
+    nativeCurrency: {
+      decimals: 18,
+      name: netConfig.currencySymbol,
+      symbol: netConfig.currencySymbol,
+    },
+    rpcUrls: {
+      default: { http: [netConfig.rpcUrl] },
+      public: { http: [netConfig.rpcUrl] },
+    },
+    blockExplorers: {
+      default: { name: 'Explorer', url: netConfig.blockExplorerUrl },
+    },
+    testnet: true,
+  });
 
   const artifact = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'artifacts', 'Counter.json'), 'utf8'));
 
   const account = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(rpcUrl)
+    chain: monadTestnet,
+    transport: http(netConfig.rpcUrl)
   });
 
   const walletClient = createWalletClient({
     account,
-    chain: baseSepolia,
-    transport: http(rpcUrl)
+    chain: monadTestnet,
+    transport: http(netConfig.rpcUrl)
   });
 
   console.log('Deployer address:', account.address);
   const bal = await publicClient.getBalance({ address: account.address });
-  console.log('Balance:', Number(bal) / 1e18, 'ETH');
+  console.log('Balance:', Number(bal) / 1e18, netConfig.currencySymbol);
 
-  console.log('\n--- 1. DEPLOYING COUNTER ---');
+  console.log('\n--- 1. DEPLOYING COUNTER ON MONAD TESTNET ---');
   const t0 = Date.now();
   const deployHash = await walletClient.deployContract({
     abi: artifact.abi,
