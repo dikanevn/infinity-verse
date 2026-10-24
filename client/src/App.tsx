@@ -119,7 +119,7 @@ class EncryptedRamSigner {
   private static aesKey: CryptoKey | null = null;
   public static activeAddress: `0x${string}` | null = null;
 
-  public static async lockPrivateKey(rawPrivateKey: string): Promise<`0x${string}`> {
+  public static async lockPrivateKey(rawPrivateKey: string, forceMode?: 'aes' | 'xor'): Promise<`0x${string}`> {
     const cleanKey = (rawPrivateKey.startsWith('0x') ? rawPrivateKey : '0x' + rawPrivateKey).trim() as `0x${string}`;
     const account = privateKeyToAccount(cleanKey);
     this.activeAddress = account.address;
@@ -127,8 +127,8 @@ class EncryptedRamSigner {
     const encoder = new TextEncoder();
     const plainBytes = encoder.encode(cleanKey);
 
-    // Если доступен нативный Web Crypto subtle (HTTPS / Localhost)
-    if (window.crypto && window.crypto.subtle) {
+    // 1. Режим AES-GCM (если не запрошен принудительный XOR и доступен subtle)
+    if (forceMode !== 'xor' && window.crypto && window.crypto.subtle) {
       try {
         this.aesKey = await window.crypto.subtle.generateKey(
           { name: 'AES-GCM', length: 256 },
@@ -147,8 +147,7 @@ class EncryptedRamSigner {
       }
     }
 
-    // Fallback для мобильных сетей по обычному HTTP (192.168...):
-    // Приватник маскируется случайной 256-битной криптостойкой маской
+    // 2. Режим XOR-Masking в RAM (гарантированно работает в локальном HTTP на любых смартфонах)
     const len = plainBytes.length;
     this.maskKey = new Uint8Array(len);
     if (window.crypto && window.crypto.getRandomValues) {
@@ -420,8 +419,9 @@ function App() {
   };
 
   // Подключение приватным ключом (прямой режим через шифрование в RAM)
-  const connectWithPrivateKey = async () => {
-    if (!pkInput || pkInput.length < 64) {
+  const connectWithPrivateKey = async (overridePk?: string, forceMode?: 'aes' | 'xor') => {
+    const keyToUse = overridePk || pkInput;
+    if (!keyToUse || keyToUse.length < 64) {
       alert('Введите корректный приватный ключ (64 hex-символа)!');
       return;
     }
@@ -429,9 +429,13 @@ function App() {
     try {
       setIsPlayerLoading(true);
       setShowPkInputModal(false);
-      setStatusText('🔐 Шифрование ключа в оперативной памяти (AES-GCM-256)...');
+      setStatusText(
+        forceMode === 'xor'
+          ? '🔐 [DEV XOR] Маскирование ключа в RAM случайной маской (для локального HTTP)...'
+          : '🔐 [AES-GCM] Шифрование ключа в RAM (Web Crypto)...'
+      );
 
-      const userAddress = await EncryptedRamSigner.lockPrivateKey(pkInput);
+      const userAddress = await EncryptedRamSigner.lockPrivateKey(keyToUse, forceMode);
       setPkInput(''); // Стираем инпут сразу из формы
       setConnectedAddress(userAddress);
       setIsDirectSignerMode(true);
@@ -451,7 +455,7 @@ function App() {
         exists: Boolean(pData[2])
       });
       setIsPlayerLoading(false);
-      setStatusText('⚡ Автономный режим: прямое подписания из зашифрованной RAM');
+      setStatusText('⚡ Автономный режим активен: прямые клики в Monad RPC');
       await fetchState();
     } catch (err: any) {
       console.error(err);
@@ -1447,38 +1451,88 @@ function App() {
               }}
             />
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
-              <button
-                onClick={() => {
-                  setShowPkInputModal(false);
-                  setPkInput('');
-                }}
-                style={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  color: '#9ca3af',
-                  padding: '6px 12px',
-                  fontSize: '0.72rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Отмена
-              </button>
-              <button
-                onClick={connectWithPrivateKey}
-                style={{
-                  backgroundColor: '#6366f1',
-                  border: 'none',
-                  color: '#ffffff',
-                  padding: '6px 16px',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
-                }}
-              >
-                ЗАШИФРОВАТЬ И ВОЙТИ ➔
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+              {/* Верхняя строка: стандартные кнопки */}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowPkInputModal(false);
+                    setPkInput('');
+                  }}
+                  style={{
+                    backgroundColor: '#1f2937',
+                    border: '1px solid #374151',
+                    color: '#9ca3af',
+                    padding: '6px 12px',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => connectWithPrivateKey(undefined, 'aes')}
+                  style={{
+                    backgroundColor: '#6366f1',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '6px 16px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+                  }}
+                >
+                  1. ЗАШИФРОВАТЬ (AES-GCM) ➔
+                </button>
+              </div>
+
+              {/* Нижняя строка: спецкнопка для разработчиков под локальный HTTP (192.168...) */}
+              <div style={{
+                borderTop: '1px dashed #334155',
+                paddingTop: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700 }}>
+                  🛠️ РЕЖИМ РАЗРАБОТЧИКА (ДЛЯ ТЕСТА С ТЕЛЕФОНА НА HTTP 192.168...):
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={() => connectWithPrivateKey(undefined, 'xor')}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#78350f',
+                      border: '1px solid #d97706',
+                      color: '#fef3c7',
+                      padding: '6px 10px',
+                      fontSize: '0.66rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textAlign: 'center'
+                    }}
+                  >
+                    2. ВОЙТИ ЧЕРЕЗ XOR-MASK (ДЛЯ HTTP 192.168) ➔
+                  </button>
+                  <button
+                    onClick={() => connectWithPrivateKey('0x078b37047c4110ebfcb35fdc91ce95a697e8c975f5aa1a06deb5d563ed6e3bfd', 'xor')}
+                    title="Мгновенный вход под тестовым Игроком 1 в 1 клик без копирования"
+                    style={{
+                      backgroundColor: '#065f46',
+                      border: '1px solid #10b981',
+                      color: '#ecfdf5',
+                      padding: '6px 10px',
+                      fontSize: '0.66rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    ⚡ ИГРОК 1 В 1 КЛИК
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
