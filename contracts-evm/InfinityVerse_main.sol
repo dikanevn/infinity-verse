@@ -177,19 +177,22 @@ contract InfinityVerse_main {
 
     /**
      * @notice Спавн (рождение) игрока в мире:
-     * Если игрок заходит впервые — он появляется на клетке (0, 1), прямо к северу от Обелиска.
+     * Человек подключает кошелёк, нажимает кнопку «Родиться в мире», и эта транзакция
+     * спавнит его на клетке (1, 0) — справа от священного Обелиска (0, 0).
+     * @param player Адрес кошелька игрока
      */
     function spawn(address player) public onlyRelayerOrPlayer(player) returns (int32, int32) {
-        if (!players[player].exists) {
-            players[player] = Player({
-                x: 0,
-                y: 1,
-                exists: true,
-                lastMoveBlock: block.number
-            });
-            emit PlayerSpawned(player, 0, 1);
-        }
-        return (players[player].x, players[player].y);
+        require(!players[player].exists, "Player already born");
+
+        players[player] = Player({
+            x: 1,
+            y: 0,
+            exists: true,
+            lastMoveBlock: block.number
+        });
+
+        emit PlayerSpawned(player, 1, 0);
+        return (1, 0);
     }
 
     /**
@@ -199,15 +202,12 @@ contract InfinityVerse_main {
      * @param targetY Координата Y целевой клетки
      * 
      * Правила хода:
-     * 1. Если игрок ещё не появился в мире — он сначала автоматически спавнится.
-     * 2. Ходить можно строго на соседнюю клетку (расстояние по осям не больше 1).
+     * 1. Игрок должен быть предварительно рождён в мире (вызван spawn).
+     * 2. Ходить можно строго на соседнюю клетку (дистанция не больше 1).
      * 3. Нельзя встать на клетку с Обелиском (0, 0).
      */
     function move(address player, int32 targetX, int32 targetY) external onlyRelayerOrPlayer(player) {
-        // Если игрок ещё не родился в мире — спавним его
-        if (!players[player].exists) {
-            spawn(player);
-        }
+        require(players[player].exists, "Player must spawn first");
 
         Player storage p = players[player];
         int32 curX = p.x;
