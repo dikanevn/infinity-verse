@@ -84,9 +84,10 @@ export function usePlayerState(
       const isSessionActive = pData[3] && pData[3].toLowerCase() === sessionAccount.address.toLowerCase() && Number(pData[4]) > nowSec;
 
       if (!isSessionActive) {
-        setStatusText('✍️ Подпишите сессию в кошельке (1 раз на 24 часа)...');
-        const expiry = nowSec + 86400;
+        setStatusText('✍️ Подпишите сессию в кошельке (1 раз на 20 часов)...');
+        const expiry = nowSec + 72000;
         const nonce = await publicClient.readContract({
+
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
           functionName: 'nonces',
@@ -385,10 +386,11 @@ export function usePlayerState(
       const isSessionActive = pData[3] && pData[3].toLowerCase() === sessionAccount.address.toLowerCase() && Number(pData[4]) > nowSec;
 
       if (!isSessionActive) {
-        setStatusText('✍️ Подпись ончейн-сессии в защищенном анклаве Cloudflare...');
-        const expiry = nowSec + 86400;
+        setStatusText('✍️ Подпись ончейн-сессии в защищенном анклаве Cloudflare (на 20 часов)...');
+        const expiry = nowSec + 72000;
 
         const sessionRes = await fetch(`${RELAYER_URL}/auth/google/authorize-session`, {
+
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
