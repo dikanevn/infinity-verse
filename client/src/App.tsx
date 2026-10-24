@@ -96,9 +96,6 @@ interface EIP6963ProviderDetail {
   provider: any;
 }
 
-// Тестовый Игрок 1 (для мгновенного теста)
-const TEST_PLAYER_1 = '0xE30FFcD61282Ca596dcd2d207769D18040FfDa8C';
-
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -139,7 +136,7 @@ function App() {
     try {
       let prov = providerDetail?.provider || (window as any).ethereum;
       if (!prov) {
-        alert('Кошелёк не найден!');
+        alert('Кошелёк не найден! Установите расширение MetaMask, Rabby или Phantom.');
         return;
       }
       const accounts = await prov.request({ method: 'eth_requestAccounts' });
@@ -152,12 +149,6 @@ function App() {
       console.error('Ошибка подключения:', err);
       alert('Ошибка при подключении: ' + (err.message || err));
     }
-  };
-
-  // Быстрый вход через тестового Игрока 1 (без установки расширений)
-  const connectTestPlayer = () => {
-    setConnectedAddress(TEST_PLAYER_1);
-    setIsWalletModalOpen(false);
   };
 
   // Рождение игрока в мире (spawn на 1, 0) через бесплатный релеер (без газа)
@@ -962,43 +953,6 @@ function App() {
                   </div>
                 </button>
               )}
-
-              {/* Разделитель */}
-              <div style={{
-                textAlign: 'center',
-                color: '#64748b',
-                fontSize: '0.62rem',
-                margin: '4px 0',
-                textTransform: 'uppercase'
-              }}>
-                или играть без расширений
-              </div>
-
-              {/* Быстрый вход тестовым Игроком 1 */}
-              <button
-                onClick={connectTestPlayer}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  backgroundColor: '#1e1b4b',
-                  border: '1px solid #8b5cf6',
-                  padding: '10px 12px',
-                  color: '#e0e7ff',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  textAlign: 'left'
-                }}
-              >
-                <span style={{ fontSize: '1.2rem' }}>🧑‍🚀</span>
-                <div>
-                  <div style={{ color: '#c084fc' }}>Войти как Игрок 1 (Тест)</div>
-                  <div style={{ fontSize: '0.60rem', color: '#a5b4fc' }}>
-                    0xE30F...Da8C (игра в 1 клик через спонсора)
-                  </div>
-                </div>
-              </button>
             </div>
           </div>
         </div>
