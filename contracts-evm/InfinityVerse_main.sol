@@ -43,12 +43,14 @@ contract InfinityVerse_Main {
     event SessionAuthorized(address indexed player, address indexed sessionKey, uint256 expiry);
     event SessionRevoked(address indexed player);
 
+    // Модификатор: вызовы разрешены только текущему логическому контракту
     modifier onlyLogic() {
-        require(msg.sender == logicContract, "Main: Caller is not logic contract");
+        require(msg.sender == logicContract, unicode"Main: Вызов разрешен только логическому контракту");
         _;
     }
 
     constructor() {
+
         // Инициализируем стартовую сетку 5х5 (от -2 до +2)
         for (int32 x = -2; x <= 2; x++) {
             for (int32 y = -2; y <= 2; y++) {
@@ -77,7 +79,7 @@ contract InfinityVerse_Main {
      * @notice Установка логического контракта (без владельцев/наследников на текущем этапе)
      */
     function setLogicContract(address _logicContract) external {
-        require(logicContract == address(0) || msg.sender == logicContract, "Main: Not allowed");
+        require(logicContract == address(0) || msg.sender == logicContract, unicode"Main: Смена логики запрещена");
         logicContract = _logicContract;
         emit LogicContractSet(_logicContract);
     }
@@ -98,7 +100,7 @@ contract InfinityVerse_Main {
         int32[] calldata xs,
         int32[] calldata ys
     ) external view returns (Cell[] memory) {
-        require(xs.length == ys.length, "Main: Array mismatch");
+        require(xs.length == ys.length, unicode"Main: Несовпадение длины массивов координат");
         uint256 total = xs.length;
         Cell[] memory result = new Cell[](total);
         for (uint256 i = 0; i < total; i++) {
@@ -129,13 +131,14 @@ contract InfinityVerse_Main {
     }
 
     function spawnPlayer(address player, int32 startX, int32 startY) external onlyLogic {
-        require(!players[player].exists, "Main: Player already exists");
+        require(!players[player].exists, unicode"Main: Игрок уже родился в этом мире");
         players[player].x = startX;
         players[player].y = startY;
         players[player].exists = true;
         players[player].lastMoveBlock = block.number;
         emit PlayerSpawned(player, startX, startY);
     }
+
 
     function movePlayer(address player, int32 toX, int32 toY) external onlyLogic {
         Player storage p = players[player];

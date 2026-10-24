@@ -36,17 +36,18 @@ contract InfinityVerse_AAA {
     event RelayerUpdated(address indexed newRelayer);
 
     constructor(address _mainContract, address _relayer) {
-        require(_mainContract != address(0), "AAA: Invalid main address");
+        require(_mainContract != address(0), unicode"AAA: Некорректный адрес Main контракта");
         mainContract = IInfinityVerse_Main(_mainContract);
         relayer = _relayer;
     }
 
     function setRelayer(address _relayer) external {
         // На текущем этапе без владельцев: разрешаем релееру обновлять адрес при необходимости
-        require(msg.sender == relayer || relayer == address(0), "AAA: Only relayer");
+        require(msg.sender == relayer || relayer == address(0), unicode"AAA: Только релеер может вызвать");
         relayer = _relayer;
         emit RelayerUpdated(_relayer);
     }
+
 
     // ========================================================================
     // === СЕССИОННЫЕ КЛЮЧИ И КРИПТОГРАФИЯ (EIP-191) ===
@@ -67,7 +68,7 @@ contract InfinityVerse_AAA {
         uint256 expiry,
         bytes calldata sig
     ) external {
-        require(block.timestamp < expiry, "AAA: Session already expired");
+        require(block.timestamp < expiry, unicode"AAA: Срок действия сессии уже истек");
 
         uint256 currentNonce = mainContract.incrementNonce(player);
 
@@ -79,7 +80,7 @@ contract InfinityVerse_AAA {
         );
 
         address signer = recoverSigner(messageHash, sig);
-        require(signer == player, "AAA: Invalid session signature");
+        require(signer == player, unicode"AAA: Неверная подпись сессии");
 
         mainContract.setPlayerSession(player, sessionKey, expiry);
     }
@@ -99,7 +100,7 @@ contract InfinityVerse_AAA {
         );
 
         address signer = recoverSigner(messageHash, sig);
-        require(signer == player, "AAA: Invalid revoke signature");
+        require(signer == player, unicode"AAA: Неверная подпись отзыва сессии");
 
         mainContract.revokePlayerSession(player);
     }
@@ -121,7 +122,7 @@ contract InfinityVerse_AAA {
      */
     function spawn(address player) external returns (int32, int32) {
         (, , , address activeSessionKey, ) = mainContract.getPlayer(player);
-        require(msg.sender == player || isSessionValid(player, activeSessionKey), "AAA: Session required for gasless spawn");
+        require(msg.sender == player || isSessionValid(player, activeSessionKey), unicode"AAA: Для спавна требуется действующая сессия");
         mainContract.spawnPlayer(player, 1, 0);
         return (1, 0);
     }
@@ -136,8 +137,8 @@ contract InfinityVerse_AAA {
         bytes calldata moveSig
     ) external {
         (, , bool exists, address sessionKey, ) = mainContract.getPlayer(player);
-        require(exists, "AAA: Player must spawn first");
-        require(isSessionValid(player, sessionKey), "AAA: Session expired or invalid");
+        require(exists, unicode"AAA: Сначала необходимо родиться в мире");
+        require(isSessionValid(player, sessionKey), unicode"AAA: Сессия истекла или недействительна");
 
         uint256 currentNonce = mainContract.incrementNonce(player);
 
@@ -149,7 +150,7 @@ contract InfinityVerse_AAA {
         );
 
         address signer = recoverSigner(moveHash, moveSig);
-        require(signer == sessionKey, "AAA: Invalid move signature: session key mismatch");
+        require(signer == sessionKey, unicode"AAA: Несовпадение сессионного ключа в подписи хода");
 
         _validateAndExecuteMove(player, targetX, targetY);
     }
@@ -159,7 +160,7 @@ contract InfinityVerse_AAA {
      */
     function moveDirect(int32 targetX, int32 targetY) external {
         (, , bool exists, , ) = mainContract.getPlayer(msg.sender);
-        require(exists, "AAA: Player must spawn first");
+        require(exists, unicode"AAA: Сначала необходимо родиться в мире");
         _validateAndExecuteMove(msg.sender, targetX, targetY);
     }
 
@@ -175,18 +176,19 @@ contract InfinityVerse_AAA {
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
 
-        require(dx <= 1 && dy <= 1, "AAA: Move distance exceeds 1 cell");
-        require(dx + dy > 0, "AAA: Must move to a different cell");
+        require(dx <= 1 && dy <= 1, unicode"AAA: Дистанция хода превышает 1 клетку");
+        require(dx + dy > 0, unicode"AAA: Необходимо выбрать соседнюю клетку, а не текущую");
 
         // Проверяем препятствие клетки
         IInfinityVerse_Main.Cell memory targetCell = mainContract.getCell(targetX, targetY);
-        require(targetCell.object != 1, "AAA: Cannot step on Obelisk");
+        require(targetCell.object != 1, unicode"AAA: Нельзя наступать на Обелиск");
 
         mainContract.movePlayer(player, targetX, targetY);
     }
 
     function recoverSigner(bytes32 messageHash, bytes memory sig) public pure returns (address) {
-        require(sig.length == 65, "AAA: Invalid signature length");
+        require(sig.length == 65, unicode"AAA: Некорректная длина подписи");
+
         bytes32 r;
         bytes32 s;
         uint8 v;
