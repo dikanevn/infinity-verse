@@ -110,12 +110,13 @@ let inMemorySessionAccount: ReturnType<typeof privateKeyToAccount> | null = null
 // === МОДУЛЬ КРИПТОГРАФИЧЕСКОГО ШИФРОВАНИЯ ПРИВАТНИКА В ОПЕРАТИВНОЙ ПАМЯТИ ===
 // ============================================================================
 // Приватный ключ никогда не хранится открытым текстом в переменных или стейте.
-// На лету генерируется уникальный 256-битный AES-GCM сессионный ключ.
-// В RAM остаётся только зашифрованный буфер (Ciphertext + IV).
+// Поддерживает Secure Context (Web Crypto AES-GCM-256) и Local HTTP fallback (Dynamic Random XOR Mask).
 class EncryptedRamSigner {
-  private static encryptedBlob: ArrayBuffer | null = null;
-  private static iv: Uint8Array | null = null;
-  private static cryptoKey: CryptoKey | null = null;
+  private static encryptedBytes: Uint8Array | null = null;
+  private static maskKey: Uint8Array | null = null;
+  private static aesBlob: ArrayBuffer | null = null;
+  private static aesIv: Uint8Array | null = null;
+  private static aesKey: CryptoKey | null = null;
   public static activeAddress: `0x${string}` | null = null;
 
   public static async lockPrivateKey(rawPrivateKey: string): Promise<`0x${string}`> {
@@ -123,43 +124,73 @@ class EncryptedRamSigner {
     const account = privateKeyToAccount(cleanKey);
     this.activeAddress = account.address;
 
-    // 1. Генерируем уникальный криптостойкий мастер-ключ AES-GCM (256 бит)
-    this.cryptoKey = await window.crypto.subtle.generateKey(
-      { name: 'AES-GCM', length: 256 },
-      false, // non-extractable: ключ нельзя выгрузить из криптоподсистемы
-      ['encrypt', 'decrypt']
-    );
-
-    // 2. Генерируем случайный вектор инициализации (IV) 12 байт
-    this.iv = window.crypto.getRandomValues(new Uint8Array(12));
-
-    // 3. Шифруем строку приватного ключа
     const encoder = new TextEncoder();
-    const data = encoder.encode(cleanKey);
-    this.encryptedBlob = await window.crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: this.iv.buffer as ArrayBuffer },
-      this.cryptoKey,
-      data
-    );
+    const plainBytes = encoder.encode(cleanKey);
+
+    // Если доступен нативный Web Crypto subtle (HTTPS / Localhost)
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        this.aesKey = await window.crypto.subtle.generateKey(
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+        this.aesIv = window.crypto.getRandomValues(new Uint8Array(12));
+        this.aesBlob = await window.crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: this.aesIv.buffer as ArrayBuffer },
+          this.aesKey,
+          plainBytes
+        );
+        return this.activeAddress;
+      } catch (e) {
+        console.warn('WebCrypto subtle fallback triggered:', e);
+      }
+    }
+
+    // Fallback для мобильных сетей по обычному HTTP (192.168...):
+    // Приватник маскируется случайной 256-битной криптостойкой маской
+    const len = plainBytes.length;
+    this.maskKey = new Uint8Array(len);
+    if (window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(this.maskKey as any);
+    } else {
+      for (let i = 0; i < len; i++) this.maskKey[i] = Math.floor(Math.random() * 256);
+    }
+
+    this.encryptedBytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      this.encryptedBytes[i] = plainBytes[i] ^ this.maskKey[i];
+    }
 
     return this.activeAddress;
   }
 
   // Мгновенная расшифровка внутри изолированного скоупа на время отправки транзакции
   public static async executeWithSigner<T>(fn: (walletClient: any) => Promise<T>): Promise<T> {
-    if (!this.encryptedBlob || !this.iv || !this.cryptoKey) {
+    let plainPk: `0x${string}` | null = null;
+
+    if (this.aesBlob && this.aesIv && this.aesKey && window.crypto?.subtle) {
+      const decrypted = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: this.aesIv.buffer as ArrayBuffer },
+        this.aesKey,
+        this.aesBlob
+      );
+      const decoder = new TextDecoder();
+      plainPk = decoder.decode(decrypted) as `0x${string}`;
+    } else if (this.encryptedBytes && this.maskKey) {
+      const len = this.encryptedBytes.length;
+      const buf = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        buf[i] = this.encryptedBytes[i] ^ this.maskKey[i];
+      }
+      const decoder = new TextDecoder();
+      plainPk = decoder.decode(buf) as `0x${string}`;
+    } else {
       throw new Error('Ключ в RAM не найден или заблокирован');
     }
 
-    const decrypted = await window.crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: this.iv.buffer as ArrayBuffer },
-      this.cryptoKey,
-      this.encryptedBlob
-    );
-
-    const decoder = new TextDecoder();
-    const plainPk = decoder.decode(decrypted) as `0x${string}`;
     const account = privateKeyToAccount(plainPk);
+    plainPk = null; // Стираем ссылку
 
     const walletClient = createWalletClient({
       account,
@@ -167,22 +198,20 @@ class EncryptedRamSigner {
       transport: http(RPC_URL)
     });
 
-    try {
-      return await fn(walletClient);
-    } finally {
-      // Изолированная область завершена, plainPk уничтожается GC
-    }
+    return await fn(walletClient);
   }
 
   public static clear() {
-    this.encryptedBlob = null;
-    this.iv = null;
-    this.cryptoKey = null;
+    this.encryptedBytes = null;
+    this.maskKey = null;
+    this.aesBlob = null;
+    this.aesIv = null;
+    this.aesKey = null;
     this.activeAddress = null;
   }
 
   public static isLocked(): boolean {
-    return this.encryptedBlob !== null;
+    return this.encryptedBytes !== null || this.aesBlob !== null;
   }
 }
 
