@@ -70,36 +70,43 @@ for (let y = 2; y >= -2; y--) {
 }
 
 // ============================================================================
-// === ЕДИНЫЙ ПУЛЬТ НАСТРОЙКИ СВЯЗИ СО ВСЕЛЕННОЙ (ВСЕ ТАЙМАУТЫ В ОДНОМ МЕСТЕ) ===
+// === ЕДИНЫЙ ПУЛЬТ НАСТРОЙКИ СВЯЗИ СО ВСЕЛЕННОЙ (СВЕТОФОР С ДВУМЯ ПОРОГАМИ) ===
 // ============================================================================
 const CONNECTION_CONFIG = {
-  // 1. Порог предупреждения (мс): если RPC отвечает дольше — надпись загорается красным
-  LATENCY_THRESHOLD_MS: 3000, 
+  // Порог 1: переход в ЖЁЛТЫЙ цвет (слабый сигнал, мс)
+  WARN_LATENCY_MS: 1500,
 
-  // 2. Интервал синхронизации (мс): как часто клиент запрашивает данные из блокчейна
-  SYNC_INTERVAL_MS: 6000,     
+  // Порог 2: переход в КРАСНЫЙ цвет (критическая задержка, мс)
+  DANGER_LATENCY_MS: 4000,
 
-  // 3. Таймаут полного обрыва связи (мс): если блокчейн вообще не отвечает
-  TIMEOUT_MS: 10000,          
+  // Частота синхронизации с блокчейном (мс)
+  SYNC_INTERVAL_MS: 6000,
 };
 
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
-  const [statusState, setStatusState] = useState<'connected' | 'slow' | 'error' | 'connecting'>('connecting');
+  const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.5');
   const CLIENT_VERSION = '0.0.0.0.11';
 
   const fetchState = async () => {
     const startTime = Date.now();
-    const thresholdSec = (CONNECTION_CONFIG.LATENCY_THRESHOLD_MS / 1000).toFixed(1).replace('.0', '');
+    const warnSec = (CONNECTION_CONFIG.WARN_LATENCY_MS / 1000).toFixed(1).replace('.0', '');
+    const dangerSec = (CONNECTION_CONFIG.DANGER_LATENCY_MS / 1000).toFixed(1).replace('.0', '');
 
-    // Таймер задержки: если за установленный порог ответ не пришёл — загорается предупреждение
-    const slowTimer = setTimeout(() => {
-      setStatusState('slow');
-      setStatusText(`⚠️ Задержка отклика: слабый межпространственный сигнал (>${thresholdSec}с)...`);
-    }, CONNECTION_CONFIG.LATENCY_THRESHOLD_MS);
+    // Таймер 1: переход в ЖЁЛТЫЙ при задержке > WARN_LATENCY_MS
+    const warnTimer = setTimeout(() => {
+      setStatusState('yellow');
+      setStatusText(`⚠️ Задержка отклика: слабый межпространственный сигнал (>${warnSec}с)...`);
+    }, CONNECTION_CONFIG.WARN_LATENCY_MS);
+
+    // Таймер 2: переход в КРАСНЫЙ при задержке > DANGER_LATENCY_MS
+    const dangerTimer = setTimeout(() => {
+      setStatusState('red');
+      setStatusText(`🚨 Критическая задержка: сигнал сквозь ткань Вселенной затухает (>${dangerSec}с)...`);
+    }, CONNECTION_CONFIG.DANGER_LATENCY_MS);
 
     try {
       const xs = INITIAL_COORDS.map(c => c.x);
@@ -119,7 +126,8 @@ function App() {
         }),
       ]);
 
-      clearTimeout(slowTimer);
+      clearTimeout(warnTimer);
+      clearTimeout(dangerTimer);
       const durationMs = Date.now() - startTime;
 
       setContractVersion(ver);
@@ -142,12 +150,23 @@ function App() {
       });
 
       setCells(parsed);
-      setStatusState('connected');
-      setStatusText(`✨ Межпространственная связь стабильна (${durationMs}мс)`);
+
+      // Оценка итогового времени отклика
+      if (durationMs > CONNECTION_CONFIG.DANGER_LATENCY_MS) {
+        setStatusState('red');
+        setStatusText(`🚨 Межпространственная связь восстановлена после задержки (${durationMs}мс)`);
+      } else if (durationMs > CONNECTION_CONFIG.WARN_LATENCY_MS) {
+        setStatusState('yellow');
+        setStatusText(`⚠️ Межпространственная связь замедлена (${durationMs}мс)`);
+      } else {
+        setStatusState('green');
+        setStatusText(`✨ Межпространственная связь стабильна (${durationMs}мс)`);
+      }
     } catch (err: any) {
-      clearTimeout(slowTimer);
+      clearTimeout(warnTimer);
+      clearTimeout(dangerTimer);
       console.error(err);
-      setStatusState('error');
+      setStatusState('red');
       setStatusText('🚨 Ошибка: межпространственная связь потеряна');
     }
   };
@@ -325,11 +344,13 @@ function App() {
             fontSize: '0.72rem',
             fontWeight: 600,
             letterSpacing: '0.04em',
-            color: statusState === 'error' || statusState === 'slow'
-              ? '#ef4444' // Красный цвет ошибки/задержки
-              : statusState === 'connected'
-                ? '#4ade80' // Зеленый цвет стабильной связи
-                : '#38bdf8', // Синий цвет инициализации
+            color: statusState === 'red'
+              ? '#ef4444' // Красный: критическая задержка или потеря связи
+              : statusState === 'yellow'
+                ? '#facc15' // Жёлтый: задержка сигнала
+                : statusState === 'green'
+                  ? '#4ade80' // Зелёный: стабильная быстрая связь
+                  : '#38bdf8', // Синий: начальная калибровка
             textAlign: 'center',
             display: 'flex',
             alignItems: 'center',
