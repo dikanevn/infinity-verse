@@ -124,7 +124,10 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         cursor: isDraggingRef.current ? 'grabbing' : 'grab',
         touchAction: 'none',
         userSelect: 'none',
-        backgroundColor: '#05070a'
+        backgroundColor: '#05070a',
+        border: '1px solid #475569',
+        borderRadius: '0px',
+        boxSizing: 'border-box'
       }}
     >
       {/* Кнопки зума и центрирования в правом верхнем углу холста */}
