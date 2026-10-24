@@ -6,6 +6,7 @@ interface WalletModalProps {
   walletProviders: EIP6963ProviderDetail[];
   onClose: () => void;
   onConnectProvider: (provider?: EIP6963ProviderDetail) => void;
+  onConnectMetaMaskWithSession: (provider?: EIP6963ProviderDetail) => void;
   onOpenPkModal: () => void;
   onGoogleLoginSuccess?: (idToken: string) => void;
   isLoggingInGoogle?: boolean;
@@ -16,6 +17,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   walletProviders,
   onClose,
   onConnectProvider,
+  onConnectMetaMaskWithSession,
   onOpenPkModal,
   onGoogleLoginSuccess,
   isLoggingInGoogle
@@ -101,7 +103,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         maxWidth: '380px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px',
+        gap: '12px',
         padding: '16px',
         color: '#f8fafc',
         fontFamily: 'monospace, system-ui, sans-serif',
@@ -132,11 +134,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </button>
         </div>
 
-        {/* Основной быстрый вход через Google */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>
-            🚀 БЫСТРЫЙ ВХОД (БЕЗ УСТАНОВКИ КОШЕЛЬКА):
+        {/* ОСНОВНОЙ БЛОК: БЫСТРЫЙ ВХОД БЕЗ ОКОН И БЕЗ ГАЗА (GOOGLE + METAMASK СЕССИЯ) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.04em' }}>
+            🚀 БЫСТРЫЙ ВХОД (БЕЗ КОМИССИИ И ОКОН):
           </div>
+
+          {/* 1. Кнопка Google */}
           <div
             ref={googleBtnRef}
             style={{
@@ -155,6 +159,32 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>⏳ Вход через Google...</span>
             )}
           </div>
+
+          {/* 2. Кнопка MetaMask с сессией на 20 часов */}
+          <button
+            onClick={() => onConnectMetaMaskWithSession(walletProviders[0])}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              backgroundColor: '#1c1917',
+              border: '1px solid #f97316',
+              padding: '10px 12px',
+              color: '#fdba74',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              textAlign: 'left',
+              boxShadow: '0 0 12px rgba(249, 115, 22, 0.25)',
+              borderRadius: '4px'
+            }}
+          >
+            <span style={{ fontSize: '1.25rem' }}>🦊</span>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
+              <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, игра без окон и без газа</div>
+            </div>
+          </button>
         </div>
 
         {/* Разделитель / Кнопка раскрытия дополнительных способов */}
@@ -188,64 +218,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
         </div>
 
-        {/* Блок дополнительных способов входа: Внешний кошелек (MetaMask) + Вход по ключу */}
+        {/* Блок дополнительных способов входа: Вход по ключу + MetaMask Direct (за свой газ) */}
         {showAdvanced && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
-            {/* Кнопка браузерного кошелька */}
-            {walletProviders.length > 0 ? (
-              walletProviders.map((w) => (
-                <button
-                  key={w.info.uuid}
-                  onClick={() => onConnectProvider(w)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    backgroundColor: '#161b26',
-                    border: '1px solid #334155',
-                    padding: '10px 12px',
-                    color: '#f8fafc',
-                    cursor: 'pointer',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {w.info.icon ? (
-                    <img src={w.info.icon} alt={w.info.name} style={{ width: '24px', height: '24px' }} />
-                  ) : (
-                    <span>💼</span>
-                  )}
-                  <span>{w.info.name}</span>
-                </button>
-              ))
-            ) : (
-              <button
-                onClick={() => onConnectProvider()}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  backgroundColor: '#161b26',
-                  border: '1px solid #334155',
-                  padding: '10px 12px',
-                  color: '#f8fafc',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  textAlign: 'left'
-                }}
-              >
-                <span style={{ fontSize: '1.2rem' }}>🦊</span>
-                <div>
-                  <div>Браузерный кошелек</div>
-                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>MetaMask / Rabby / Phantom</div>
-                </div>
-              </button>
-            )}
-
-            {/* Кнопка входа по ключу */}
+            {/* Кнопка входа по ключу в RAM */}
             <button
               onClick={onOpenPkModal}
               style={{
@@ -260,6 +236,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 fontSize: '0.78rem',
                 fontWeight: 700,
                 textAlign: 'left',
+                borderRadius: '4px',
                 boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)'
               }}
             >
@@ -267,6 +244,31 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <div>
                 <div>Вход по ключу (Шифрование в RAM)</div>
                 <div style={{ fontSize: '0.62rem', color: '#818cf8' }}>Прямой ончейн без релееров, AES-GCM-256</div>
+              </div>
+            </button>
+
+            {/* Ручной режим MetaMask Direct за свой газ */}
+            <button
+              onClick={() => onConnectProvider(walletProviders[0])}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                backgroundColor: '#161b26',
+                border: '1px solid #334155',
+                padding: '10px 12px',
+                color: '#f8fafc',
+                cursor: 'pointer',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                textAlign: 'left',
+                borderRadius: '4px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>🦊</span>
+              <div>
+                <div>MetaMask Direct (Ручной режим)</div>
+                <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Каждый шаг подтверждается окном за личный газ</div>
               </div>
             </button>
           </div>

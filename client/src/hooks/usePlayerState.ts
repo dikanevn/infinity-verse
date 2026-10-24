@@ -23,7 +23,8 @@ export function usePlayerState(
   const [isPlayerLoading, setIsPlayerLoading] = useState<boolean>(false);
   const [actionPending, setActionPending] = useState<boolean>(false);
 
-  // Режим авторизации: 'none' | 'google' | 'private_key' | 'metamask'
+  // Режим авторизации:
+  // 'none' | 'google' | 'metamask_session' | 'private_key' | 'metamask_direct'
   const [authMode, setAuthMode] = useState<AuthMode>('none');
   const [googleIdToken, setGoogleIdToken] = useState<string>('');
   const [activeMetaMaskProvider, setActiveMetaMaskProvider] = useState<any>(null);
@@ -31,7 +32,9 @@ export function usePlayerState(
   // Производные флаги для UI
   const isDirectSignerMode = authMode === 'private_key';
   const isGoogleMode = authMode === 'google';
-  const isMetaMaskMode = authMode === 'metamask';
+  const isMetaMaskSessionMode = authMode === 'metamask_session';
+  const isMetaMaskDirectMode = authMode === 'metamask_direct';
+  const isMetaMaskMode = isMetaMaskSessionMode || isMetaMaskDirectMode;
 
   // ============================================================================
   // 1. ЧТЕНИЕ СОСТОЯНИЯ ИГРОКА ИЗ MAIN_G_2
@@ -69,7 +72,105 @@ export function usePlayerState(
   }, [connectedAddress]);
 
   // ============================================================================
-  // 2. ВХОД: METAMASK / БРАУЗЕРНЫЙ КОШЕЛЕК (DIRECT С РУЧНЫМ ПОДТВЕРЖДЕНИЕМ КАЖДОГО ДЕЙСТВИЯ)
+  // 2. ВХОД METAMASK С СЕССИЕЙ НА 20 ЧАСОВ (GASLESS: 1 ПОДПИСЬ БЕЗ КОМИССИИ, ДАЛЬШЕ БЕЗ ОКОН)
+  // ============================================================================
+  const connectMetaMaskWithSession = async (
+    providerDetail?: EIP6963ProviderDetail,
+    onSuccess?: () => void
+  ) => {
+    try {
+      const prov = providerDetail?.provider || (window as any).ethereum;
+      if (!prov) {
+        alert('Кошелёк не найден! Установите расширение MetaMask, Rabby или Phantom.');
+        return;
+      }
+      setIsPlayerLoading(true);
+      setStatusText('🦊 Запрос подключения кошелька...');
+
+      const accounts = await prov.request({ method: 'eth_requestAccounts' });
+      if (!accounts || !accounts[0]) {
+        setIsPlayerLoading(false);
+        return;
+      }
+
+      const userAddress = accounts[0];
+      setConnectedAddress(userAddress);
+      setActiveMetaMaskProvider(prov);
+
+      const sessionAccount = getOrCreateSessionAccount();
+      const nowSec = Math.floor(Date.now() / 1000);
+
+      // Проверяем статус в контракте
+      const pData: any = await publicClient.readContract({
+        address: MAIN_CONTRACT_ADDRESS,
+        abi: MAIN_ABI,
+        functionName: 'getPlayer',
+        args: [userAddress as `0x${string}`]
+      });
+
+      const isSessionActive =
+        pData[3] &&
+        pData[3].toLowerCase() === sessionAccount.address.toLowerCase() &&
+        Number(pData[4]) > nowSec;
+
+      if (!isSessionActive) {
+        setStatusText('✍️ Подпишите сессию в MetaMask (1 раз на 20 часов, без комиссии)...');
+        const expiry = nowSec + 72000;
+        const nonce = await publicClient.readContract({
+          address: MAIN_CONTRACT_ADDRESS,
+          abi: MAIN_ABI,
+          functionName: 'nonces',
+          args: [userAddress as `0x${string}`]
+        });
+
+        const innerHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'address', 'uint256', 'uint256', 'uint256'],
+            ['AuthorizeSession', userAddress as `0x${string}`, sessionAccount.address, BigInt(expiry), nonce, BigInt(10143)]
+          )
+        );
+
+        const walletClient = createWalletClient({
+          chain: monadTestnet,
+          transport: custom(prov)
+        });
+
+        const sig = await walletClient.signMessage({
+          account: userAddress as `0x${string}`,
+          message: { raw: innerHash }
+        });
+
+        setStatusText('⏳ Регистрация сессии через спонсора...');
+        const res = await fetch(RELAYER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'authorize_session',
+            player: userAddress,
+            sessionKey: sessionAccount.address,
+            expiry,
+            sig
+          })
+        });
+        const resData = await res.json();
+        if (!res.ok || resData.error) throw new Error(resData.error || 'Session auth failed');
+      }
+
+      setAuthMode('metamask_session');
+      setStatusText('✅ MetaMask подключен: сессия активна на 20 часов! Играйте без окон и без газа.');
+      await fetchPlayer();
+      if (onSuccess) onSuccess();
+      await onStateRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert('Ошибка при авторизации MetaMask: ' + (err.shortMessage || err.message));
+    } finally {
+      setIsPlayerLoading(false);
+    }
+  };
+
+  // ============================================================================
+  // 3. ВХОД METAMASK DIRECT (РУЧНОЙ РЕЖИМ С ПОДТВЕРЖДЕНИЕМ КАЖДОГО ДЕЙСТВИЯ ЗА СВОЙ ГАЗ)
   // ============================================================================
   const connectProvider = async (
     providerDetail?: EIP6963ProviderDetail,
@@ -82,7 +183,7 @@ export function usePlayerState(
         return;
       }
       setIsPlayerLoading(true);
-      setStatusText('🦊 Подключение внешнего кошелька (MetaMask)...');
+      setStatusText('🦊 Подключение внешнего кошелька (MetaMask Direct)...');
 
       const accounts = await prov.request({ method: 'eth_requestAccounts' });
       if (!accounts || !accounts[0]) {
@@ -92,11 +193,11 @@ export function usePlayerState(
 
       const userAddress = accounts[0];
       setConnectedAddress(userAddress);
-      setAuthMode('metamask');
+      setAuthMode('metamask_direct');
       setActiveMetaMaskProvider(prov);
 
       await fetchPlayer();
-      setStatusText('🦊 MetaMask подключен: все действия выполняются напрямую за собственный MON.');
+      setStatusText('🦊 MetaMask Direct: каждое действие подтверждается вручную за собственный MON.');
       if (onSuccess) onSuccess();
       await onStateRefresh();
     } catch (err: any) {
@@ -108,7 +209,7 @@ export function usePlayerState(
   };
 
   // ============================================================================
-  // 3. ВХОД: ПРИВАТНЫЙ КЛЮЧ (DIRECT БЕЗ ОКОН С ШИФРОВАНИЕМ В RAM)
+  // 4. ВХОД: ПРИВАТНЫЙ КЛЮЧ (DIRECT БЕЗ ОКОН С ШИФРОВАНИЕМ В RAM)
   // ============================================================================
   const connectWithPrivateKey = async (
     rawKey: string,
@@ -140,7 +241,7 @@ export function usePlayerState(
   };
 
   // ============================================================================
-  // 4. ВХОД: GOOGLE OAUTH (GASLESS ЧЕРЕЗ СПОНСОРА)
+  // 5. ВХОД: GOOGLE OAUTH (GASLESS ЧЕРЕЗ СПОНСОРА)
   // ============================================================================
   const connectWithGoogle = async (
     idToken: string,
@@ -220,14 +321,14 @@ export function usePlayerState(
   };
 
   // ============================================================================
-  // 5. УНИВЕРСАЛЬНЫЙ СПАВН (DIRECT vs GASLESS)
+  // 6. УНИВЕРСАЛЬНЫЙ СПАВН (DIRECT vs GASLESS)
   // ============================================================================
   const handleSpawn = async () => {
     if (!connectedAddress) return;
     setActionPending(true);
 
     try {
-      // ВЕТКА А: ПРИВАТНЫЙ КЛЮЧ (Direct через RAM Signer)
+      // РЕЖИМ 1: ПРИВАТНЫЙ КЛЮЧ (Direct через RAM Signer)
       if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
         setStatusText('⏳ Прямой ончейн-спавн в Monad RPC (spawnDirect)...');
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
@@ -239,8 +340,8 @@ export function usePlayerState(
           await publicClient.waitForTransactionReceipt({ hash });
         });
       }
-      // ВЕТКА Б: METAMASK (Direct через всплывающее окно)
-      else if (authMode === 'metamask') {
+      // РЕЖИМ 2: METAMASK DIRECT (Direct через всплывающее окно)
+      else if (authMode === 'metamask_direct') {
         setStatusText('🦊 Подтвердите транзакцию спавна в MetaMask...');
         const prov = activeMetaMaskProvider || (window as any).ethereum;
         const walletClient = createWalletClient({
@@ -256,7 +357,7 @@ export function usePlayerState(
         setStatusText('⏳ Ожидание подтверждения спавна в Monad...');
         await publicClient.waitForTransactionReceipt({ hash });
       }
-      // ВЕТКА В: GOOGLE (Gasless через спонсора релеера)
+      // РЕЖИМ 3 & 4: GOOGLE или METAMASK СЕССИЯ (Gasless через спонсора)
       else {
         setStatusText('⏳ Рождение игрока через спонсора (spawnGasless)...');
         const res = await fetch(RELAYER_URL, {
@@ -280,7 +381,7 @@ export function usePlayerState(
   };
 
   // ============================================================================
-  // 6. УНИВЕРСАЛЬНЫЙ ХОД (DIRECT vs GASLESS)
+  // 7. УНИВЕРСАЛЬНЫЙ ХОД (DIRECT vs GASLESS)
   // ============================================================================
   const handleMove = async (targetX: number, targetY: number) => {
     if (!connectedAddress || !player?.exists) return;
@@ -288,7 +389,7 @@ export function usePlayerState(
     setStatusText(`⏳ Ход на (${targetX}, ${targetY})...`);
 
     try {
-      // ВЕТКА А: ПРИВАТНЫЙ КЛЮЧ (Direct за собственный газ)
+      // РЕЖИМ 1: ПРИВАТНЫЙ КЛЮЧ (Direct за собственный газ)
       if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
           const hash = await walletClient.writeContract({
@@ -300,8 +401,8 @@ export function usePlayerState(
           await publicClient.waitForTransactionReceipt({ hash });
         });
       }
-      // ВЕТКА Б: METAMASK (Direct за собственный газ с подтверждением окна)
-      else if (authMode === 'metamask') {
+      // РЕЖИМ 2: METAMASK DIRECT (Direct с подтверждением окна)
+      else if (authMode === 'metamask_direct') {
         setStatusText(`🦊 Подтвердите шаг на (${targetX}, ${targetY}) в MetaMask...`);
         const prov = activeMetaMaskProvider || (window as any).ethereum;
         const walletClient = createWalletClient({
@@ -318,7 +419,7 @@ export function usePlayerState(
         setStatusText('⏳ Фиксация шага в Monad...');
         await publicClient.waitForTransactionReceipt({ hash });
       }
-      // ВЕТКА В: GOOGLE (Gasless по EIP-191 подписи через спонсора)
+      // РЕЖИМ 3 & 4: GOOGLE или METAMASK СЕССИЯ (Gasless по EIP-191 подписи сессии)
       else {
         const sessionAccount = getOrCreateSessionAccount();
         const nonce = await publicClient.readContract({
@@ -366,7 +467,7 @@ export function usePlayerState(
   };
 
   // ============================================================================
-  // 7. АННУЛИРОВАНИЕ СЕССИИ (DIRECT vs GASLESS)
+  // 8. АННУЛИРОВАНИЕ СЕССИИ (DIRECT vs GASLESS)
   // ============================================================================
   const handleRevokeSession = async () => {
     if (!connectedAddress) return;
@@ -385,7 +486,7 @@ export function usePlayerState(
           });
           await publicClient.waitForTransactionReceipt({ hash });
         });
-      } else if (authMode === 'metamask') {
+      } else if (authMode === 'metamask_direct') {
         const prov = activeMetaMaskProvider || (window as any).ethereum;
         const walletClient = createWalletClient({
           chain: monadTestnet,
@@ -445,7 +546,7 @@ export function usePlayerState(
   };
 
   // ============================================================================
-  // 8. ВЫВОД МОНЕТ С GOOGLE-КОШЕЛЬКА НА ВНЕШНИЙ АДРЕС
+  // 9. ВЫВОД МОНЕТ С GOOGLE-КОШЕЛЬКА
   // ============================================================================
   const handleWithdrawGoogleWallet = async (targetAddress: string) => {
     if (!googleIdToken) {
@@ -500,9 +601,12 @@ export function usePlayerState(
     authMode,
     isDirectSignerMode,
     isGoogleMode,
+    isMetaMaskSessionMode,
+    isMetaMaskDirectMode,
     isMetaMaskMode,
     googleIdToken,
     connectProvider,
+    connectMetaMaskWithSession,
     connectWithPrivateKey,
     connectWithGoogle,
     handleWithdrawGoogleWallet,

@@ -74,7 +74,7 @@ export function useWorldState(connectedAddress: string) {
 
       if (ageSec > CONNECTION_CONFIG.DANGER_BLOCK_AGE_SEC) {
         setStatusState('red');
-        setStatusText(`🚨 Сигнал угасает (${ageSec} сек назад)`);
+        setStatusText(`🚨 Нет сигнала (${ageSec} сек назад)`);
       } else if (ageSec > CONNECTION_CONFIG.WARN_BLOCK_AGE_SEC) {
         setStatusState('yellow');
         setStatusText(`⚠️ Замедление связи (${ageSec} сек назад)`);

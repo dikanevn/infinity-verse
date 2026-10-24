@@ -57,6 +57,7 @@ function App() {
     isGoogleMode,
     isMetaMaskMode,
     connectProvider,
+    connectMetaMaskWithSession,
     connectWithPrivateKey,
     connectWithGoogle,
     handleSpawn,
@@ -166,6 +167,7 @@ function App() {
         walletProviders={walletProviders}
         onClose={() => setIsWalletModalOpen(false)}
         onConnectProvider={(w) => connectProvider(w, () => setIsWalletModalOpen(false))}
+        onConnectMetaMaskWithSession={(w) => connectMetaMaskWithSession(w, () => setIsWalletModalOpen(false))}
         onOpenPkModal={() => {
           setIsWalletModalOpen(false);
           setShowPkInputModal(true);

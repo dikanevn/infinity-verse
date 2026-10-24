@@ -1,4 +1,4 @@
-export type AuthMode = 'none' | 'google' | 'private_key' | 'metamask';
+export type AuthMode = 'none' | 'google' | 'metamask_session' | 'private_key' | 'metamask_direct';
 
 export interface CellData {
   x: number;
