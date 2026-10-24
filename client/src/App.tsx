@@ -56,11 +56,13 @@ function App() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [lastTxDuration, setLastTxDuration] = useState<number | null>(null);
   const [statusText, setStatusText] = useState<string>('Сетка подключена');
+  const [contractVersion, setContractVersion] = useState<string>('...');
+  const CLIENT_VERSION = '0.0.0.0.2';
   const timerRef = useRef<number | null>(null);
 
   const fetchState = async () => {
     try {
-      const [gridData, starIdx, balance] = await Promise.all([
+      const [gridData, starIdx, balance, onchainVer] = await Promise.all([
         publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
@@ -76,12 +78,18 @@ function App() {
           abi: VERSE_ABI,
           functionName: 'starBalance',
           args: [TEST_ACCOUNT.address]
+        }),
+        publicClient.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: VERSE_ABI,
+          functionName: 'VERSION'
         })
       ]);
 
       setGrid([...gridData]);
       setStarCell(Number(starIdx));
       setStarBalance(Number(balance));
+      setContractVersion(onchainVer);
     } catch (e: any) {
       console.error('Fetch state error:', e);
     }
@@ -349,14 +357,18 @@ function App() {
           )}
         </div>
 
-        {/* Футер */}
+        {/* Футер: раздельные версии */}
         <div style={{
           fontSize: '0.75rem',
           color: '#64748b',
           letterSpacing: '0.05em',
-          textAlign: 'center'
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '3px'
         }}>
-          v0.0.0.0.2 &bull; Шагайте на ⭐ для сбора в он-чейн баланс
+          <div>Контракт: <span style={{ color: '#a78bfa', fontWeight: 700 }}>v{contractVersion}</span> &bull; Monad Testnet</div>
+          <div>Фронтенд: <span style={{ color: '#38bdf8', fontWeight: 700 }}>v{CLIENT_VERSION}</span></div>
         </div>
       </div>
     </div>
