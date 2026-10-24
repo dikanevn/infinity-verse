@@ -86,6 +86,19 @@ const CONNECTION_CONFIG = {
   SYNC_INTERVAL_MS: 2000,
 };
 
+interface EIP6963ProviderDetail {
+  info: {
+    uuid: string;
+    name: string;
+    icon: string;
+    rdns: string;
+  };
+  provider: any;
+}
+
+// Тестовый Игрок 1 (для мгновенного теста)
+const TEST_PLAYER_1 = '0xE30FFcD61282Ca596dcd2d207769D18040FfDa8C';
+
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -95,26 +108,56 @@ function App() {
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [lastBlockNumber, setLastBlockNumber] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [activeProvider, setActiveProvider] = useState<any>(null);
+  const [walletProviders, setWalletProviders] = useState<EIP6963ProviderDetail[]>([]);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState<boolean>(false);
   const [player, setPlayer] = useState<{ x: number; y: number; exists: boolean } | null>(null);
   const [actionPending, setActionPending] = useState<boolean>(false);
   const CLIENT_VERSION = '0.0.0.0.12';
   const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
 
-  // Подключение кошелька (MetaMask / Rabby / Phantom)
-  const connectWallet = async () => {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) {
-      alert('Кошелёк не обнаружен! Установите MetaMask, Rabby или Phantom.');
-      return;
-    }
+  // Поиск всех установленных кошельков по стандарту EIP-6963
+  useEffect(() => {
+    const handleAnnouncement = (event: any) => {
+      if (!event.detail) return;
+      setWalletProviders(prev => {
+        if (prev.some(p => p.info.uuid === event.detail.info.uuid)) return prev;
+        return [...prev, event.detail];
+      });
+    };
+
+    window.addEventListener('eip6963:announceProvider', handleAnnouncement);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+    return () => {
+      window.removeEventListener('eip6963:announceProvider', handleAnnouncement);
+    };
+  }, []);
+
+  // Подключение выбранного кошелька
+  const connectProvider = async (providerDetail?: EIP6963ProviderDetail) => {
     try {
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      let prov = providerDetail?.provider || (window as any).ethereum;
+      if (!prov) {
+        alert('Кошелёк не найден!');
+        return;
+      }
+      const accounts = await prov.request({ method: 'eth_requestAccounts' });
       if (accounts && accounts[0]) {
         setConnectedAddress(accounts[0]);
+        setActiveProvider(prov);
+        setIsWalletModalOpen(false);
       }
     } catch (err: any) {
-      console.error('Ошибка подключения кошелька:', err);
+      console.error('Ошибка подключения:', err);
+      alert('Ошибка при подключении: ' + (err.message || err));
     }
+  };
+
+  // Быстрый вход через тестового Игрока 1 (без установки расширений)
+  const connectTestPlayer = () => {
+    setConnectedAddress(TEST_PLAYER_1);
+    setIsWalletModalOpen(false);
   };
 
   // Рождение игрока в мире (spawn на 1, 0) через бесплатный релеер (без газа)
@@ -136,13 +179,13 @@ function App() {
       await fetchState();
     } catch (relayerErr) {
       console.warn('Релеер недоступен, выполняем через прямое подписание кошельком:', relayerErr);
-      // 2. Fallback: прямое подписание через MetaMask
-      const ethereum = (window as any).ethereum;
-      if (ethereum) {
+      // 2. Fallback: прямое подписание через кошелёк
+      const prov = activeProvider || (window as any).ethereum;
+      if (prov) {
         try {
           const walletClient = createWalletClient({
             chain: monadTestnet,
-            transport: custom(ethereum)
+            transport: custom(prov)
           });
           const hash = await walletClient.writeContract({
             address: CONTRACT_ADDRESS,
@@ -182,13 +225,13 @@ function App() {
       await fetchState();
     } catch (relayerErr) {
       console.warn('Релеер недоступен, выполняем через прямое подписание кошельком:', relayerErr);
-      // 2. Fallback: прямое подписание через MetaMask
-      const ethereum = (window as any).ethereum;
-      if (ethereum) {
+      // 2. Fallback: прямое подписание через активный кошелёк
+      const prov = activeProvider || (window as any).ethereum;
+      if (prov) {
         try {
           const walletClient = createWalletClient({
             chain: monadTestnet,
-            transport: custom(ethereum)
+            transport: custom(prov)
           });
           const hash = await walletClient.writeContract({
             address: CONTRACT_ADDRESS,
@@ -483,21 +526,27 @@ function App() {
           }}>
             {!connectedAddress ? (
               <button
-                onClick={connectWallet}
+                onClick={() => setIsWalletModalOpen(true)}
                 style={{
                   backgroundColor: '#8b5cf6',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '0px',
-                  padding: '8px 16px',
-                  fontSize: '0.75rem',
+                  padding: '8px 20px',
+                  fontSize: '0.78rem',
                   fontWeight: 800,
                   cursor: 'pointer',
-                  letterSpacing: '0.05em',
-                  boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)'
+                  letterSpacing: '0.06em',
+                  boxShadow: '0 0 20px rgba(139, 92, 246, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}
               >
-                🦊 ПОДКЛЮЧИТЬ КОШЕЛЕК
+                <span>⚡ ПОДКЛЮЧИТЬ КОШЕЛЕК</span>
+                <span style={{ fontSize: '0.62rem', backgroundColor: '#6d28d9', padding: '2px 6px' }}>
+                  {walletProviders.length > 0 ? `${walletProviders.length} найдено` : 'МЕНЮ'}
+                </span>
               </button>
             ) : !player?.exists ? (
               <button
@@ -802,6 +851,158 @@ function App() {
           <div>Клиент: <span style={{ color: '#38bdf8', fontWeight: 700 }}>v{CLIENT_VERSION}</span></div>
         </div>
       </div>
+
+      {/* Модальное окно выбора кошелька (EIP-6963 Multi-Wallet) */}
+      {isWalletModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100dvh',
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: '#0d111a',
+            border: '2px solid #8b5cf6',
+            boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)',
+            width: '100%',
+            maxWidth: '380px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            padding: '16px',
+            color: '#f8fafc',
+            fontFamily: 'monospace, system-ui, sans-serif'
+          }}>
+            {/* Заголовок модалки */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #1e293b',
+              paddingBottom: '8px'
+            }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#c084fc', letterSpacing: '0.05em' }}>
+                ⚡ ВЫБЕРИТЕ КОШЕЛЕК
+              </span>
+              <button
+                onClick={() => setIsWalletModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Список обнаруженных браузерных кошельков */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+              {walletProviders.length > 0 ? (
+                walletProviders.map((w) => (
+                  <button
+                    key={w.info.uuid}
+                    onClick={() => connectProvider(w)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      backgroundColor: '#161b26',
+                      border: '1px solid #334155',
+                      padding: '10px 12px',
+                      color: '#f8fafc',
+                      cursor: 'pointer',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {w.info.icon ? (
+                      <img src={w.info.icon} alt={w.info.name} style={{ width: '24px', height: '24px' }} />
+                    ) : (
+                      <span>💼</span>
+                    )}
+                    <span>{w.info.name}</span>
+                  </button>
+                ))
+              ) : (
+                // Стандартный fallback на window.ethereum
+                <button
+                  onClick={() => connectProvider()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    backgroundColor: '#161b26',
+                    border: '1px solid #334155',
+                    padding: '10px 12px',
+                    color: '#f8fafc',
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>🦊</span>
+                  <div>
+                    <div>Браузерный кошелек</div>
+                    <div style={{ fontSize: '0.62rem', color: '#64748b' }}>MetaMask / Rabby / Phantom</div>
+                  </div>
+                </button>
+              )}
+
+              {/* Разделитель */}
+              <div style={{
+                textAlign: 'center',
+                color: '#64748b',
+                fontSize: '0.62rem',
+                margin: '4px 0',
+                textTransform: 'uppercase'
+              }}>
+                или играть без расширений
+              </div>
+
+              {/* Быстрый вход тестовым Игроком 1 */}
+              <button
+                onClick={connectTestPlayer}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: '#1e1b4b',
+                  border: '1px solid #8b5cf6',
+                  padding: '10px 12px',
+                  color: '#e0e7ff',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textAlign: 'left'
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>🧑‍🚀</span>
+                <div>
+                  <div style={{ color: '#c084fc' }}>Войти как Игрок 1 (Тест)</div>
+                  <div style={{ fontSize: '0.60rem', color: '#a5b4fc' }}>
+                    0xE30F...Da8C (игра в 1 клик через спонсора)
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
