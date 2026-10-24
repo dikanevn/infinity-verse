@@ -1,0 +1,8 @@
+{
+  "networkName": "Base Sepolia Testnet",
+  "rpcUrl": "https://base-sepolia.drpc.org",
+  "chainId": 84532,
+  "chainIdHex": "0x14a34",
+  "currencySymbol": "ETH",
+  "blockExplorerUrl": "https://sepolia.basescan.org"
+}
