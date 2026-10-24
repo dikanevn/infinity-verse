@@ -22,15 +22,13 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
       flexDirection: 'column',
       alignItems: 'center',
       gap: '8px',
-      margin: '4px 0 8px 0',
-      width: '100%',
-      maxWidth: '100%',
-      overflowX: 'auto'
+      margin: '6px 0 12px 0',
+      width: '100%'
     }}>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(5, min(64px, 17vw))',
-        gridTemplateRows: 'repeat(5, min(64px, 17vw))',
+        gridTemplateColumns: 'repeat(5, 62px)',
+        gridTemplateRows: 'repeat(5, 62px)',
         gap: '4px',
         backgroundColor: '#10131d',
         padding: '5px',
