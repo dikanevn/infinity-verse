@@ -73,14 +73,14 @@ for (let y = 2; y >= -2; y--) {
 // === ЕДИНЫЙ ПУЛЬТ НАСТРОЙКИ СВЯЗИ СО ВСЕЛЕННОЙ (СВЕТОФОР С ДВУМЯ ПОРОГАМИ) ===
 // ============================================================================
 const CONNECTION_CONFIG = {
-  // Порог 1: переход в ЖЁЛТЫЙ цвет (слабый сигнал, мс)
-  WARN_LATENCY_MS: 1500,
+  // 1. Порог 1: переход в ЖЁЛТЫЙ цвет (если с последнего блока прошло > СЕКУНД)
+  WARN_BLOCK_AGE_SEC: 5,
 
-  // Порог 2: переход в КРАСНЫЙ цвет (критическая задержка, мс)
-  DANGER_LATENCY_MS: 4000,
+  // 2. Порог 2: переход в КРАСНЫЙ цвет (если с последнего блока прошло > СЕКУНД или ошибка)
+  DANGER_BLOCK_AGE_SEC: 15,
 
-  // Частота синхронизации с блокчейном (мс)
-  SYNC_INTERVAL_MS: 6000,
+  // 3. Частота проверки ончейна и считывания сетки клеток (мс: 2000 = 2 секунды)
+  SYNC_INTERVAL_MS: 2000,
 };
 
 function App() {
@@ -89,25 +89,11 @@ function App() {
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.5');
+  const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
+  const [lastBlockNumber, setLastBlockNumber] = useState<string | null>(null);
   const CLIENT_VERSION = '0.0.0.0.11';
 
   const fetchState = async () => {
-    const startTime = Date.now();
-    const warnSec = (CONNECTION_CONFIG.WARN_LATENCY_MS / 1000).toFixed(1).replace('.0', '');
-    const dangerSec = (CONNECTION_CONFIG.DANGER_LATENCY_MS / 1000).toFixed(1).replace('.0', '');
-
-    // Таймер 1: переход в ЖЁЛТЫЙ при задержке > WARN_LATENCY_MS
-    const warnTimer = setTimeout(() => {
-      setStatusState('yellow');
-      setStatusText(`⚠️ Задержка отклика: слабый межпространственный сигнал (>${warnSec}с)...`);
-    }, CONNECTION_CONFIG.WARN_LATENCY_MS);
-
-    // Таймер 2: переход в КРАСНЫЙ при задержке > DANGER_LATENCY_MS
-    const dangerTimer = setTimeout(() => {
-      setStatusState('red');
-      setStatusText(`🚨 Критическая задержка: сигнал сквозь ткань Вселенной затухает (>${dangerSec}с)...`);
-    }, CONNECTION_CONFIG.DANGER_LATENCY_MS);
-
     try {
       const xs = INITIAL_COORDS.map(c => c.x);
       const ys = INITIAL_COORDS.map(c => c.y);
@@ -127,15 +113,9 @@ function App() {
         publicClient.getBlock({ blockTag: 'latest' })
       ]);
 
-      clearTimeout(warnTimer);
-      clearTimeout(dangerTimer);
-      const durationMs = Date.now() - startTime;
-
       setContractVersion(ver);
-
-      // Время блока: форматируем timestamp блока в читаемое локальное время
-      const blockDate = new Date(Number(latestBlock.timestamp) * 1000);
-      const blockTimeStr = blockDate.toLocaleTimeString();
+      setLastBlockTimestamp(Number(latestBlock.timestamp));
+      setLastBlockNumber(latestBlock.number.toString());
 
       const parsed: CellData[] = INITIAL_COORDS.map((coord, i) => {
         const c = onchainCells[i];
@@ -155,32 +135,44 @@ function App() {
       });
 
       setCells(parsed);
-
-      // Оценка итогового времени отклика с отображением времени блока
-      if (durationMs > CONNECTION_CONFIG.DANGER_LATENCY_MS) {
-        setStatusState('red');
-        setStatusText(`🚨 Связь восстановлена • Блок: ${blockTimeStr}`);
-      } else if (durationMs > CONNECTION_CONFIG.WARN_LATENCY_MS) {
-        setStatusState('yellow');
-        setStatusText(`⚠️ Связь замедлена • Блок: ${blockTimeStr}`);
-      } else {
-        setStatusState('green');
-        setStatusText(`✨ Межпространственная связь стабильна • Блок: ${blockTimeStr}`);
-      }
     } catch (err: any) {
-      clearTimeout(warnTimer);
-      clearTimeout(dangerTimer);
       console.error(err);
       setStatusState('red');
       setStatusText('🚨 Ошибка: межпространственная связь потеряна');
     }
   };
 
+  // 1. Постоянный опрос смарт-контракта и ноды
   useEffect(() => {
     fetchState();
     const interval = setInterval(fetchState, CONNECTION_CONFIG.SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
+
+  // 2. Ежесекундный живой таймер свежести блока и светофор
+  useEffect(() => {
+    if (!lastBlockTimestamp) return;
+
+    const updateStatus = () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const ageSec = Math.max(0, nowSec - lastBlockTimestamp);
+
+      if (ageSec > CONNECTION_CONFIG.DANGER_BLOCK_AGE_SEC) {
+        setStatusState('red');
+        setStatusText(`🚨 Сигнал угасает: блок #${lastBlockNumber} (${ageSec} сек назад)`);
+      } else if (ageSec > CONNECTION_CONFIG.WARN_BLOCK_AGE_SEC) {
+        setStatusState('yellow');
+        setStatusText(`⚠️ Замедление блоков: #${lastBlockNumber} (${ageSec} сек назад)`);
+      } else {
+        setStatusState('green');
+        setStatusText(`✨ Межпространственная связь стабильна • Блок #${lastBlockNumber} (${ageSec} сек назад)`);
+      }
+    };
+
+    updateStatus();
+    const ticker = setInterval(updateStatus, 1000);
+    return () => clearInterval(ticker);
+  }, [lastBlockTimestamp, lastBlockNumber]);
 
   const curCell = cells.find(c => c.x === selectedCoord.x && c.y === selectedCoord.y) || null;
   const terrainInfo = curCell
