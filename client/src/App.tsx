@@ -74,7 +74,7 @@ for (let y = 2; y >= -2; y--) {
 // ============================================================================
 const CONNECTION_CONFIG = {
   // 1. Порог 1: переход в ЖЁЛТЫЙ цвет (если с последнего блока прошло > СЕКУНД)
-  WARN_BLOCK_AGE_SEC: 5,
+  WARN_BLOCK_AGE_SEC: 1,
 
   // 2. Порог 2: переход в КРАСНЫЙ цвет (если с последнего блока прошло > СЕКУНД или ошибка)
   DANGER_BLOCK_AGE_SEC: 15,
@@ -159,13 +159,13 @@ function App() {
 
       if (ageSec > CONNECTION_CONFIG.DANGER_BLOCK_AGE_SEC) {
         setStatusState('red');
-        setStatusText(`🚨 Сигнал угасает: блок #${lastBlockNumber} (${ageSec} сек назад)`);
+        setStatusText(`🚨 Сигнал угасает (${ageSec} сек назад)`);
       } else if (ageSec > CONNECTION_CONFIG.WARN_BLOCK_AGE_SEC) {
         setStatusState('yellow');
-        setStatusText(`⚠️ Замедление блоков: #${lastBlockNumber} (${ageSec} сек назад)`);
+        setStatusText(`⚠️ Замедление связи (${ageSec} сек назад)`);
       } else {
         setStatusState('green');
-        setStatusText(`✨ Межпространственная связь стабильна • Блок #${lastBlockNumber} (${ageSec} сек назад)`);
+        setStatusText(`📡 Межпространственная связь стабильна (${ageSec} сек назад)`);
       }
     };
 
