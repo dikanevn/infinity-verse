@@ -264,11 +264,13 @@ contract InfinityVerse_AAA {
 
     /**
      * @notice Восстановление публичного адреса подписанта по стандарту EIP-191 / ecrecover
+     * @dev Включает строгую защиту от Signature Malleability (EIP-2 / OpenZeppelin ECDSA standard).
+     * Значение s обязано находиться в нижней половине диапазона secp256k1 (s <= n/2), а v равно 27 или 28.
      * @param messageHash Хеш сообщения с префиксом "\x19Ethereum Signed Message:\n32"
      * @param sig 65-байтная сигнатура (r, s, v)
-     * @return Адрес кошелька, подписавшего сообщение
+     * @return signer Адрес кошелька, подписавшего сообщение
      */
-    function recoverSigner(bytes32 messageHash, bytes memory sig) public pure returns (address) {
+    function recoverSigner(bytes32 messageHash, bytes memory sig) public pure returns (address signer) {
         require(sig.length == 65, unicode"AAA: Некорректная длина подписи");
 
         bytes32 r;
@@ -282,6 +284,17 @@ contract InfinityVerse_AAA {
         }
 
         if (v < 27) v += 27;
-        return ecrecover(messageHash, v, r, s);
+        require(v == 27 || v == 28, unicode"AAA: Некорректный параметр v подписи");
+
+        // Защита от Signature Malleability (EIP-2):
+        // Ограничиваем s нижней половиной порядка эллиптической кривой secp256k1 (n / 2)
+        // 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0 = secp256k1n / 2
+        require(
+            uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0,
+            unicode"AAA: Некорректный параметр s (malleability protection)"
+        );
+
+        signer = ecrecover(messageHash, v, r, s);
+        require(signer != address(0), unicode"AAA: Не удалось восстановить подписанта");
     }
 }

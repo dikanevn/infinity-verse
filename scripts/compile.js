@@ -27,8 +27,17 @@ function compile(contractFileName, contractName) {
     }
   };
 
+  function findImports(importPath) {
+    const cleanPath = importPath.replace(/^\.\//, '');
+    const fullPath = path.resolve(__dirname, '..', 'contracts-evm', cleanPath);
+    if (fs.existsSync(fullPath)) {
+      return { contents: fs.readFileSync(fullPath, 'utf8') };
+    }
+    return { error: 'File not found' };
+  }
+
   console.log(`Compiling ${contractFileName}...`);
-  const output = JSON.parse(solc.compile(JSON.stringify(input)));
+  const output = JSON.parse(solc.compile(JSON.stringify(input), { import: findImports }));
 
   if (output.errors) {
     let hasError = false;

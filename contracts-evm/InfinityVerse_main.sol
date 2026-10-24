@@ -5,17 +5,40 @@ interface IInfinityVerse_PrevMain {
     function admin() external view returns (address);
     function contractAAA() external view returns (address);
     function nextMain() external view returns (address);
+    function getAllowedContracts() external view returns (address[] memory);
 }
 
 /**
- * @title InfinityVerse_Main
- * @notice Вечное хранилище состояния мира (State Keeper).
- * Хранит координаты мира, структуру клеток (4 байта) и данные игроков.
- * Вся игровая логика вынесена во внешний контракт-исполнитель (AAA),
- * который в будущем может передаваться по наследству (BBB, CCC...).
+ * @title InfinityVerse_Main_G_1
+ * @notice Вечное хранилище состояния мира (State Keeper) - Поколение 1 (G_1).
+ * Хранит координаты мира, структуру клеток (4 байта) и реестр игроков.
+ * Вся игровая логика вынесена во внешние контракты-исполнители (AAA, BBB, CCC...),
+ * которые могут параллельно выполнять свои роли или заменяться по протоколу эволюции.
+ *
+ * ============================================================================
+ * === РЕГЛАМЕНТ ЭВОЛЮЦИИ И СМЕНЫ ПОКОЛЕНИЙ (STATE GENERATIONS HANDSHAKE) ===
+ * ============================================================================
+ * 1. Иерархия: поколения именуются Main_G_1, Main_G_2, ..., Main_G_N (Эволюция).
+ * 2. Рождение нового поколения (G_{N+1}):
+ *    - При развертывании Main_G_{N+1} в конструктор передается адрес Main_G_N.
+ *    - Для Main_G_1: prevMain = address(0) или 0x...dEaD.
+ *    - Для Main_G_{N+1}: конструктор проверяет, что предок Main_G_N полностью готов:
+ *      * prevAdmin == 0x000000000000000000000000000000000000dEaD (админ сожжен)
+ *      * allowedContractsList.length == 0 && contractAAA == address(0) (вся логика отключена)
+ *      * prevMain.nextMain() == address(this) (предок явно утвердил этого наследника).
+ * 3. Ритуал цементирования старого поколения (Main_G_N):
+ *    - Шаг А: setNextMain(address(Main_G_{N+1})) — указать преемника.
+ *    - Шаг Б: disallowContract(...) для каждого исполнителя (отключить мутации).
+ *    - Шаг В: changeAdmin(0x000000000000000000000000000000000000dEaD) — сжечь админа.
+ *      (Внимание: changeAdmin физически запретит вызов, если логика не отключена или nextMain не задан!)
+ * 4. Преемственность игроков (История происхождения):
+ *    - При регистрации игрока фиксируются registeredAtBlock и registeredAtTimestamp.
+ *    - Клиент и контракты опрашивают цепочку prevMain назад: если игрок уже родился
+ *      в раннем поколении, его статус и дата рождения сохраняются навечно.
+ * ============================================================================
  */
-contract InfinityVerse_Main {
-    string public constant VERSION = "0.0.0.0.8-MAIN";
+contract InfinityVerse_Main_G_1 {
+    string public constant VERSION = "0.0.0.0.9-MAIN-G-1";
 
     // 4 байта = 32 бита на клетку (до 8 клеток в одном слоте storage)
     struct Cell {
@@ -48,13 +71,19 @@ contract InfinityVerse_Main {
 
     address public nextMain;                // Адрес следующего поколения (наследника)
 
-    // Адрес активного логического контракта AAA
+    // Адрес активного логического контракта AAA (для обратной совместимости)
     address public contractAAA;
+
+    // Мульти-логика: реестр разрешенных исполнителей (AAA, BBB, CCC...)
+    mapping(address => bool) public allowedContracts;
+    address[] public allowedContractsList;
 
     // Адрес администратора (в будущем передается на DAO или Dead-адрес)
     address public admin;
 
     event ContractAAASet(address indexed newContractAAA);
+    event ContractAllowed(address indexed contractAddress);
+    event ContractDisallowed(address indexed contractAddress);
     event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
     event NextMainSet(address indexed nextMainAddress);
     event CellUpdated(int32 indexed x, int32 indexed y, uint8 terrain, uint8 object);
@@ -69,9 +98,12 @@ contract InfinityVerse_Main {
         _;
     }
 
-    // Модификатор: вызовы разрешены только текущему контракту AAA
-    modifier onlyContractAAA() {
-        require(msg.sender == contractAAA, unicode"Main: Вызов разрешен только контракту AAA");
+    // Модификатор: вызовы разрешены любому авторизованному контракту логики (AAA, BBB и т.д.)
+    modifier onlyAllowedContracts() {
+        require(
+            allowedContracts[msg.sender] || msg.sender == contractAAA,
+            unicode"Main: Вызов разрешен только авторизованному контракту логики"
+        );
         _;
     }
 
@@ -87,10 +119,24 @@ contract InfinityVerse_Main {
             );
 
             // 2. Все контракты логики старого контракта должны быть отключены
-            address prevAAA = IInfinityVerse_PrevMain(_prevMain).contractAAA();
+            try IInfinityVerse_PrevMain(_prevMain).getAllowedContracts() returns (address[] memory prevList) {
+                require(
+                    prevList.length == 0,
+                    unicode"Main: Список логических контрактов предыдущего поколения не пуст"
+                );
+            } catch {
+                // Если предок старой версии без getAllowedContracts, проверяем contractAAA
+                address prevAAA = IInfinityVerse_PrevMain(_prevMain).contractAAA();
+                require(
+                    prevAAA == address(0),
+                    unicode"Main: Логика предыдущего поколения еще не отключена"
+                );
+            }
+
+            // 3. Старый контракт обязан явно указать этот новый контракт своим наследником
             require(
-                prevAAA == address(0),
-                unicode"Main: Логика предыдущего поколения еще не отключена"
+                IInfinityVerse_PrevMain(_prevMain).nextMain() == address(this),
+                unicode"Main: Этот контракт не зарегистрирован как nextMain в предыдущем поколении"
             );
         }
 
@@ -130,12 +176,68 @@ contract InfinityVerse_Main {
 
     /**
      * @notice Установка адреса контракта логики AAA администратором (или DAO)
-     * @dev Только активный контракт AAA получает право изменять состояние мира
-     * @param _contractAAA Адрес нового развернутого контракта логики
+     * @dev Для обратной совместимости. Также автоматически добавляет/заменяет адрес в allowedContracts
+     * @param _contractAAA Адрес нового развернутого контракта логики AAA
      */
     function setContractAAA(address _contractAAA) external onlyAdmin {
+        if (contractAAA != address(0) && allowedContracts[contractAAA]) {
+            allowedContracts[contractAAA] = false;
+            _removeAllowedContract(contractAAA);
+            emit ContractDisallowed(contractAAA);
+        }
+
         contractAAA = _contractAAA;
+        if (_contractAAA != address(0) && !allowedContracts[_contractAAA]) {
+            allowedContracts[_contractAAA] = true;
+            allowedContractsList.push(_contractAAA);
+            emit ContractAllowed(_contractAAA);
+        }
+
         emit ContractAAASet(_contractAAA);
+    }
+
+    /**
+     * @notice Авторизация дополнительного контракта логики (BBB, CCC и др.)
+     * @param logicContract Адрес контракта игровой логики
+     */
+    function allowContract(address logicContract) external onlyAdmin {
+        require(logicContract != address(0), unicode"Main: Адрес логики не может быть нулевым");
+        require(!allowedContracts[logicContract], unicode"Main: Контракт уже авторизован");
+        allowedContracts[logicContract] = true;
+        allowedContractsList.push(logicContract);
+        emit ContractAllowed(logicContract);
+    }
+
+    /**
+     * @notice Отзыв авторизации у контракта логики
+     * @param logicContract Адрес отзываемого контракта
+     */
+    function disallowContract(address logicContract) external onlyAdmin {
+        require(allowedContracts[logicContract], unicode"Main: Контракт не авторизован");
+        allowedContracts[logicContract] = false;
+        _removeAllowedContract(logicContract);
+        if (contractAAA == logicContract) {
+            contractAAA = address(0);
+        }
+        emit ContractDisallowed(logicContract);
+    }
+
+    /**
+     * @notice Получение полного списка всех авторизованных контрактов логики
+     */
+    function getAllowedContracts() external view returns (address[] memory) {
+        return allowedContractsList;
+    }
+
+    function _removeAllowedContract(address logicContract) internal {
+        uint256 len = allowedContractsList.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (allowedContractsList[i] == logicContract) {
+                allowedContractsList[i] = allowedContractsList[len - 1];
+                allowedContractsList.pop();
+                break;
+            }
+        }
     }
 
     /**
@@ -155,7 +257,7 @@ contract InfinityVerse_Main {
      * @dev При финализации миграции передается на 0x...dEaD. Для защиты от ошибок сжечь админа
      * можно только если:
      * 1) Следующее поколение зафиксировано (nextMain != address(0)).
-     * 2) Логика текущего поколения полностью отключена (contractAAA == address(0)).
+     * 2) ВСЕ контракты логики текущего поколения полностью отключены (allowedContractsList пуст и contractAAA == address(0)).
      * @param newAdmin Адрес нового администратора
      */
     function changeAdmin(address newAdmin) external onlyAdmin {
@@ -164,7 +266,10 @@ contract InfinityVerse_Main {
 
         if (newAdmin == 0x000000000000000000000000000000000000dEaD) {
             require(nextMain != address(0), unicode"Main: Сначала зафиксируйте nextMain перед сжиганием админа");
-            require(contractAAA == address(0), unicode"Main: Отключите contractAAA (установите в 0) перед сжиганием админа");
+            require(
+                contractAAA == address(0) && allowedContractsList.length == 0,
+                unicode"Main: Отключите все контракты логики (список должен быть пуст) перед сжиганием админа"
+            );
         }
 
         emit AdminChanged(admin, newAdmin);
@@ -241,17 +346,17 @@ contract InfinityVerse_Main {
     }
 
     // ========================================================================
-    // === STATE MUTATION (ТОЛЬКО ДЛЯ АКТИВНОГО КОНТРАКТА AAA) ===
+    // === STATE MUTATION (ДЛЯ АКТИВНЫХ КОНТРАКТОВ ЛОГИКИ AAA, BBB, CCC...) ===
     // ========================================================================
 
     /**
      * @notice Изменение данных клетки мира
-     * @dev Вызывается только авторизованным логическим контрактом AAA
+     * @dev Вызывается только авторизованным логическим контрактом (AAA, BBB и т.д.)
      * @param x Координата X
      * @param y Координата Y
      * @param cellData Новые упакованные данные клетки (4 байта)
      */
-    function setCell(int32 x, int32 y, Cell calldata cellData) external onlyContractAAA {
+    function setCell(int32 x, int32 y, Cell calldata cellData) external onlyAllowedContracts {
         bytes32 key = getCellKey(x, y);
         cells[key] = cellData;
         emit CellUpdated(x, y, cellData.terrain, cellData.object);
@@ -259,12 +364,12 @@ contract InfinityVerse_Main {
 
     /**
      * @notice Рождение (спавн) нового игрока в игровом мире
-     * @dev Вызывается только контрактом AAA после проверки правил спавна
+     * @dev Вызывается только авторизованным логическим контрактом после проверки правил спавна
      * @param player Адрес кошелька игрока
      * @param startX Начальная координата X
      * @param startY Начальная координата Y
      */
-    function spawnPlayer(address player, int32 startX, int32 startY) external onlyContractAAA {
+    function spawnPlayer(address player, int32 startX, int32 startY) external onlyAllowedContracts {
         require(!players[player].exists, unicode"Main: Игрок уже родился в этом мире");
         players[player].x = startX;
         players[player].y = startY;
@@ -277,12 +382,12 @@ contract InfinityVerse_Main {
 
     /**
      * @notice Перемещение игрока на новые координаты
-     * @dev Вызывается только контрактом AAA после валидации шага и препятствий
+     * @dev Вызывается только авторизованным логическим контрактом после валидации шага и препятствий
      * @param player Адрес игрока
      * @param toX Целевая координата X
      * @param toY Целевая координата Y
      */
-    function movePlayer(address player, int32 toX, int32 toY) external onlyContractAAA {
+    function movePlayer(address player, int32 toX, int32 toY) external onlyAllowedContracts {
         Player storage p = players[player];
         int32 fromX = p.x;
         int32 fromY = p.y;
@@ -295,12 +400,12 @@ contract InfinityVerse_Main {
 
     /**
      * @notice Запись активного сессионного ключа игрока
-     * @dev Вызывается контрактом AAA после проверки EIP-191 подписи владельца кошелька
+     * @dev Вызывается логическим контрактом после проверки EIP-191 подписи владельца кошелька
      * @param player Адрес игрока
      * @param sessionKey Временный сессионный ключ
      * @param expiry Время истечения сессии
      */
-    function setPlayerSession(address player, address sessionKey, uint256 expiry) external onlyContractAAA {
+    function setPlayerSession(address player, address sessionKey, uint256 expiry) external onlyAllowedContracts {
         players[player].sessionKey = sessionKey;
         players[player].sessionExpiry = expiry;
         emit SessionAuthorized(player, sessionKey, expiry);
@@ -311,7 +416,7 @@ contract InfinityVerse_Main {
      * @dev Обнуляет sessionKey и sessionExpiry в хранилище
      * @param player Адрес игрока
      */
-    function revokePlayerSession(address player) external onlyContractAAA {
+    function revokePlayerSession(address player) external onlyAllowedContracts {
         players[player].sessionKey = address(0);
         players[player].sessionExpiry = 0;
         emit SessionRevoked(player);
@@ -323,7 +428,7 @@ contract InfinityVerse_Main {
      * @param player Адрес игрока
      * @return Предыдущее значение нонса перед увеличением на 1
      */
-    function incrementNonce(address player) external onlyContractAAA returns (uint256) {
+    function incrementNonce(address player) external onlyAllowedContracts returns (uint256) {
         return nonces[player]++;
     }
 
