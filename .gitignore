@@ -4,6 +4,14 @@
 *.local
 node_modules/
 
+# Builds & Outputs
+dist/
+target/
+.system_generated/
+*.Identifier
+
 # IDE & Editor artifacts
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
