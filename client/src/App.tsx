@@ -77,10 +77,13 @@ function App() {
     }
   }, [player?.x, player?.y, player?.exists]);
 
-  // Выбор клетки: переносим фокус на неё, чтобы блокчейн подгрузил сектор 5х5 вокруг точки клика
+  // Выбор клетки: если выбрана клетка, отличная от текущего выбора
   const handleSelectCoord = (coord: { x: number; y: number }) => {
     setSelectedCoord(coord);
-    setFocusCoord(coord);
+    // Сдвигаем фокус только если кликнули далеко за пределами текущего окна фокуса (больше 2 шагов)
+    if (Math.abs(coord.x - focusCoord.x) > 2 || Math.abs(coord.y - focusCoord.y) > 2) {
+      setFocusCoord(coord);
+    }
   };
 
   // Возврат фокуса к игроку

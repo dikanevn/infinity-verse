@@ -19,8 +19,8 @@ export const CellView: React.FC<CellViewProps> = ({
   player,
   onSelect
 }) => {
-  // Клетка считается неразведанной (туман войны), если её нет в ответе или её terrain === 0 (пустота космоса)
-  const isFog = !cell || cell.terrain === 0;
+  // Туман войны — только если клетка вообще не прочитана из блокчейна (!cell)
+  const isFog = !cell;
 
   const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: `T:${cell.terrain}`, icon: '', bg: '#14291e' }) : TERRAIN_CONFIG[0];
   const oInfo = cell ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : OBJECT_CONFIG[0];
@@ -28,6 +28,9 @@ export const CellView: React.FC<CellViewProps> = ({
   // Если это песок (terrain === 1), берем уникальную процедурную текстуру по координатам (x, y)
   const isSand = !isFog && cell.terrain === 1;
   const sandBgPattern = isSand ? getSandTextureForCoord(coord.x, coord.y) : undefined;
+
+  // Если прочитано из блокчейна и terrain === 0 — это Космос (глубокий чёрный космический фон)
+  const isSpace = !isFog && cell.terrain === 0;
 
   return (
     <button
@@ -38,7 +41,7 @@ export const CellView: React.FC<CellViewProps> = ({
         height: '62px',
         background: isFog 
           ? 'radial-gradient(circle, #0e1322 0%, #05070d 100%)' 
-          : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : tInfo.bg),
+          : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : (isSpace ? '#06080f' : tInfo.bg)),
         border: isSelected ? '2px solid #38bdf8' : 'none',
         opacity: isFog ? 0.35 : 1,
         borderRadius: '0px',
@@ -46,7 +49,7 @@ export const CellView: React.FC<CellViewProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'space-between',
-        cursor: isFog ? 'default' : 'pointer',
+        cursor: 'pointer',
         color: '#ffffff',
         fontFamily: 'inherit',
         position: 'relative',
@@ -79,8 +82,8 @@ export const CellView: React.FC<CellViewProps> = ({
           alignItems: 'flex-end',
           textAlign: 'right'
         }}>
-          <span style={{ fontSize: '0.52rem', color: isFog ? '#64748b' : '#fef08a', fontWeight: 700 }}>
-            {isFog ? '🌫️ Туман' : tInfo.name}
+          <span style={{ fontSize: '0.52rem', color: isFog ? '#64748b' : (isSpace ? '#38bdf8' : '#fef08a'), fontWeight: 700 }}>
+            {isFog ? '🌫️ Туман' : (isSpace ? '🌌 Космос' : tInfo.name)}
           </span>
           <span style={{
             fontSize: '0.48rem',
