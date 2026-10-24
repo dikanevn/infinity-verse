@@ -1,11 +1,63 @@
-name: Build Android APK and Windows EXE
+name: Build & Release (On Demand)
 
 on:
-  workflow_dispatch: # Сборка запускается только вручную по запросу пользователя (или по тегу релиза)
+  workflow_dispatch:
+    inputs:
+      deploy_pages:
+        description: 'Deploy to GitHub Pages'
+        type: boolean
+        default: true
+      build_apk:
+        description: 'Build Android APK'
+        type: boolean
+        default: true
+      build_exe:
+        description: 'Build Windows Portable EXE'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'build-and-release'
+  cancel-in-progress: false
 
 jobs:
+  deploy-pages:
+    name: Deploy GitHub Pages
+    if: inputs.deploy_pages == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build web dist
+        working-directory: client
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: client/dist
+          branch: gh-pages
+
   build-android:
     name: Build Android APK
+    if: inputs.build_apk == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -50,6 +102,7 @@ jobs:
 
   build-windows:
     name: Build Windows EXE (Tauri)
+    if: inputs.build_exe == true
     runs-on: windows-latest
     steps:
       - name: Checkout repository

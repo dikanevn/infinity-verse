@@ -29,7 +29,7 @@ function App() {
           color: '#64748b',
           letterSpacing: '0.05em',
         }}>
-          версия 20261024644-1
+          версия 20261024644-2
         </div>
       </div>
     </div>
