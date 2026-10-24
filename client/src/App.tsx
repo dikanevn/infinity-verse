@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { createPublicClient, http, parseAbi, defineChain, keccak256, encodePacked } from 'viem';
+import { createPublicClient, createWalletClient, custom, http, parseAbi, defineChain, keccak256, encodePacked } from 'viem';
 
-// Контракт InfinityVerse V_0.0.0.0.5 (Direct X,Y Coordinate Grid 5x5)
-const CONTRACT_ADDRESS = '0xb16b78e9075ef1c36a0bec220812a488687a225b';
+// Основной контракт InfinityVerse_main (Direct X,Y Coordinate Grid 5x5 + Players)
+const CONTRACT_ADDRESS = '0x9f9f4b625bc455d0b1328f548eafd28afcc50ae7';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
 const monadTestnet = defineChain({
@@ -27,7 +27,10 @@ const VERSE_ABI = parseAbi([
   'function VERSION() view returns (string)',
   'function getCellKey(int32 x, int32 y) pure returns (bytes32)',
   'function getCell(int32 x, int32 y) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint16 paramA, uint16 paramB))',
-  'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint16 paramA, uint16 paramB)[])'
+  'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint16 paramA, uint16 paramB)[])',
+  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists)',
+  'function spawn(address player) returns (int32, int32)',
+  'function move(address player, int32 targetX, int32 targetY)'
 ]);
 
 const publicClient = createPublicClient({
@@ -88,17 +91,97 @@ function App() {
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
-  const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.5');
+  const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.6');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [lastBlockNumber, setLastBlockNumber] = useState<string | null>(null);
-  const CLIENT_VERSION = '0.0.0.0.11';
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [player, setPlayer] = useState<{ x: number; y: number; exists: boolean } | null>(null);
+  const [actionPending, setActionPending] = useState<boolean>(false);
+  const CLIENT_VERSION = '0.0.0.0.12';
+
+  // Подключение кошелька (MetaMask / Rabby / Phantom)
+  const connectWallet = async () => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) {
+      alert('Кошелёк не обнаружен! Установите MetaMask, Rabby или Phantom.');
+      return;
+    }
+    try {
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts[0]) {
+        setConnectedAddress(accounts[0]);
+      }
+    } catch (err: any) {
+      console.error('Ошибка подключения кошелька:', err);
+    }
+  };
+
+  // Рождение игрока в мире (spawn на 1, 0)
+  const handleSpawn = async () => {
+    if (!connectedAddress) return;
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) return;
+
+    setActionPending(true);
+    setStatusText('⏳ Происходит рождение игрока в мире...');
+    try {
+      const walletClient = createWalletClient({
+        chain: monadTestnet,
+        transport: custom(ethereum)
+      });
+      const hash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: VERSE_ABI,
+        functionName: 'spawn',
+        args: [connectedAddress as `0x${string}`],
+        account: connectedAddress as `0x${string}`
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      await fetchState();
+    } catch (err: any) {
+      console.error(err);
+      alert('Ошибка при спавне: ' + (err.shortMessage || err.message));
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  // Перемещение игрока на выбранную клетку
+  const handleMove = async (targetX: number, targetY: number) => {
+    if (!connectedAddress || !player?.exists) return;
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) return;
+
+    setActionPending(true);
+    setStatusText(`⏳ Перемещение на (${targetX}, ${targetY})...`);
+    try {
+      const walletClient = createWalletClient({
+        chain: monadTestnet,
+        transport: custom(ethereum)
+      });
+      const hash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: VERSE_ABI,
+        functionName: 'move',
+        args: [connectedAddress as `0x${string}`, targetX, targetY],
+        account: connectedAddress as `0x${string}`
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      await fetchState();
+    } catch (err: any) {
+      console.error(err);
+      alert('Недопустимый ход: ' + (err.shortMessage || err.message));
+    } finally {
+      setActionPending(false);
+    }
+  };
 
   const fetchState = async () => {
     try {
       const xs = INITIAL_COORDS.map(c => c.x);
       const ys = INITIAL_COORDS.map(c => c.y);
 
-      const [ver, onchainCells, latestBlock] = await Promise.all([
+      const calls: any[] = [
         publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
@@ -111,7 +194,28 @@ function App() {
           args: [xs, ys]
         }),
         publicClient.getBlock({ blockTag: 'latest' })
-      ]);
+      ];
+
+      if (connectedAddress) {
+        calls.push(
+          publicClient.readContract({
+            address: CONTRACT_ADDRESS,
+            abi: VERSE_ABI,
+            functionName: 'getPlayer',
+            args: [connectedAddress as `0x${string}`]
+          })
+        );
+      }
+
+      const results = await Promise.all(calls);
+      const ver = results[0];
+      const onchainCells = results[1];
+      const latestBlock = results[2];
+
+      if (connectedAddress && results[3]) {
+        const p = results[3];
+        setPlayer({ x: Number(p[0]), y: Number(p[1]), exists: Boolean(p[2]) });
+      }
 
       setContractVersion(ver);
       setLastBlockTimestamp(Number(latestBlock.timestamp));
@@ -319,20 +423,119 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Центр клетки: Обелиск */}
+                  {/* Центр клетки: Обелиск или Игрок */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flex: 1,
                     fontSize: '1.75rem',
-                    lineHeight: 1
+                    lineHeight: 1,
+                    position: 'relative'
                   }}>
-                    {cell?.object ? oInfo.icon : ''}
+                    {/* Если на этой клетке стоит игрок — показываем фигурку игрока */}
+                    {player?.exists && player.x === coord.x && player.y === coord.y ? (
+                      <span title="Ваш персонаж" style={{ filter: 'drop-shadow(0 0 8px #38bdf8)' }}>
+                        🧑‍🚀
+                      </span>
+                    ) : (
+                      cell?.object ? oInfo.icon : ''
+                    )}
                   </div>
                 </button>
               );
             })}
+          </div>
+
+          {/* Панель управления Игроком и Кошельком */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            flexWrap: 'wrap',
+            margin: '4px 0'
+          }}>
+            {!connectedAddress ? (
+              <button
+                onClick={connectWallet}
+                style={{
+                  backgroundColor: '#8b5cf6',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0px',
+                  padding: '8px 16px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  letterSpacing: '0.05em',
+                  boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)'
+                }}
+              >
+                🦊 ПОДКЛЮЧИТЬ КОШЕЛЕК
+              </button>
+            ) : !player?.exists ? (
+              <button
+                onClick={handleSpawn}
+                disabled={actionPending}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0px',
+                  padding: '8px 18px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  cursor: actionPending ? 'wait' : 'pointer',
+                  letterSpacing: '0.05em',
+                  boxShadow: '0 0 15px rgba(16, 185, 129, 0.5)'
+                }}
+              >
+                {actionPending ? 'РОЖДЕНИЕ В МИРЕ...' : '✨ РОДИТЬСЯ В МИРЕ (НА 1, 0)'}
+              </button>
+            ) : (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.72rem',
+                backgroundColor: '#131826',
+                border: '1px solid #38bdf8',
+                padding: '6px 12px'
+              }}>
+                <span>🧑‍🚀 Игрок: <b>({player.x}, {player.y})</b></span>
+                {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
+                {(() => {
+                  const dx = Math.abs(selectedCoord.x - player.x);
+                  const dy = Math.abs(selectedCoord.y - player.y);
+                  const isAdjacent = (dx <= 1 && dy <= 1) && (dx + dy > 0);
+                  const isObelisk = selectedCoord.x === 0 && selectedCoord.y === 0;
+
+                  if (isAdjacent && !isObelisk) {
+                    return (
+                      <button
+                        onClick={() => handleMove(selectedCoord.x, selectedCoord.y)}
+                        disabled={actionPending}
+                        style={{
+                          backgroundColor: '#38bdf8',
+                          color: '#07080d',
+                          border: 'none',
+                          borderRadius: '0px',
+                          padding: '4px 10px',
+                          fontWeight: 800,
+                          fontSize: '0.68rem',
+                          cursor: actionPending ? 'wait' : 'pointer',
+                          marginLeft: '6px'
+                        }}
+                      >
+                        {actionPending ? 'ХОД...' : `ШАГНУТЬ НА (${selectedCoord.x}, ${selectedCoord.y}) ➔`}
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            )}
           </div>
 
           {/* Статус связи со Вселенной */}
