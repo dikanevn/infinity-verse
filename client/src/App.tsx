@@ -155,7 +155,7 @@ function App() {
         width: '100%',
         height: '100%',
         border: '2px solid #8b5cf6',
-        borderRadius: '8px',
+        borderRadius: '0px',
         boxShadow: '0 0 25px rgba(139, 92, 246, 0.25), inset 0 0 15px rgba(139, 92, 246, 0.1)',
         display: 'flex',
         flexDirection: 'column',
@@ -204,7 +204,7 @@ function App() {
             backgroundColor: '#10131d',
             padding: '8px',
             border: '2px solid #2e384d',
-            borderRadius: '6px'
+            borderRadius: '0px'
           }}>
             {INITIAL_COORDS.map((coord) => {
               const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
@@ -222,7 +222,7 @@ function App() {
                     height: '90px',
                     backgroundColor: tInfo.bg,
                     border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
-                    borderRadius: '4px',
+                    borderRadius: '0px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -269,7 +269,7 @@ function App() {
               maxWidth: '92vw',
               backgroundColor: '#0d111a',
               border: '1px solid #38bdf8',
-              borderRadius: '6px',
+              borderRadius: '0px',
               padding: '10px 14px',
               display: 'flex',
               flexDirection: 'column',
@@ -304,7 +304,7 @@ function App() {
                   <div style={{
                     backgroundColor: '#0a0d14',
                     border: '1px solid #334155',
-                    borderRadius: '4px',
+                    borderRadius: '0px',
                     padding: '6px 8px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -369,7 +369,7 @@ function App() {
               })()}
 
               {/* Разбор ключа в Mapping */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#131826', padding: '6px', borderRadius: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#131826', padding: '6px', borderRadius: '0px' }}>
                 <span style={{ color: '#fbbf24', fontWeight: 700 }}>Ключ в Mapping: keccak256(abi.encodePacked(x, y))</span>
                 <span style={{ color: '#94a3b8', fontSize: '0.65rem', wordBreak: 'break-all' }}>
                   {curCell.key}
@@ -378,32 +378,32 @@ function App() {
 
               {/* 8-байтовая структура клетки */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '2px' }}>
-                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '4px' }}>
+                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '0px' }}>
                   <div style={{ color: '#94a3b8', fontSize: '0.64rem' }}>terrain (uint8)</div>
                   <div style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.terrain} — {terrainInfo?.name}</div>
                 </div>
 
-                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '4px' }}>
+                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '0px' }}>
                   <div style={{ color: '#94a3b8', fontSize: '0.64rem' }}>object (uint8)</div>
                   <div style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.object} — {objectInfo?.name || 'Пусто'}</div>
                 </div>
 
-                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '4px' }}>
+                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '0px' }}>
                   <div style={{ color: '#94a3b8', fontSize: '0.64rem' }}>state (uint8)</div>
                   <div style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.state}%</div>
                 </div>
 
-                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '4px' }}>
+                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '0px' }}>
                   <div style={{ color: '#94a3b8', fontSize: '0.64rem' }}>reserved (uint8)</div>
                   <div style={{ color: '#f8fafc', fontWeight: 700 }}>{curCell.reserved} (запас)</div>
                 </div>
 
-                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '4px' }}>
+                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '0px' }}>
                   <div style={{ color: '#94a3b8', fontSize: '0.64rem' }}>paramA (uint16)</div>
                   <div style={{ color: '#38bdf8', fontWeight: 700 }}>{curCell.paramA}</div>
                 </div>
 
-                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '4px' }}>
+                <div style={{ backgroundColor: '#131826', padding: '5px 8px', borderRadius: '0px' }}>
                   <div style={{ color: '#94a3b8', fontSize: '0.64rem' }}>paramB (uint16)</div>
                   <div style={{ color: '#38bdf8', fontWeight: 700 }}>{curCell.paramB}</div>
                 </div>
@@ -413,7 +413,7 @@ function App() {
               <div style={{
                 backgroundColor: '#0a0d14',
                 border: '1px solid #1e293b',
-                borderRadius: '4px',
+                borderRadius: '0px',
                 padding: '8px',
                 marginTop: '4px',
                 display: 'flex',
@@ -431,7 +431,7 @@ function App() {
                   fontSize: '0.72rem',
                   backgroundColor: '#111827',
                   padding: '4px 6px',
-                  borderRadius: '3px',
+                  borderRadius: '0px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   letterSpacing: '0.04em'
