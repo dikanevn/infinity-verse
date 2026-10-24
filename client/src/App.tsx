@@ -112,7 +112,7 @@ function App() {
       const xs = INITIAL_COORDS.map(c => c.x);
       const ys = INITIAL_COORDS.map(c => c.y);
 
-      const [ver, onchainCells] = await Promise.all([
+      const [ver, onchainCells, latestBlock] = await Promise.all([
         publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: VERSE_ABI,
@@ -124,6 +124,7 @@ function App() {
           functionName: 'getCellsBatch',
           args: [xs, ys]
         }),
+        publicClient.getBlock({ blockTag: 'latest' })
       ]);
 
       clearTimeout(warnTimer);
@@ -131,6 +132,10 @@ function App() {
       const durationMs = Date.now() - startTime;
 
       setContractVersion(ver);
+
+      // Время блока: форматируем timestamp блока в читаемое локальное время
+      const blockDate = new Date(Number(latestBlock.timestamp) * 1000);
+      const blockTimeStr = blockDate.toLocaleTimeString();
 
       const parsed: CellData[] = INITIAL_COORDS.map((coord, i) => {
         const c = onchainCells[i];
@@ -151,16 +156,16 @@ function App() {
 
       setCells(parsed);
 
-      // Оценка итогового времени отклика
+      // Оценка итогового времени отклика с отображением времени блока
       if (durationMs > CONNECTION_CONFIG.DANGER_LATENCY_MS) {
         setStatusState('red');
-        setStatusText(`🚨 Межпространственная связь восстановлена после задержки (${durationMs}мс)`);
+        setStatusText(`🚨 Связь восстановлена • Блок: ${blockTimeStr}`);
       } else if (durationMs > CONNECTION_CONFIG.WARN_LATENCY_MS) {
         setStatusState('yellow');
-        setStatusText(`⚠️ Межпространственная связь замедлена (${durationMs}мс)`);
+        setStatusText(`⚠️ Связь замедлена • Блок: ${blockTimeStr}`);
       } else {
         setStatusState('green');
-        setStatusText(`✨ Межпространственная связь стабильна (${durationMs}мс)`);
+        setStatusText(`✨ Межпространственная связь стабильна • Блок: ${blockTimeStr}`);
       }
     } catch (err: any) {
       clearTimeout(warnTimer);
