@@ -288,9 +288,10 @@ contract InfinityVerse_AAA {
         require(dx <= 1 && dy <= 1, unicode"AAA: Дистанция хода превышает 1 клетку");
         require(dx + dy > 0, unicode"AAA: Необходимо выбрать соседнюю клетку, а не текущую");
 
-        // Проверяем препятствие клетки
+        // Проверяем препятствие клетки (Обелиск или Стена)
         IInfinityVerse_Main.Cell memory targetCell = mainContract.getCell(targetX, targetY);
         require(targetCell.object != 1, unicode"AAA: Нельзя наступать на Обелиск");
+        require(targetCell.object != 2, unicode"AAA: Путь преграждает каменная стена");
 
         mainContract.movePlayer(player, targetX, targetY);
     }

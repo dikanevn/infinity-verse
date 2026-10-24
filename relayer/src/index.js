@@ -5,7 +5,7 @@ import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 // === АКТУАЛЬНЫЕ АДРЕСА ПОКОЛЕНИЯ 2 (MAIN_G_2 + СИММЕТРИЧНЫЙ AAA) ===
 // ============================================================================
 const MAIN_G2_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
-const AAA_ADDRESS = '0x2a8d707aa28f35596805d5668bc531afec9eeafd';
+const AAA_ADDRESS = '0x21ba79b42716501b9c0fbee2f8da4b041fd3984d';
 
 // ABI для чтения нонсов и состояния из хранилища Main_G_2
 const MAIN_ABI = parseAbi([

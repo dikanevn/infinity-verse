@@ -6,11 +6,11 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 // Хранилище мира (State Storage Generation 2):
 export const MAIN_CONTRACT_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
 // Исполнительная логика (AAA Module):
-export const AAA_CONTRACT_ADDRESS = '0x2a8d707aa28f35596805d5668bc531afec9eeafd';
+export const AAA_CONTRACT_ADDRESS = '0x21ba79b42716501b9c0fbee2f8da4b041fd3984d';
 
 export const RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2610250003';
+export const CLIENT_VERSION = '2610250005';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
