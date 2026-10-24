@@ -6,11 +6,11 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 // Хранилище мира (State Storage Generation 2):
 export const MAIN_CONTRACT_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
 // Исполнительная логика (AAA Module):
-export const AAA_CONTRACT_ADDRESS = '0xfa8f0d80475c27797765a3cc03feb930ddf15306';
+export const AAA_CONTRACT_ADDRESS = '0x5486aa7b0d7042ec6a49f91d90ce7b7d4ed28faa';
 
 export const RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2610250032';
+export const CLIENT_VERSION = '2610250053';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -56,11 +56,13 @@ export const AAA_ABI = parseAbi([
   // Прямые действия игрока за личный газ (Direct: MetaMask / Приватник)
   'function spawnDirect()',
   'function moveDirect(int32 targetX, int32 targetY)',
+  'function discoverCellDirect(int32 targetX, int32 targetY)',
   'function authorizeSessionDirect(address sessionKey, uint256 expiry)',
   'function revokeSessionDirect()',
   // Спонсируемые действия по EIP-191 подписи (Gasless: Google / Релеер)
   'function spawnGasless(address player, bytes sig)',
   'function moveGasless(address player, int32 targetX, int32 targetY, bytes sig)',
+  'function discoverCellGasless(address player, int32 targetX, int32 targetY, bytes sig)',
   'function authorizeSessionGasless(address player, address sessionKey, uint256 expiry, bytes sig)',
   'function revokeSessionGasless(address player, bytes sig)'
 ]);

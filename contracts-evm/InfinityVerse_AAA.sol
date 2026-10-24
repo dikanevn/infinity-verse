@@ -267,6 +267,51 @@ contract InfinityVerse_AAA {
         _validateAndExecuteMove(player, targetX, targetY);
     }
 
+    /**
+     * @notice 5. Разведка / создание одной клетки мира — ПРЯМОЙ РЕЖИМ (Direct)
+     * @dev Игрок материализует 1 клетку песка из первозданной пустоты за собственный газ
+     * @param targetX Координата X создаваемой клетки
+     * @param targetY Координата Y создаваемой клетки
+     */
+    function discoverCellDirect(int32 targetX, int32 targetY) external {
+        (, , bool exists, , , , ) = mainContract.getPlayer(msg.sender);
+        require(exists, unicode"AAA: Сначала необходимо родиться в мире");
+        _validateAndExecuteDiscoverCell(msg.sender, targetX, targetY);
+    }
+
+    /**
+     * @notice 5. Разведка / создание одной клетки мира — БЕЗГАЗОВЫЙ РЕЖИМ (Gasless)
+     * @dev Игрок материализует 1 клетку песка по EIP-191 подписи сессионного ключа (газ платит спонсор)
+     * @param player Адрес кошелька игрока
+     * @param targetX Координата X создаваемой клетки
+     * @param targetY Координата Y создаваемой клетки
+     * @param sig Подпись команды "DiscoverCell" сессионным ключом игрока
+     */
+    function discoverCellGasless(
+        address player,
+        int32 targetX,
+        int32 targetY,
+        bytes calldata sig
+    ) external {
+        (, , bool exists, address sessionKey, , , ) = mainContract.getPlayer(player);
+        require(exists, unicode"AAA: Сначала необходимо родиться в мире");
+        require(isSessionValid(player, sessionKey), unicode"AAA: Сессия истекла или недействительна");
+
+        uint256 currentNonce = mainContract.incrementNonce(player);
+
+        bytes32 discoverHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked("DiscoverCell", player, targetX, targetY, currentNonce, block.chainid))
+            )
+        );
+
+        address signer = recoverSigner(discoverHash, sig);
+        require(signer == sessionKey, unicode"AAA: Несовпадение сессионного ключа в подписи создания клетки");
+
+        _validateAndExecuteDiscoverCell(player, targetX, targetY);
+    }
+
     // ========================================================================
     // === ЕДИНОЕ ВНУТРЕННЕЕ ЯДРО ВЫПОЛНЕНИЯ (INTERNAL CORE) ===
     // ========================================================================
@@ -308,6 +353,32 @@ contract InfinityVerse_AAA {
         require(targetCell.object != 2, unicode"AAA: Путь преграждает каменная стена");
 
         mainContract.movePlayer(player, targetX, targetY);
+    }
+
+    /**
+     * @dev Внутренняя валидация и создание одной клетки песка:
+     * 1) Клетка обязана быть первозданной пустотой (terrain == 0)
+     * 2) Дистанция от игрока не более 1 клетки (в радиусе 3х3 вокруг персонажа)
+     */
+    function _validateAndExecuteDiscoverCell(address player, int32 targetX, int32 targetY) internal {
+        (int32 currentX, int32 currentY, , , , , ) = mainContract.getPlayer(player);
+
+        int32 dx = targetX - currentX;
+        int32 dy = targetY - currentY;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+
+        require(dx <= 1 && dy <= 1, unicode"AAA: Создание клетки разрешено только в радиусе 1 шага от игрока");
+
+        IInfinityVerse_Main.Cell memory targetCell = mainContract.getCell(targetX, targetY);
+        require(targetCell.terrain == 0, unicode"AAA: Клетка уже существует (не пустота)");
+
+        mainContract.setCell(targetX, targetY, IInfinityVerse_Main.Cell({
+            terrain: 1, // Песок
+            object: 0,  // Без препятствий
+            state: 0,
+            reserved: 0
+        }));
     }
 
     /**

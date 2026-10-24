@@ -5,7 +5,7 @@ import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 // === АКТУАЛЬНЫЕ АДРЕСА ПОКОЛЕНИЯ 2 (MAIN_G_2 + СИММЕТРИЧНЫЙ AAA) ===
 // ============================================================================
 const MAIN_G2_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
-const AAA_ADDRESS = '0xfa8f0d80475c27797765a3cc03feb930ddf15306';
+const AAA_ADDRESS = '0x5486aa7b0d7042ec6a49f91d90ce7b7d4ed28faa';
 
 // ABI для чтения нонсов и состояния из хранилища Main_G_2
 const MAIN_ABI = parseAbi([
@@ -17,6 +17,7 @@ const MAIN_ABI = parseAbi([
 const AAA_ABI = parseAbi([
   'function spawnGasless(address player, bytes sig)',
   'function moveGasless(address player, int32 targetX, int32 targetY, bytes sig)',
+  'function discoverCellGasless(address player, int32 targetX, int32 targetY, bytes sig)',
   'function authorizeSessionGasless(address player, address sessionKey, uint256 expiry, bytes sig)',
   'function revokeSessionGasless(address player, bytes sig)'
 ]);
@@ -436,6 +437,25 @@ export default {
               abi: AAA_ABI,
               functionName: 'moveGasless',
               args: [player, Number(targetX), Number(targetY), moveSig],
+              nonce
+            })
+          );
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
+        }
+
+        // 5. Разведка/создание 1 клетки песка (discoverCellGasless)
+        if (action === 'discover_cell') {
+          if (targetX === undefined || targetY === undefined || !sig) {
+            return jsonResponse({ error: 'targetX, targetY and sig required' }, 400);
+          }
+
+          const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
+            walletClient.writeContract({
+              address: aaaContractAddress,
+              abi: AAA_ABI,
+              functionName: 'discoverCellGasless',
+              args: [player, Number(targetX), Number(targetY), sig],
               nonce
             })
           );
