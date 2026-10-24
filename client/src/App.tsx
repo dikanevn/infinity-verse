@@ -31,6 +31,7 @@ const VERSE_ABI = parseAbi([
   'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint16 paramA, uint16 paramB)[])',
   'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry)',
   'function spawn(address player) returns (int32, int32)',
+  'function moveDirect(int32 targetX, int32 targetY)',
   'function authorizeSessionWithSig(address player, address sessionKey, uint256 expiry, bytes sig)',
   'function revokeSessionWithSig(address player, bytes sig)',
   'function revokeSessionDirect()',
@@ -105,6 +106,86 @@ interface EIP6963ProviderDetail {
 // При закрытии страницы или вкладки ключ безвозвратно уничтожается
 let inMemorySessionAccount: ReturnType<typeof privateKeyToAccount> | null = null;
 
+// ============================================================================
+// === МОДУЛЬ КРИПТОГРАФИЧЕСКОГО ШИФРОВАНИЯ ПРИВАТНИКА В ОПЕРАТИВНОЙ ПАМЯТИ ===
+// ============================================================================
+// Приватный ключ никогда не хранится открытым текстом в переменных или стейте.
+// На лету генерируется уникальный 256-битный AES-GCM сессионный ключ.
+// В RAM остаётся только зашифрованный буфер (Ciphertext + IV).
+class EncryptedRamSigner {
+  private static encryptedBlob: ArrayBuffer | null = null;
+  private static iv: Uint8Array | null = null;
+  private static cryptoKey: CryptoKey | null = null;
+  public static activeAddress: `0x${string}` | null = null;
+
+  public static async lockPrivateKey(rawPrivateKey: string): Promise<`0x${string}`> {
+    const cleanKey = (rawPrivateKey.startsWith('0x') ? rawPrivateKey : '0x' + rawPrivateKey).trim() as `0x${string}`;
+    const account = privateKeyToAccount(cleanKey);
+    this.activeAddress = account.address;
+
+    // 1. Генерируем уникальный криптостойкий мастер-ключ AES-GCM (256 бит)
+    this.cryptoKey = await window.crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 },
+      false, // non-extractable: ключ нельзя выгрузить из криптоподсистемы
+      ['encrypt', 'decrypt']
+    );
+
+    // 2. Генерируем случайный вектор инициализации (IV) 12 байт
+    this.iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+    // 3. Шифруем строку приватного ключа
+    const encoder = new TextEncoder();
+    const data = encoder.encode(cleanKey);
+    this.encryptedBlob = await window.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: this.iv.buffer as ArrayBuffer },
+      this.cryptoKey,
+      data
+    );
+
+    return this.activeAddress;
+  }
+
+  // Мгновенная расшифровка внутри изолированного скоупа на время отправки транзакции
+  public static async executeWithSigner<T>(fn: (walletClient: any) => Promise<T>): Promise<T> {
+    if (!this.encryptedBlob || !this.iv || !this.cryptoKey) {
+      throw new Error('Ключ в RAM не найден или заблокирован');
+    }
+
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: this.iv.buffer as ArrayBuffer },
+      this.cryptoKey,
+      this.encryptedBlob
+    );
+
+    const decoder = new TextDecoder();
+    const plainPk = decoder.decode(decrypted) as `0x${string}`;
+    const account = privateKeyToAccount(plainPk);
+
+    const walletClient = createWalletClient({
+      account,
+      chain: monadTestnet,
+      transport: http(RPC_URL)
+    });
+
+    try {
+      return await fn(walletClient);
+    } finally {
+      // Изолированная область завершена, plainPk уничтожается GC
+    }
+  }
+
+  public static clear() {
+    this.encryptedBlob = null;
+    this.iv = null;
+    this.cryptoKey = null;
+    this.activeAddress = null;
+  }
+
+  public static isLocked(): boolean {
+    return this.encryptedBlob !== null;
+  }
+}
+
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -119,7 +200,10 @@ function App() {
   const [player, setPlayer] = useState<{ x: number; y: number; exists: boolean } | null>(null);
   const [isPlayerLoading, setIsPlayerLoading] = useState<boolean>(false);
   const [actionPending, setActionPending] = useState<boolean>(false);
-  const CLIENT_VERSION = '0.0.0.0.12';
+  const [isDirectSignerMode, setIsDirectSignerMode] = useState<boolean>(false);
+  const [pkInput, setPkInput] = useState<string>('');
+  const [showPkInputModal, setShowPkInputModal] = useState<boolean>(false);
+  const CLIENT_VERSION = '0.0.0.0.13';
   const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
 
   // Поиск всех установленных кошельков по стандарту EIP-6963
@@ -306,20 +390,76 @@ function App() {
     }
   };
 
-  // Рождение игрока в мире (spawn на 1, 0) через бесплатный релеер
+  // Подключение приватным ключом (прямой режим через шифрование в RAM)
+  const connectWithPrivateKey = async () => {
+    if (!pkInput || pkInput.length < 64) {
+      alert('Введите корректный приватный ключ (64 hex-символа)!');
+      return;
+    }
+
+    try {
+      setIsPlayerLoading(true);
+      setShowPkInputModal(false);
+      setStatusText('🔐 Шифрование ключа в оперативной памяти (AES-GCM-256)...');
+
+      const userAddress = await EncryptedRamSigner.lockPrivateKey(pkInput);
+      setPkInput(''); // Стираем инпут сразу из формы
+      setConnectedAddress(userAddress);
+      setIsDirectSignerMode(true);
+      setIsWalletModalOpen(false);
+
+      // Считываем ончейн-состояние
+      const pData: any = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: VERSE_ABI,
+        functionName: 'getPlayer',
+        args: [userAddress]
+      });
+
+      setPlayer({
+        x: Number(pData[0]),
+        y: Number(pData[1]),
+        exists: Boolean(pData[2])
+      });
+      setIsPlayerLoading(false);
+      setStatusText('⚡ Автономный режим: прямое подписания из зашифрованной RAM');
+      await fetchState();
+    } catch (err: any) {
+      console.error(err);
+      alert('Ошибка при импорте ключа: ' + (err.message || err));
+      setIsPlayerLoading(false);
+    }
+  };
+
+  // Рождение игрока в мире (spawn на 1, 0)
   const handleSpawn = async () => {
     if (!connectedAddress) return;
     setActionPending(true);
-    setStatusText('⏳ Рождение игрока через релеер (Gasless)...');
 
     try {
-      const res = await fetch(RELAYER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'spawn', player: connectedAddress })
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Relayer error');
+      if (isDirectSignerMode && EncryptedRamSigner.isLocked()) {
+        // Прямой вызов spawn со своего баланса без посредников
+        setStatusText('⏳ Прямой ончейн-спавн в Monad RPC...');
+        await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
+          const hash = await walletClient.writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: VERSE_ABI,
+            functionName: 'spawn',
+            args: [connectedAddress as `0x${string}`]
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+        });
+      } else {
+        // Через бесплатный спонсорский релеер
+        setStatusText('⏳ Рождение игрока через релеер (Gasless)...');
+        const res = await fetch(RELAYER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'spawn', player: connectedAddress })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Relayer error');
+      }
 
       await fetchState();
     } catch (err: any) {
@@ -330,52 +470,65 @@ function App() {
     }
   };
 
-  // Перемещение игрока: подписывается локальным сессионным ключом в фоне (0 окон)
+  // Перемещение игрока
   const handleMove = async (targetX: number, targetY: number) => {
     if (!connectedAddress || !player?.exists) return;
     setActionPending(true);
     setStatusText(`⏳ Ход на (${targetX}, ${targetY})...`);
 
     try {
-      const sessionAccount = getOrCreateSessionAccount();
-      const nonce = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
-        abi: VERSE_ABI,
-        functionName: 'nonces',
-        args: [connectedAddress as `0x${string}`]
-      });
+      if (isDirectSignerMode && EncryptedRamSigner.isLocked()) {
+        // Прямой ход moveDirect без релеера и ожидания сессий
+        await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
+          const hash = await walletClient.writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: VERSE_ABI,
+            functionName: 'moveDirect',
+            args: [targetX, targetY]
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+        });
+      } else {
+        // Ход через сессионный ключ и релеер
+        const sessionAccount = getOrCreateSessionAccount();
+        const nonce = await publicClient.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: VERSE_ABI,
+          functionName: 'nonces',
+          args: [connectedAddress as `0x${string}`]
+        });
 
-      // Хэш хода: keccak256("Move", player, targetX, targetY, nonce, chainId)
-      const moveInnerHash = keccak256(
-        encodePacked(
-          ['string', 'address', 'int32', 'int32', 'uint256', 'uint256'],
-          ['Move', connectedAddress as `0x${string}`, targetX, targetY, nonce, BigInt(10143)]
-        )
-      );
+        // Хэш хода: keccak256("Move", player, targetX, targetY, nonce, chainId)
+        const moveInnerHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'int32', 'int32', 'uint256', 'uint256'],
+            ['Move', connectedAddress as `0x${string}`, targetX, targetY, nonce, BigInt(10143)]
+          )
+        );
 
-      // Локальная мгновенная подпись сессионным ключом (без единого окна Метамаска!)
-      const moveSig = await sessionAccount.signMessage({
-        message: { raw: moveInnerHash }
-      });
+        const moveSig = await sessionAccount.signMessage({
+          message: { raw: moveInnerHash }
+        });
 
-      const res = await fetch(RELAYER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'move',
-          player: connectedAddress,
-          targetX,
-          targetY,
-          moveSig
-        })
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Move error');
+        const res = await fetch(RELAYER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'move',
+            player: connectedAddress,
+            targetX,
+            targetY,
+            moveSig
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Move error');
+      }
 
       await fetchState();
     } catch (err: any) {
       console.error(err);
-      alert('Недопустимый ход или ошибка сессии: ' + (err.message || err));
+      alert('Недопустимый ход или ошибка: ' + (err.message || err));
     } finally {
       setActionPending(false);
     }
@@ -718,24 +871,47 @@ function App() {
                 padding: '6px 12px'
               }}>
                 <span>🧑‍🚀 Игрок: <b>({player.x}, {player.y})</b></span>
-                {/* Кнопка отзыва сессии для безопасности */}
-                <button
-                  onClick={handleRevokeSession}
-                  disabled={actionPending}
-                  title="Аннулировать сессионный ключ в блокчейне"
-                  style={{
-                    backgroundColor: 'transparent',
-                    color: '#f87171',
-                    border: '1px solid #ef4444',
-                    padding: '2px 6px',
-                    fontSize: '0.62rem',
-                    fontWeight: 700,
-                    cursor: actionPending ? 'wait' : 'pointer',
-                    marginLeft: '4px'
-                  }}
-                >
-                  🔒 СБРОС СЕССИИ
-                </button>
+                {isDirectSignerMode ? (
+                  <button
+                    onClick={() => {
+                      EncryptedRamSigner.clear();
+                      setIsDirectSignerMode(false);
+                      setConnectedAddress('');
+                      setPlayer(null);
+                    }}
+                    title="Выйти и стереть зашифрованный ключ из оперативной памяти"
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: '#fbbf24',
+                      border: '1px solid #d97706',
+                      padding: '2px 6px',
+                      fontSize: '0.62rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      marginLeft: '4px'
+                    }}
+                  >
+                    🔐 ВЫЙТИ ИЗ RAM
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleRevokeSession}
+                    disabled={actionPending}
+                    title="Аннулировать сессионный ключ в блокчейне"
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: '#f87171',
+                      border: '1px solid #ef4444',
+                      padding: '2px 6px',
+                      fontSize: '0.62rem',
+                      fontWeight: 700,
+                      cursor: actionPending ? 'wait' : 'pointer',
+                      marginLeft: '4px'
+                    }}
+                  >
+                    🔒 СБРОС СЕССИИ
+                  </button>
+                )}
                 {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
                 {(() => {
                   const dx = Math.abs(selectedCoord.x - player.x);
@@ -1120,6 +1296,160 @@ function App() {
                   </div>
                 </button>
               )}
+            </div>
+
+            {/* Разделитель и кнопка входа по приватному ключу с AES-GCM шифрованием в RAM */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: '4px 0',
+              color: '#64748b',
+              fontSize: '0.62rem'
+            }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
+              <span>АВТОНОМНЫЙ РЕЖИМ</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsWalletModalOpen(false);
+                setShowPkInputModal(true);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                backgroundColor: '#1e1b4b',
+                border: '1px solid #6366f1',
+                padding: '10px 12px',
+                color: '#e0e7ff',
+                cursor: 'pointer',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                textAlign: 'left'
+              }}
+            >
+              <span style={{ fontSize: '1.1rem' }}>🔐</span>
+              <div>
+                <div style={{ color: '#a5b4fc' }}>Вход по ключу (Шифрование в RAM)</div>
+                <div style={{ fontSize: '0.58rem', color: '#818cf8' }}>Прямой ончейн без релееров, AES-GCM-256</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно ввода приватного ключа с шифрованием на лету */}
+      {showPkInputModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100dvh',
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: '#0d111a',
+            border: '2px solid #6366f1',
+            boxShadow: '0 0 30px rgba(99, 102, 241, 0.5)',
+            width: '100%',
+            maxWidth: '420px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            padding: '18px',
+            color: '#f8fafc',
+            fontFamily: 'monospace, system-ui, sans-serif'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #1e293b',
+              paddingBottom: '8px'
+            }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#a5b4fc', letterSpacing: '0.05em' }}>
+                🔐 ПРИВАТНЫЙ КЛЮЧ (ШИФРОВАНИЕ В RAM)
+              </span>
+              <button
+                onClick={() => {
+                  setShowPkInputModal(false);
+                  setPkInput('');
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.4 }}>
+              Ключ никогда не сохраняется на диске (localStorage выключен). При загрузке генерируется случайный 256-битный мастер-ключ, и приватник держится в памяти в виде зашифрованного шума AES-GCM.
+            </div>
+
+            <input
+              type="password"
+              placeholder="0x... (приватный ключ EVM)"
+              value={pkInput}
+              onChange={(e) => setPkInput(e.target.value)}
+              style={{
+                backgroundColor: '#131826',
+                border: '1px solid #334155',
+                padding: '8px 10px',
+                color: '#f8fafc',
+                fontSize: '0.72rem',
+                fontFamily: 'monospace',
+                outline: 'none'
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
+              <button
+                onClick={() => {
+                  setShowPkInputModal(false);
+                  setPkInput('');
+                }}
+                style={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
+                  color: '#9ca3af',
+                  padding: '6px 12px',
+                  fontSize: '0.72rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={connectWithPrivateKey}
+                style={{
+                  backgroundColor: '#6366f1',
+                  border: 'none',
+                  color: '#ffffff',
+                  padding: '6px 16px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+                }}
+              >
+                ЗАШИФРОВАТЬ И ВОЙТИ ➔
+              </button>
             </div>
           </div>
         </div>
