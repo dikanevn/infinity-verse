@@ -6,31 +6,36 @@ interface WorldGridProps {
   cells: CellData[];
   selectedCoord: { x: number; y: number };
   player: PlayerData | null;
+  focusCoord: { x: number; y: number };
   onSelectCoord: (coord: { x: number; y: number }) => void;
+  onCenterPlayer: () => void;
 }
 
 export const WorldGrid: React.FC<WorldGridProps> = ({
   cells,
   selectedCoord,
   player,
-  onSelectCoord
+  focusCoord,
+  onSelectCoord,
+  onCenterPlayer
 }) => {
   // Масштаб регулируется строго через кнопки + и -
   const [scale, setScale] = useState<number>(0.85);
 
-  // Центр сетки отображения: привязан к игроку
-  const centerX = player?.exists ? player.x : 0;
-  const centerY = player?.exists ? player.y : 0;
+  // Центр активного окна 5х5 (фокусная точка): по умолчанию игрок или место куда кликнули
+  const centerX = focusCoord.x;
+  const centerY = focusCoord.y;
 
-  // Расширенное поле 25х25 (радиус 12 клеток вокруг игрока):
-  // Видимый сектор 5х5 берется из блокчейна, а всё бесконечное пространство вокруг заполняется туманом
-  const R_VIEW = 12; // 25x25 = 625 клеток
-  const gridCoords: { x: number; y: number }[] = [];
-  for (let y = centerY + R_VIEW; y >= centerY - R_VIEW; y--) {
-    for (let x = centerX - R_VIEW; x <= centerX + R_VIEW; x++) {
-      gridCoords.push({ x, y });
+  // Строго 25 интерактивных клеток (5х5) вокруг точки фокуса
+  const active5x5Coords: { x: number; y: number }[] = [];
+  for (let y = centerY + 2; y >= centerY - 2; y--) {
+    for (let x = centerX - 2; x <= centerX + 2; x++) {
+      active5x5Coords.push({ x, y });
     }
   }
+
+  // Размер одной клетки 62px + 1px разделитель = 63px
+  const CELL_PITCH = 63;
 
   // Смещение поля
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -39,16 +44,33 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const isDraggingRef = useRef<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const posStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hasMovedRef = useRef<boolean>(false);
 
-  // Кнопка прицела центрирует камеру прямо на игроке
-  const centerOnPlayer = () => {
+  // Кнопка прицела центрирует камеру прямо на игроке и возвращает фокус на него
+  const handleResetToPlayer = () => {
     setPosition({ x: 0, y: 0 });
+    onCenterPlayer();
+  };
+
+  // Клик по бесконечному туману (контейнеру) пересчитывает координаты и переносит 5х5 окно
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    if (hasMovedRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left - rect.width / 2 - position.x;
+    const clickY = e.clientY - rect.top - rect.height / 2 - position.y;
+
+    // В нашей системе координат: X вправо (+), Y вверх (+)
+    const clickedGridX = centerX + Math.round(clickX / (CELL_PITCH * scale));
+    const clickedGridY = centerY - Math.round(clickY / (CELL_PITCH * scale));
+
+    onSelectCoord({ x: clickedGridX, y: clickedGridY });
   };
 
   // Drag мышью (только перемещение, без зума)
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     isDraggingRef.current = true;
+    hasMovedRef.current = false;
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     posStartRef.current = { ...position };
   };
@@ -57,6 +79,9 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     if (!isDraggingRef.current) return;
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasMovedRef.current = true;
+    }
     setPosition({
       x: posStartRef.current.x + dx,
       y: posStartRef.current.y + dy
@@ -67,10 +92,11 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     isDraggingRef.current = false;
   };
 
-  // Drag пальцем (только перемещение одним пальцем, жест масштабирования отключен)
+  // Drag пальцем
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
+      hasMovedRef.current = false;
       dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       posStartRef.current = { ...position };
     }
@@ -80,6 +106,9 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     if (e.touches.length === 1 && isDraggingRef.current) {
       const dx = e.touches[0].clientX - dragStartRef.current.x;
       const dy = e.touches[0].clientY - dragStartRef.current.y;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        hasMovedRef.current = true;
+      }
       setPosition({
         x: posStartRef.current.x + dx,
         y: posStartRef.current.y + dy
@@ -94,6 +123,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   return (
     <div
       ref={containerRef}
+      onClick={handleBackgroundClick}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -115,6 +145,12 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         touchAction: 'none',
         userSelect: 'none',
         backgroundColor: '#05070a',
+        /* Бесконечный процедурный космический туман без создания лишних DOM-элементов */
+        backgroundImage: `
+          radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.4) 0%, rgba(5, 7, 10, 0.95) 100%),
+          repeating-linear-gradient(0deg, transparent, transparent ${62 * scale}px, rgba(51, 65, 85, 0.25) ${62 * scale}px, rgba(51, 65, 85, 0.25) ${63 * scale}px),
+          repeating-linear-gradient(90deg, transparent, transparent ${62 * scale}px, rgba(51, 65, 85, 0.25) ${62 * scale}px, rgba(51, 65, 85, 0.25) ${63 * scale}px)
+        `,
         border: '1px solid #475569',
         borderRadius: '0px',
         boxSizing: 'border-box'
@@ -169,7 +205,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           -
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); centerOnPlayer(); }}
+          onClick={(e) => { e.stopPropagation(); handleResetToPlayer(); }}
           title="Центрировать на игроке"
           style={{
             width: '32px',
@@ -189,23 +225,24 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </button>
       </div>
 
-      {/* Интерактивный слой мира без отдельной рамки */}
+      {/* Интерактивный слой мира (ровно 25 клеток 5х5 вокруг фокуса, нулевой оверхед на браузер) */}
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: 'center center',
           transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(25, 62px)',
-          gridTemplateRows: 'repeat(25, 62px)',
+          gridTemplateColumns: 'repeat(5, 62px)',
+          gridTemplateRows: 'repeat(5, 62px)',
           gap: '1px',
-          backgroundColor: '#1e293b',
+          backgroundColor: '#334155',
           padding: '0px',
           border: 'none',
-          boxShadow: 'none'
+          boxShadow: '0 0 40px rgba(0, 0, 0, 0.9)'
         }}
       >
-        {gridCoords.map((coord) => {
+        {active5x5Coords.map((coord) => {
           const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
           const isSelected = selectedCoord.x === coord.x && selectedCoord.y === coord.y;
 

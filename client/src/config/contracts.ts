@@ -10,7 +10,7 @@ export const AAA_CONTRACT_ADDRESS = '0x035da1a59b049f9022984743f4c43fbc311d44d6'
 
 export const RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2510260150';
+export const CLIENT_VERSION = '2510260201';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({

@@ -37,10 +37,10 @@ function App() {
     };
   }, []);
 
-  // Координаты игрока для окна видимости 5х5 вокруг него
-  const [playerCenterCoord, setPlayerCenterCoord] = useState<{ x: number; y: number } | null>(null);
+  // Точка фокуса для окна 5х5 (по умолчанию на игроке, но можно кликнуть в туман и исследовать любое место)
+  const [focusCoord, setFocusCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // 2. Ончейн-состояние мира (считывает только 5х5 вокруг игрока, остальное - туман войны)
+  // 2. Ончейн-состояние мира (считывает строго 5х5 вокруг точки фокуса)
   const {
     cells,
     contractVersion,
@@ -48,7 +48,7 @@ function App() {
     statusState,
     setStatusText,
     fetchState
-  } = useWorldState(connectedAddress, playerCenterCoord);
+  } = useWorldState(connectedAddress, focusCoord);
 
   // 3. Состояние игрока и механики ходов
   const {
@@ -70,14 +70,29 @@ function App() {
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
 
-  // Обновляем координаты центра для опроса 5х5 вокруг игрока
+  // При первом появлении или ходе игрока автоматически держим фокус на нём
   useEffect(() => {
     if (player?.exists) {
-      setPlayerCenterCoord({ x: player.x, y: player.y });
-    } else {
-      setPlayerCenterCoord(null);
+      setFocusCoord({ x: player.x, y: player.y });
     }
   }, [player?.x, player?.y, player?.exists]);
+
+  // Выбор клетки: переносим фокус на неё, чтобы блокчейн подгрузил сектор 5х5 вокруг точки клика
+  const handleSelectCoord = (coord: { x: number; y: number }) => {
+    setSelectedCoord(coord);
+    setFocusCoord(coord);
+  };
+
+  // Возврат фокуса к игроку
+  const handleCenterPlayer = () => {
+    if (player?.exists) {
+      setFocusCoord({ x: player.x, y: player.y });
+      setSelectedCoord({ x: player.x, y: player.y });
+    } else {
+      setFocusCoord({ x: 0, y: 0 });
+      setSelectedCoord({ x: 0, y: 0 });
+    }
+  };
 
   // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 3x3 ВОКРУГ ИГРОКА
   const discoveringRef = useState<{ inFlight: boolean; visited: Set<string> }>({
@@ -168,12 +183,14 @@ function App() {
         {/* Заголовок и статус блокчейна */}
         <TopBar statusText={statusText} statusState={statusState} />
 
-        {/* Игровая сетка 5х5 */}
+        {/* Игровая сетка 5х5 на бесконечном фоне тумана */}
         <WorldGrid
           cells={cells}
           selectedCoord={selectedCoord}
           player={player}
-          onSelectCoord={setSelectedCoord}
+          focusCoord={focusCoord}
+          onSelectCoord={handleSelectCoord}
+          onCenterPlayer={handleCenterPlayer}
         />
 
         {/* Панель управления игроком */}
