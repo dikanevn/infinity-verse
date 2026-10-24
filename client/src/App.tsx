@@ -69,17 +69,28 @@ for (let y = 2; y >= -2; y--) {
   }
 }
 
+// === НАСТРОЙКА ВРЕМЕНИ ЗАДЕРЖКИ (В МИЛЛИСЕКУНДАХ) ===
+// Если запрос к блокчейну длится дольше этого времени, загорается ошибка связи со Вселенной:
+const UNIVERSE_LATENCY_THRESHOLD_MS = 3000; // 3 секунды (меняй это значение для тестов!)
+const SYNC_INTERVAL_MS = 6000; // Частота опроса блокчейна (6 секунд)
+
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [loading, setLoading] = useState(false);
-  const [statusText, setStatusText] = useState<string>('Подключение к Monad Testnet...');
+  const [statusText, setStatusText] = useState<string>('Настройка связи со Вселенной...');
+  const [statusState, setStatusState] = useState<'connected' | 'slow' | 'error' | 'connecting'>('connecting');
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.5');
   const CLIENT_VERSION = '0.0.0.0.11';
 
   const fetchState = async () => {
+    const startTime = Date.now();
+    // Таймер задержки: если за 3 секунды ответ не пришёл — сигнализируем о задержке связи
+    const slowTimer = setTimeout(() => {
+      setStatusState('slow');
+      setStatusText('⚠️ Задержка отклика: слабый сигнал сквозь ткань Вселенной (>3с)...');
+    }, UNIVERSE_LATENCY_THRESHOLD_MS);
+
     try {
-      setLoading(true);
       const xs = INITIAL_COORDS.map(c => c.x);
       const ys = INITIAL_COORDS.map(c => c.y);
 
@@ -97,11 +108,13 @@ function App() {
         }),
       ]);
 
+      clearTimeout(slowTimer);
+      const durationMs = Date.now() - startTime;
+
       setContractVersion(ver);
 
       const parsed: CellData[] = INITIAL_COORDS.map((coord, i) => {
         const c = onchainCells[i];
-        // Локальное вычисление keccak256 для наглядности маппинга
         const localKey = keccak256(encodePacked(['int32', 'int32'], [coord.x, coord.y]));
 
         return {
@@ -118,18 +131,19 @@ function App() {
       });
 
       setCells(parsed);
-      setStatusText('Синхронизировано со смарт-контрактом');
+      setStatusState('connected');
+      setStatusText(`✨ Связь со Вселенной стабильна (${durationMs}мс)`);
     } catch (err: any) {
+      clearTimeout(slowTimer);
       console.error(err);
-      setStatusText('Ошибка RPC соединения');
-    } finally {
-      setLoading(false);
+      setStatusState('error');
+      setStatusText('🚨 Ошибка связи со Вселенной: сигнал потерян');
     }
   };
 
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 6000);
+    const interval = setInterval(fetchState, SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -294,13 +308,24 @@ function App() {
             })}
           </div>
 
-          {/* Статус RPC */}
+          {/* Статус связи со Вселенной */}
           <div style={{
+            minHeight: '22px',
             fontSize: '0.72rem',
-            color: loading ? '#38bdf8' : '#4ade80',
-            textAlign: 'center'
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            color: statusState === 'error' || statusState === 'slow'
+              ? '#ef4444' // Красный цвет ошибки/задержки
+              : statusState === 'connected'
+                ? '#4ade80' // Зеленый цвет стабильной связи
+                : '#38bdf8', // Синий цвет инициализации
+            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color 0.25s ease'
           }}>
-            {loading ? '⏳ Чтение из Monad Testnet...' : statusText}
+            {statusText}
           </div>
         </div>
 
