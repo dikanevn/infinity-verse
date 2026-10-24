@@ -3,8 +3,10 @@ import { privateKeyToAccount } from 'viem/accounts';
 
 const VERSE_ABI = parseAbi([
   'function spawn(address player) returns (int32, int32)',
-  'function move(address player, int32 targetX, int32 targetY)',
-  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists)'
+  'function authorizeSessionWithSig(address player, address sessionKey, uint256 expiry, bytes sig)',
+  'function moveWithSession(address player, int32 targetX, int32 targetY, bytes moveSig)',
+  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry)',
+  'function nonces(address player) view returns (uint256)'
 ]);
 
 function jsonResponse(data, status = 200) {
@@ -37,7 +39,7 @@ export default {
     if (request.method === 'GET' && url.pathname === '/') {
       return jsonResponse({
         status: 'online',
-        service: 'Infinity-Verse Gasless Relayer',
+        service: 'Infinity-Verse Cryptographic Session Relayer',
         contract: env.CONTRACT_ADDRESS,
         timestamp: Date.now()
       });
@@ -46,7 +48,7 @@ export default {
     if (request.method === 'POST') {
       try {
         const body = await request.json();
-        const { action, player, targetX, targetY } = body;
+        const { action, player, sessionKey, expiry, sig, targetX, targetY, moveSig } = body;
 
         if (!player || !player.startsWith('0x')) {
           return jsonResponse({ error: 'Invalid player address' }, 400);
@@ -76,6 +78,23 @@ export default {
           transport: http(env.RPC_URL)
         });
 
+        // 1. Авторизация сессии игрока (кошелёк игрока подписывает сессионный ключ)
+        if (action === 'authorize_session') {
+          if (!sessionKey || !expiry || !sig) {
+            return jsonResponse({ error: 'sessionKey, expiry, sig required' }, 400);
+          }
+
+          const hash = await walletClient.writeContract({
+            address: env.CONTRACT_ADDRESS,
+            abi: VERSE_ABI,
+            functionName: 'authorizeSessionWithSig',
+            args: [player, sessionKey, BigInt(expiry), sig]
+          });
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
+        }
+
+        // 2. Спавн игрока в мир
         if (action === 'spawn') {
           const hash = await walletClient.writeContract({
             address: env.CONTRACT_ADDRESS,
@@ -87,22 +106,23 @@ export default {
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
 
+        // 3. Защищённый криптографический ход с подписью сессионного ключа
         if (action === 'move') {
-          if (targetX === undefined || targetY === undefined) {
-            return jsonResponse({ error: 'targetX and targetY required' }, 400);
+          if (targetX === undefined || targetY === undefined || !moveSig) {
+            return jsonResponse({ error: 'targetX, targetY and moveSig required' }, 400);
           }
 
           const hash = await walletClient.writeContract({
             address: env.CONTRACT_ADDRESS,
             abi: VERSE_ABI,
-            functionName: 'move',
-            args: [player, Number(targetX), Number(targetY)]
+            functionName: 'moveWithSession',
+            args: [player, Number(targetX), Number(targetY), moveSig]
           });
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
 
-        return jsonResponse({ error: 'Unknown action. Supported: spawn, move' }, 400);
+        return jsonResponse({ error: 'Unknown action' }, 400);
       } catch (err) {
         console.error('Relayer error:', err);
         return jsonResponse({

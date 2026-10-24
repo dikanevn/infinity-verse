@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { createPublicClient, createWalletClient, custom, http, parseAbi, defineChain, keccak256, encodePacked } from 'viem';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 
-// Основной контракт InfinityVerse_main (Direct X,Y Coordinate Grid 5x5 + Players)
-const CONTRACT_ADDRESS = '0x9f9f4b625bc455d0b1328f548eafd28afcc50ae7';
+// Основной контракт InfinityVerse_main (Direct X,Y Coordinate Grid 5x5 + Players + Session Keys)
+const CONTRACT_ADDRESS = '0xb0e0ba5918750d7246d04aebc7bd43d1df6a2c9a';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
 const monadTestnet = defineChain({
@@ -28,9 +29,11 @@ const VERSE_ABI = parseAbi([
   'function getCellKey(int32 x, int32 y) pure returns (bytes32)',
   'function getCell(int32 x, int32 y) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint16 paramA, uint16 paramB))',
   'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint16 paramA, uint16 paramB)[])',
-  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists)',
+  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry)',
   'function spawn(address player) returns (int32, int32)',
-  'function move(address player, int32 targetX, int32 targetY)'
+  'function authorizeSessionWithSig(address player, address sessionKey, uint256 expiry, bytes sig)',
+  'function moveWithSession(address player, int32 targetX, int32 targetY, bytes moveSig)',
+  'function nonces(address player) view returns (uint256)'
 ]);
 
 const publicClient = createPublicClient({
@@ -104,8 +107,7 @@ function App() {
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.6');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [lastBlockNumber, setLastBlockNumber] = useState<string | null>(null);
-  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
-  const [activeProvider, setActiveProvider] = useState<any>(null);
+  const [connectedAddress, setConnectedAddress] = useState<string>('');
   const [walletProviders, setWalletProviders] = useState<EIP6963ProviderDetail[]>([]);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState<boolean>(false);
   const [player, setPlayer] = useState<{ x: number; y: number; exists: boolean } | null>(null);
@@ -131,7 +133,17 @@ function App() {
     };
   }, []);
 
-  // Подключение выбранного кошелька
+  // Получение или создание локального сессионного ключа
+  const getOrCreateSessionAccount = () => {
+    let sk = localStorage.getItem('iv_session_key');
+    if (!sk) {
+      sk = generatePrivateKey();
+      localStorage.setItem('iv_session_key', sk);
+    }
+    return privateKeyToAccount(sk as `0x${string}`);
+  };
+
+  // Подключение выбранного кошелька с авторизацией сессии
   const connectProvider = async (providerDetail?: EIP6963ProviderDetail) => {
     try {
       let prov = providerDetail?.provider || (window as any).ethereum;
@@ -140,25 +152,84 @@ function App() {
         return;
       }
       const accounts = await prov.request({ method: 'eth_requestAccounts' });
-      if (accounts && accounts[0]) {
-        setConnectedAddress(accounts[0]);
-        setActiveProvider(prov);
-        setIsWalletModalOpen(false);
+      if (!accounts || !accounts[0]) return;
+
+      const userAddress = accounts[0];
+      setConnectedAddress(userAddress);
+      setIsWalletModalOpen(false);
+
+      // Проверяем статус игрока и сессии
+      const sessionAccount = getOrCreateSessionAccount();
+      const pData: any = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: VERSE_ABI,
+        functionName: 'getPlayer',
+        args: [userAddress as `0x${string}`]
+      });
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const isSessionActive = pData[3] && pData[3].toLowerCase() === sessionAccount.address.toLowerCase() && Number(pData[4]) > nowSec;
+
+      // Если сессия не авторизована в блокчейне — запрашиваем 1 подпись у кошелька
+      if (!isSessionActive) {
+        setStatusText('✍️ Подпишите сессию в кошельке (1 раз на 24 часа)...');
+        const expiry = nowSec + 86400; // 24 часа
+        const nonce = await publicClient.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: VERSE_ABI,
+          functionName: 'nonces',
+          args: [userAddress as `0x${string}`]
+        });
+
+        // Создаем хэш: keccak256("AuthorizeSession", player, sessionKey, expiry, nonce, chainId)
+        const innerHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'address', 'uint256', 'uint256', 'uint256'],
+            ['AuthorizeSession', userAddress as `0x${string}`, sessionAccount.address, BigInt(expiry), nonce, BigInt(10143)]
+          )
+        );
+
+        const walletClient = createWalletClient({
+          chain: monadTestnet,
+          transport: custom(prov)
+        });
+
+        const sig = await walletClient.signMessage({
+          account: userAddress as `0x${string}`,
+          message: { raw: innerHash }
+        });
+
+        setStatusText('⏳ Регистрация криптографической сессии через релеер...');
+        const res = await fetch(RELAYER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'authorize_session',
+            player: userAddress,
+            sessionKey: sessionAccount.address,
+            expiry,
+            sig
+          })
+        });
+        const resData = await res.json();
+        if (!res.ok || resData.error) throw new Error(resData.error || 'Session auth failed');
+        setStatusText('✅ Сессия подтверждена! Играйте без всплывающих окон.');
       }
+
+      await fetchState();
     } catch (err: any) {
-      console.error('Ошибка подключения:', err);
-      alert('Ошибка при подключении: ' + (err.message || err));
+      console.error('Ошибка подключения/сессии:', err);
+      alert('Ошибка при авторизации сессии: ' + (err.shortMessage || err.message));
     }
   };
 
-  // Рождение игрока в мире (spawn на 1, 0) через бесплатный релеер (без газа)
+  // Рождение игрока в мире (spawn на 1, 0) через бесплатный релеер
   const handleSpawn = async () => {
     if (!connectedAddress) return;
     setActionPending(true);
     setStatusText('⏳ Рождение игрока через релеер (Gasless)...');
 
     try {
-      // 1. Пробуем через облачный релеер (без всплывающих окон и без газа!)
       const res = await fetch(RELAYER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,76 +239,60 @@ function App() {
       if (!res.ok || data.error) throw new Error(data.error || 'Relayer error');
 
       await fetchState();
-    } catch (relayerErr) {
-      console.warn('Релеер недоступен, выполняем через прямое подписание кошельком:', relayerErr);
-      // 2. Fallback: прямое подписание через кошелёк
-      const prov = activeProvider || (window as any).ethereum;
-      if (prov) {
-        try {
-          const walletClient = createWalletClient({
-            chain: monadTestnet,
-            transport: custom(prov)
-          });
-          const hash = await walletClient.writeContract({
-            address: CONTRACT_ADDRESS,
-            abi: VERSE_ABI,
-            functionName: 'spawn',
-            args: [connectedAddress as `0x${string}`],
-            account: connectedAddress as `0x${string}`
-          });
-          await publicClient.waitForTransactionReceipt({ hash });
-          await fetchState();
-        } catch (err: any) {
-          console.error(err);
-          alert('Ошибка при спавне: ' + (err.shortMessage || err.message));
-        }
-      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Ошибка при спавне: ' + (err.message || err));
     } finally {
       setActionPending(false);
     }
   };
 
-  // Перемещение игрока на выбранную клетку через бесплатный релеер (без окон)
+  // Перемещение игрока: подписывается локальным сессионным ключом в фоне (0 окон)
   const handleMove = async (targetX: number, targetY: number) => {
     if (!connectedAddress || !player?.exists) return;
     setActionPending(true);
-    setStatusText(`⏳ Ход на (${targetX}, ${targetY}) через релеер...`);
+    setStatusText(`⏳ Ход на (${targetX}, ${targetY})...`);
 
     try {
-      // 1. Пробуем через облачный релеер (быстро, в один клик без окон)
+      const sessionAccount = getOrCreateSessionAccount();
+      const nonce = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: VERSE_ABI,
+        functionName: 'nonces',
+        args: [connectedAddress as `0x${string}`]
+      });
+
+      // Хэш хода: keccak256("Move", player, targetX, targetY, nonce, chainId)
+      const moveInnerHash = keccak256(
+        encodePacked(
+          ['string', 'address', 'int32', 'int32', 'uint256', 'uint256'],
+          ['Move', connectedAddress as `0x${string}`, targetX, targetY, nonce, BigInt(10143)]
+        )
+      );
+
+      // Локальная мгновенная подпись сессионным ключом (без единого окна Метамаска!)
+      const moveSig = await sessionAccount.signMessage({
+        message: { raw: moveInnerHash }
+      });
+
       const res = await fetch(RELAYER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'move', player: connectedAddress, targetX, targetY })
+        body: JSON.stringify({
+          action: 'move',
+          player: connectedAddress,
+          targetX,
+          targetY,
+          moveSig
+        })
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Relayer error');
+      if (!res.ok || data.error) throw new Error(data.error || 'Move error');
 
       await fetchState();
-    } catch (relayerErr) {
-      console.warn('Релеер недоступен, выполняем через прямое подписание кошельком:', relayerErr);
-      // 2. Fallback: прямое подписание через активный кошелёк
-      const prov = activeProvider || (window as any).ethereum;
-      if (prov) {
-        try {
-          const walletClient = createWalletClient({
-            chain: monadTestnet,
-            transport: custom(prov)
-          });
-          const hash = await walletClient.writeContract({
-            address: CONTRACT_ADDRESS,
-            abi: VERSE_ABI,
-            functionName: 'move',
-            args: [connectedAddress as `0x${string}`, targetX, targetY],
-            account: connectedAddress as `0x${string}`
-          });
-          await publicClient.waitForTransactionReceipt({ hash });
-          await fetchState();
-        } catch (err: any) {
-          console.error(err);
-          alert('Недопустимый ход: ' + (err.shortMessage || err.message));
-        }
-      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Недопустимый ход или ошибка сессии: ' + (err.message || err));
     } finally {
       setActionPending(false);
     }

@@ -6,32 +6,15 @@ pragma solidity ^0.8.20;
  * @author Infinity-Verse Team
  * @notice Основной контракт автономного мира Infinity-Verse:
  * 
- * 1. Бесконечная сетка клеток (x, y), где координаты упаковываются в 8-байтный ключ keccak256(x, y).
- * 2. Стартовая область 5х5 (25 клеток: x от -2 до +2, y от -2 до +2).
- *    В центре (0, 0) стоит древний Обелиск (🗿), вокруг — песчаная пустошь.
- * 3. Поддержка Игроков:
- *    - Каждый игрок имеет координаты (x, y) в мире.
- *    - Спавн игрока происходит возле Обелиска на клетке (0, 1).
- *    - Игрок может перемещаться на соседние клетки (влево, вправо, вверх, вниз, по диагонали).
- *    - На клетку с Обелиском (0, 0) наступать нельзя — это священный монолит!
- * 4. Поддержка Gasless-транзакций (Релеер):
- *    - Игрок может ходить сам (если у него есть монеты на газ).
- *    - ЛИБО за игрока транзакцию в блокчейн отправляет и оплачивает специальный спонсор (релеер).
- *      Благодаря этому игрок играет в один клик без всплывающих окон и с 0 на балансе!
+ * КРИПТОГРАФИЧЕСКАЯ БЕЗОПАСНОСТЬ (SESSION KEYS):
+ * 1. Игрок подключает кошелёк (MetaMask / Rabby / Phantom) и ОДИН РАЗ подписывает сессию.
+ * 2. Сессия регистрирует временный сессионный ключ (sessionKey), который может ходить за игрока до expireTime.
+ * 3. Релеер отправляет транзакции и платит за газ, но контракт ПРОВЕРЯЕТ подпись сессионного ключа.
+ * 4. Никто чужой не может ходить за чужого игрока!
  */
 contract InfinityVerse_main {
-    // Версия смарт-контракта (для проверки клиентом и фронтендом)
-    string public constant VERSION = "0.0.0.0.6";
+    string public constant VERSION = "0.0.0.0.7";
 
-    /**
-     * @dev Структура данных одной клетки мира (ровно 8 байт = 64 бита):
-     * - terrain: тип почвы (0 = пустота, 1 = песок, 2 = вода, 3 = скала)
-     * - object: объект на клетке (0 = пусто, 1 = обелиск, 2 = камень)
-     * - state: состояние/прочность клетки (от 0 до 255)
-     * - reserved: резервный байт под будущие механики
-     * - paramA: 2 байта под параметры эпох (ресурсы, температура и т.д.)
-     * - paramB: 2 байта под параметры эпох
-     */
     struct Cell {
         uint8 terrain;
         uint8 object;
@@ -41,76 +24,45 @@ contract InfinityVerse_main {
         uint16 paramB;
     }
 
-    /**
-     * @dev Структура игрока в мире:
-     * - x, y: текущие координаты игрока
-     * - exists: зарегистрирован ли игрок в мире
-     * - lastMoveBlock: номер блока последнего хода (защита от спама)
-     */
     struct Player {
         int32 x;
         int32 y;
         bool exists;
         uint256 lastMoveBlock;
+        address sessionKey;    // Авторизованный временный ключ игрока
+        uint256 sessionExpiry; // Срок действия сессии
     }
 
-    // Хранилище клеток: хэш координат keccak256(x, y) => Данные клетки
     mapping(bytes32 => Cell) public cells;
-
-    // Хранилище игроков: адрес кошелька игрока => Данные игрока
     mapping(address => Player) public players;
 
-    // Адрес доверенного спонсора/релеера, который имеет право оплачивать газ за игроков
-    address public relayer;
+    // Счётчик nonces для защиты от повтора подписей (Replay Attack)
+    mapping(address => uint256) public nonces;
 
-    // Владелец контракта (деплоер)
+    address public relayer;
     address public owner;
 
-    // --- СОБЫТИЯ (EVENTS) ---
-    // Срабатывает при изменении клетки (ландшафт или объект)
     event CellUpdated(int32 indexed x, int32 indexed y, uint8 terrain, uint8 object);
-    // Срабатывает при первом появлении (спавне) игрока в мире
     event PlayerSpawned(address indexed player, int32 x, int32 y);
-    // Срабатывает при каждом шаге игрока
     event PlayerMoved(address indexed player, int32 fromX, int32 fromY, int32 toX, int32 toY);
-    // Срабатывает при смене адреса спонсора/релеера
+    event SessionAuthorized(address indexed player, address indexed sessionKey, uint256 expiry);
     event RelayerUpdated(address indexed newRelayer);
 
-    /**
-     * @dev Модификатор доступа: действие может выполнить:
-     * 1. Сам игрок лично (со своего кошелька).
-     * 2. Доверенный спонсор (релеер), оплачивающий газ за игрока.
-     * 3. Владелец контракта (owner).
-     */
-    modifier onlyRelayerOrPlayer(address player) {
-        require(msg.sender == player || msg.sender == relayer || msg.sender == owner, "Not authorized");
-        _;
-    }
-
-    /**
-     * @dev Модификатор доступа: только владелец контракта
-     */
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
         _;
     }
 
-    /**
-     * @notice Конструктор контракта:
-     * @param _relayer Адрес доверенного кошелька-спонсора для бесплатной игры игроков
-     * Создаёт стартовую сетку 5х5 (25 клеток от -2 до +2 по осям X и Y).
-     */
     constructor(address _relayer) {
         owner = msg.sender;
         relayer = _relayer;
 
-        // Заполняем сетку 5х5 вокруг центра
+        // Создаём стартовую сетку 5х5 (25 клеток от -2 до +2)
         for (int32 x = -2; x <= 2; x++) {
             for (int32 y = -2; y <= 2; y++) {
                 bytes32 key = getCellKey(x, y);
 
                 if (x == 0 && y == 0) {
-                    // Точный центр мира (0, 0): песок (terrain = 1) и древний Обелиск (object = 1)
                     cells[key] = Cell({
                         terrain: 1,
                         object: 1,
@@ -120,7 +72,6 @@ contract InfinityVerse_main {
                         paramB: 0
                     });
                 } else {
-                    // Окружающие 24 клетки: чистый песок (terrain = 1) без объектов (object = 0)
                     cells[key] = Cell({
                         terrain: 1,
                         object: 0,
@@ -134,34 +85,19 @@ contract InfinityVerse_main {
         }
     }
 
-    /**
-     * @notice Смена адреса спонсора/релеера (только для владельца контракта)
-     */
     function setRelayer(address _newRelayer) external onlyOwner {
         relayer = _newRelayer;
         emit RelayerUpdated(_newRelayer);
     }
 
-    /**
-     * @notice Превращает координаты (x, y) в уникальный 32-байтный хэш-ключ для mapping
-     * @dev Использует плотную бинарную упаковку abi.encodePacked(int32, int32) = ровно 8 байт
-     */
     function getCellKey(int32 x, int32 y) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(x, y));
     }
 
-    /**
-     * @notice Получить данные одной конкретной клетки по координатам (x, y)
-     */
     function getCell(int32 x, int32 y) external view returns (Cell memory) {
         return cells[getCellKey(x, y)];
     }
 
-    /**
-     * @notice Получить данные сразу пачки клеток (оптимизация для быстрого чтения клиентом)
-     * @param xs Массив координат X
-     * @param ys Массив координат Y
-     */
     function getCellsBatch(
         int32[] calldata xs,
         int32[] calldata ys
@@ -176,70 +112,136 @@ contract InfinityVerse_main {
     }
 
     /**
-     * @notice Спавн (рождение) игрока в мире:
-     * Человек подключает кошелёк, нажимает кнопку «Родиться в мире», и эта транзакция
-     * спавнит его на клетке (1, 0) — справа от священного Обелиска (0, 0).
-     * @param player Адрес кошелька игрока
+     * @notice Авторизация сессионного ключа игрока (вызывается релеером с подписью кошелька игрока)
+     * @param player Адрес основного кошелька игрока
+     * @param sessionKey Временный локальный ключ в браузере игрока
+     * @param expiry Время истечения сессии (unix timestamp)
+     * @param sig Подпись EIP-191 / personal_sign от основного кошелька игрока
      */
-    function spawn(address player) public onlyRelayerOrPlayer(player) returns (int32, int32) {
+    function authorizeSessionWithSig(
+        address player,
+        address sessionKey,
+        uint256 expiry,
+        bytes calldata sig
+    ) public {
+        require(block.timestamp < expiry, "Session already expired");
+
+        // Хэш сообщения авторизации: keccak256("AuthorizeSession", player, sessionKey, expiry, nonce, chainId)
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked("AuthorizeSession", player, sessionKey, expiry, nonces[player]++, block.chainid))
+            )
+        );
+
+        address signer = recoverSigner(messageHash, sig);
+        require(signer == player, "Invalid session signature");
+
+        players[player].sessionKey = sessionKey;
+        players[player].sessionExpiry = expiry;
+
+        emit SessionAuthorized(player, sessionKey, expiry);
+    }
+
+    /**
+     * @notice Спавн игрока:
+     * Может вызываться:
+     * 1. Лично игроком (msg.sender == player)
+     * 2. Релеером, если сессионный ключ игрока подписал команду спавна
+     */
+    function spawn(address player) external returns (int32, int32) {
+        require(msg.sender == player || isSessionValid(player, msg.sender) || msg.sender == relayer, "Not authorized");
         require(!players[player].exists, "Player already born");
 
-        players[player] = Player({
-            x: 1,
-            y: 0,
-            exists: true,
-            lastMoveBlock: block.number
-        });
+        players[player].x = 1;
+        players[player].y = 0;
+        players[player].exists = true;
+        players[player].lastMoveBlock = block.number;
 
         emit PlayerSpawned(player, 1, 0);
         return (1, 0);
     }
 
     /**
-     * @notice Перемещение игрока на новую клетку:
-     * @param player Адрес игрока, который совершает ход
-     * @param targetX Координата X целевой клетки
-     * @param targetY Координата Y целевой клетки
-     * 
-     * Правила хода:
-     * 1. Игрок должен быть предварительно рождён в мире (вызван spawn).
-     * 2. Ходить можно строго на соседнюю клетку (дистанция не больше 1).
-     * 3. Нельзя встать на клетку с Обелиском (0, 0).
+     * @notice Перемещение игрока с криптографической проверкой сессионного ключа:
+     * @param player Адрес игрока
+     * @param targetX Куда шагнуть по X
+     * @param targetY Куда шагнуть по Y
+     * @param moveSig Подпись действия от сессионного ключа игрока
      */
-    function move(address player, int32 targetX, int32 targetY) external onlyRelayerOrPlayer(player) {
+    function moveWithSession(
+        address player,
+        int32 targetX,
+        int32 targetY,
+        bytes calldata moveSig
+    ) external {
         require(players[player].exists, "Player must spawn first");
+        require(isSessionValid(player, players[player].sessionKey), "Session expired or invalid");
 
+        // Проверяем подпись конкретного шага сессионным ключом
+        bytes32 moveHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked("Move", player, targetX, targetY, nonces[player]++, block.chainid))
+            )
+        );
+
+        address signer = recoverSigner(moveHash, moveSig);
+        require(signer == players[player].sessionKey, "Invalid move signature: session key mismatch");
+
+        _executeMove(player, targetX, targetY);
+    }
+
+    /**
+     * @notice Прямой ход игрока (если игрок вызывает сам со своего кошелька)
+     */
+    function moveDirect(int32 targetX, int32 targetY) external {
+        require(players[msg.sender].exists, "Player must spawn first");
+        _executeMove(msg.sender, targetX, targetY);
+    }
+
+    function _executeMove(address player, int32 targetX, int32 targetY) internal {
         Player storage p = players[player];
         int32 curX = p.x;
         int32 curY = p.y;
 
-        // Вычисляем расстояние шага по X и по Y
         int32 dx = targetX - curX;
         int32 dy = targetY - curY;
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
 
-        // Проверка: ход строго на соседнюю клетку (дистанция 1) и не на то же самое место
         require((dx <= 1 && dy <= 1) && (dx + dy > 0), "Can only move to adjacent cell");
 
-        // Проверка: на клетке (0, 0) стоит монолитный Обелиск — проход заблокирован
         Cell memory dest = cells[getCellKey(targetX, targetY)];
         require(dest.object != 1, "Cell occupied by Obelisk");
 
-        // Записываем новые координаты игрока и обновляем блок последнего хода
         p.x = targetX;
         p.y = targetY;
         p.lastMoveBlock = block.number;
 
-        // Вызываем событие, чтобы фронтенд и индексаторы мгновенно увидели анимацию перемещения
         emit PlayerMoved(player, curX, curY, targetX, targetY);
     }
 
-    /**
-     * @notice Получить текущие координаты игрока и статус его существования
-     */
-    function getPlayer(address player) external view returns (int32 x, int32 y, bool exists) {
+    function isSessionValid(address player, address caller) public view returns (bool) {
         Player memory p = players[player];
-        return (p.x, p.y, p.exists);
+        return p.sessionKey != address(0) && p.sessionKey == caller && block.timestamp < p.sessionExpiry;
+    }
+
+    function getPlayer(address player) external view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry) {
+        Player memory p = players[player];
+        return (p.x, p.y, p.exists, p.sessionKey, p.sessionExpiry);
+    }
+
+    function recoverSigner(bytes32 hash, bytes memory sig) internal pure returns (address) {
+        require(sig.length == 65, "Invalid signature length");
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
+        return ecrecover(hash, v, r, s);
     }
 }
