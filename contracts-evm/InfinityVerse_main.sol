@@ -177,13 +177,24 @@ contract InfinityVerse_main {
     }
 
     /**
+     * @notice Прямой спавн игроком со своего адреса (требует газа игрока)
+     */
+    function spawnDirect() external returns (int32, int32) {
+        return _executeSpawn(msg.sender);
+    }
+
+    /**
      * @notice Спавн игрока:
      * Может вызываться:
-     * 1. Лично игроком (msg.sender == player)
-     * 2. Релеером, если сессионный ключ игрока подписал команду спавна
+     * 1. Лично игроком со своего кошелька (msg.sender == player)
+     * 2. Релеером (gasless) ТОЛЬКО при наличии валидной сессии, подписанной приватником игрока (isSessionValid)
      */
     function spawn(address player) external returns (int32, int32) {
-        require(msg.sender == player || isSessionValid(player, msg.sender) || msg.sender == relayer, "Not authorized");
+        require(msg.sender == player || isSessionValid(player, players[player].sessionKey), "Not authorized: session required");
+        return _executeSpawn(player);
+    }
+
+    function _executeSpawn(address player) internal returns (int32, int32) {
         require(!players[player].exists, "Player already born");
 
         players[player].x = 1;
@@ -194,6 +205,7 @@ contract InfinityVerse_main {
         emit PlayerSpawned(player, 1, 0);
         return (1, 0);
     }
+
 
     /**
      * @notice Перемещение игрока с криптографической проверкой сессионного ключа:

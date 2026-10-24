@@ -56,9 +56,9 @@ function App() {
     connectProvider,
     connectWithPrivateKey,
     connectWithGoogle,
-    handleWithdrawGoogleWallet,
     handleSpawn,
     handleMove,
+
     handleRevokeSession,
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
@@ -119,8 +119,8 @@ function App() {
           onMove={handleMove}
           onRevokeSession={() => handleRevokeSession(walletProviders)}
           onExitRam={handleExitRam}
-          onWithdrawGoogle={handleWithdrawGoogleWallet}
         />
+
 
 
         {/* 64-битный инспектор выбранной клетки */}
