@@ -425,7 +425,7 @@ contract InfinityVerse_Main_G_3 {
      * @param sessionKey Временный сессионный ключ
      * @param expiry Время истечения сессии
      */
-    function setPlayerSession(address player, address sessionKey, uint256 expiry) external onlyAllowedContracts {
+    function authorizePlayerSession(address player, address sessionKey, uint256 expiry) external onlyAllowedContracts {
         players[player].sessionKey = sessionKey;
         players[player].sessionExpiry = expiry;
         emit SessionAuthorized(player, sessionKey, expiry);
