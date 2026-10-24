@@ -207,6 +207,15 @@ function App() {
           }}>
             INFINITY-VERSE &bull; 3x3 GRID
           </div>
+          <div style={{
+            fontSize: '0.72rem',
+            color: '#a78bfa',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            fontWeight: 600
+          }}>
+            MONAD TESTNET
+          </div>
 
           <div style={{
             display: 'flex',
@@ -367,7 +376,7 @@ function App() {
           flexDirection: 'column',
           gap: '3px'
         }}>
-          <div>Контракт: <span style={{ color: '#a78bfa', fontWeight: 700 }}>v{contractVersion}</span> &bull; Monad Testnet</div>
+          <div>Контракт: <span style={{ color: '#a78bfa', fontWeight: 700 }}>v{contractVersion}</span></div>
           <div>Фронтенд: <span style={{ color: '#38bdf8', fontWeight: 700 }}>v{CLIENT_VERSION}</span></div>
         </div>
       </div>
