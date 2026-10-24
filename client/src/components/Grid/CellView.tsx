@@ -1,8 +1,10 @@
 import React from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { TERRAIN_CONFIG, OBJECT_CONFIG } from '../../config/constants';
+import { getSandTextureForCoord } from '../../config/sandTextures';
 
 interface CellViewProps {
+
   coord: { x: number; y: number };
   cell?: CellData;
   isSelected: boolean;
@@ -20,6 +22,10 @@ export const CellView: React.FC<CellViewProps> = ({
   const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: `T:${cell.terrain}`, icon: '', bg: '#14291e' }) : TERRAIN_CONFIG[0];
   const oInfo = cell ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : OBJECT_CONFIG[0];
 
+  // Если это песок (terrain === 1 или дефолт), берем уникальную процедурную текстуру по координатам (x, y)
+  const isSand = !cell || cell.terrain === 1;
+  const sandBgPattern = isSand ? getSandTextureForCoord(coord.x, coord.y) : undefined;
+
   return (
     <button
       onClick={() => onSelect(coord)}
@@ -28,6 +34,9 @@ export const CellView: React.FC<CellViewProps> = ({
         width: '62px',
         height: '62px',
         backgroundColor: tInfo.bg,
+        backgroundImage: sandBgPattern ? `url("${sandBgPattern}")` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
         borderRadius: '0px',
         display: 'flex',
@@ -43,6 +52,7 @@ export const CellView: React.FC<CellViewProps> = ({
         boxShadow: isSelected ? '0 0 14px rgba(56, 189, 248, 0.7)' : 'none'
       }}
     >
+
       {/* Верхняя строка: Координаты и Названия */}
       <div style={{
         width: '100%',
