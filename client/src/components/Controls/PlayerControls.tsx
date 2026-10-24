@@ -7,6 +7,7 @@ interface PlayerControlsProps {
   isPlayerLoading: boolean;
   actionPending: boolean;
   isDirectSignerMode: boolean;
+  isGoogleMode?: boolean;
   selectedCoord: { x: number; y: number };
   walletProvidersCount: number;
   onOpenWalletModal: () => void;
@@ -14,7 +15,9 @@ interface PlayerControlsProps {
   onMove: (x: number, y: number) => void;
   onRevokeSession: () => void;
   onExitRam: () => void;
+  onWithdrawGoogle?: (targetAddress: string) => void;
 }
+
 
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
   connectedAddress,
@@ -22,14 +25,19 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   isPlayerLoading,
   actionPending,
   isDirectSignerMode,
+  isGoogleMode,
   selectedCoord,
   walletProvidersCount,
   onOpenWalletModal,
   onSpawn,
   onMove,
   onRevokeSession,
-  onExitRam
+  onExitRam,
+  onWithdrawGoogle
 }) => {
+  const [showWithdrawPrompt, setShowWithdrawPrompt] = React.useState(false);
+  const [withdrawTarget, setWithdrawTarget] = React.useState('');
+
   return (
     <div style={{
       display: 'flex',
@@ -123,6 +131,37 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             >
               🔐 ВЫЙТИ ИЗ RAM
             </button>
+          ) : isGoogleMode ? (
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <button
+                onClick={() => setShowWithdrawPrompt(!showWithdrawPrompt)}
+                style={{
+                  backgroundColor: '#065f46',
+                  color: '#34d399',
+                  border: '1px solid #059669',
+                  padding: '2px 6px',
+                  fontSize: '0.62rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                💸 ВЫВЕСТИ MON
+              </button>
+              <button
+                onClick={onExitRam}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#94a3b8',
+                  border: '1px solid #475569',
+                  padding: '2px 6px',
+                  fontSize: '0.62rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                ВЫЙТИ
+              </button>
+            </div>
           ) : (
             <button
               onClick={onRevokeSession}
@@ -142,6 +181,68 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               🔒 СБРОС СЕССИИ
             </button>
           )}
+
+          {/* Модальное окно/поле для вывода средств */}
+          {showWithdrawPrompt && onWithdrawGoogle && (
+            <div style={{
+              display: 'flex',
+              gap: '4px',
+              alignItems: 'center',
+              backgroundColor: '#064e3b',
+              border: '1px solid #10b981',
+              padding: '4px 8px',
+              marginTop: '4px'
+            }}>
+              <input
+                type="text"
+                placeholder="Адрес для вывода (0x...)"
+                value={withdrawTarget}
+                onChange={(e) => setWithdrawTarget(e.target.value)}
+                style={{
+                  backgroundColor: '#022c22',
+                  border: '1px solid #059669',
+                  color: '#ecfdf5',
+                  padding: '2px 6px',
+                  fontSize: '0.65rem',
+                  fontFamily: 'monospace',
+                  width: '180px'
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (withdrawTarget) {
+                    onWithdrawGoogle(withdrawTarget.trim());
+                    setShowWithdrawPrompt(false);
+                  }
+                }}
+                disabled={actionPending || !withdrawTarget}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: '#022c22',
+                  border: 'none',
+                  padding: '2px 8px',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                ОТПРАВИТЬ
+              </button>
+              <button
+                onClick={() => setShowWithdrawPrompt(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#6ee7b7',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
 
           {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
           {(() => {

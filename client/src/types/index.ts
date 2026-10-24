@@ -25,3 +25,10 @@ export interface EIP6963ProviderDetail {
   };
   provider: any;
 }
+
+export interface GoogleSessionData {
+  idToken: string;
+  email?: string;
+  address: `0x${string}`;
+}
+

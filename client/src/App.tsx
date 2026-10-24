@@ -52,13 +52,17 @@ function App() {
     isPlayerLoading,
     actionPending,
     isDirectSignerMode,
+    isGoogleMode,
     connectProvider,
     connectWithPrivateKey,
+    connectWithGoogle,
+    handleWithdrawGoogleWallet,
     handleSpawn,
     handleMove,
     handleRevokeSession,
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
+
 
   const curCell = cells.find(c => c.x === selectedCoord.x && c.y === selectedCoord.y) || null;
 
@@ -107,6 +111,7 @@ function App() {
           isPlayerLoading={isPlayerLoading}
           actionPending={actionPending}
           isDirectSignerMode={isDirectSignerMode}
+          isGoogleMode={isGoogleMode}
           selectedCoord={selectedCoord}
           walletProvidersCount={walletProviders.length}
           onOpenWalletModal={() => setIsWalletModalOpen(true)}
@@ -114,7 +119,9 @@ function App() {
           onMove={handleMove}
           onRevokeSession={() => handleRevokeSession(walletProviders)}
           onExitRam={handleExitRam}
+          onWithdrawGoogle={handleWithdrawGoogleWallet}
         />
+
 
         {/* 64-битный инспектор выбранной клетки */}
         <CellInspector curCell={curCell} />
@@ -143,7 +150,11 @@ function App() {
           setIsWalletModalOpen(false);
           setShowPkInputModal(true);
         }}
+        onGoogleLoginSuccess={(idToken) => {
+          connectWithGoogle(idToken, () => setIsWalletModalOpen(false));
+        }}
       />
+
 
       {/* Модальное окно ввода ключа с Dev-кнопками */}
       <PkModal

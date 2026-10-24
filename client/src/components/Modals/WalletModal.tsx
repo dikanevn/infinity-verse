@@ -7,16 +7,56 @@ interface WalletModalProps {
   onClose: () => void;
   onConnectProvider: (provider?: EIP6963ProviderDetail) => void;
   onOpenPkModal: () => void;
+  onGoogleLoginSuccess?: (idToken: string) => void;
+  isLoggingInGoogle?: boolean;
 }
+
 
 export const WalletModal: React.FC<WalletModalProps> = ({
   isOpen,
   walletProviders,
   onClose,
   onConnectProvider,
-  onOpenPkModal
+  onOpenPkModal,
+  onGoogleLoginSuccess,
+  isLoggingInGoogle
 }) => {
+  const googleBtnRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const setupGoogle = () => {
+      const google = (window as any).google;
+      if (google?.accounts?.id && googleBtnRef.current) {
+        try {
+          google.accounts.id.initialize({
+            client_id: '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com',
+            callback: (response: any) => {
+              if (response?.credential && onGoogleLoginSuccess) {
+                onGoogleLoginSuccess(response.credential);
+              }
+            }
+          });
+          google.accounts.id.renderButton(googleBtnRef.current, {
+            theme: 'filled_black',
+            size: 'large',
+            width: 340,
+            text: 'continue_with',
+            shape: 'rectangular'
+          });
+        } catch (e) {
+          console.error('Google button init error:', e);
+        }
+      }
+    };
+
+    const timer = setTimeout(setupGoogle, 100);
+    return () => clearTimeout(timer);
+  }, [isOpen, onGoogleLoginSuccess]);
+
   if (!isOpen) return null;
+
 
   return (
     <div style={{
@@ -54,7 +94,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           paddingBottom: '8px'
         }}>
           <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#c084fc', letterSpacing: '0.05em' }}>
-            ⚡ ВЫБЕРИТЕ КОШЕЛЕК
+            ⚡ ВЫБЕРИТЕ СПОСОБ ВХОДА
           </span>
           <button
             onClick={onClose}
@@ -71,7 +111,43 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </button>
         </div>
 
+        {/* Быстрый вход через Google */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>
+            🚀 БЫСТРЫЙ ВХОД (БЕЗ УСТАНОВКИ КОШЕЛЬКА):
+          </div>
+          <div
+            ref={googleBtnRef}
+            style={{
+              minHeight: '44px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '4px',
+              overflow: 'hidden'
+            }}
+          >
+            {isLoggingInGoogle && (
+              <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>⏳ Вход через Google...</span>
+            )}
+          </div>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          margin: '2px 0',
+          color: '#64748b',
+          fontSize: '0.62rem'
+        }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
+          <span>ИЛИ ВНЕШНИЙ КОШЕЛЕК</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+
           {walletProviders.length > 0 ? (
             walletProviders.map((w) => (
               <button

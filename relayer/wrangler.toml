@@ -6,3 +6,9 @@ compatibility_date = "2026-10-24"
 CONTRACT_ADDRESS = "0x171814e6567896597dc79311b48f70ab6a79ced6"
 RPC_URL = "https://testnet-rpc.monad.xyz"
 CHAIN_ID = 10143
+GOOGLE_CLIENT_ID = "302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com"
+
+[[kv_namespaces]]
+binding = "GOOGLE_WALLETS"
+id = "38c312a173fd4b70bd112e77e2f7fbb0"
+

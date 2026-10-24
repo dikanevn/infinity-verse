@@ -15,6 +15,9 @@ export function usePlayerState(
   const [isPlayerLoading, setIsPlayerLoading] = useState<boolean>(false);
   const [actionPending, setActionPending] = useState<boolean>(false);
   const [isDirectSignerMode, setIsDirectSignerMode] = useState<boolean>(false);
+  const [googleIdToken, setGoogleIdToken] = useState<string>('');
+  const [isGoogleMode, setIsGoogleMode] = useState<boolean>(false);
+
 
   const fetchPlayer = async () => {
     if (!connectedAddress) return;
@@ -337,9 +340,124 @@ export function usePlayerState(
     }
   };
 
+  // Вход через Google OAuth
+  const connectWithGoogle = async (
+    idToken: string,
+    onSuccess?: () => void
+  ) => {
+    try {
+      setIsPlayerLoading(true);
+      setStatusText('🔑 Авторизация в Cloudflare через Google ID Token...');
+
+      const authRes = await fetch(`${RELAYER_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+      const authData = await authRes.json();
+      if (!authRes.ok || authData.error) {
+        throw new Error(authData.error || 'Google auth failed');
+      }
+
+      const playerAddr = authData.address;
+      setConnectedAddress(playerAddr);
+      setGoogleIdToken(idToken);
+      setIsGoogleMode(true);
+      setIsDirectSignerMode(false);
+
+      const sessionAccount = getOrCreateSessionAccount();
+      const nowSec = Math.floor(Date.now() / 1000);
+
+      // Проверяем статус игрока и сессию
+      const pData: any = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: VERSE_ABI,
+        functionName: 'getPlayer',
+        args: [playerAddr as `0x${string}`]
+      });
+
+      setPlayer({
+        x: Number(pData[0]),
+        y: Number(pData[1]),
+        exists: Boolean(pData[2])
+      });
+
+      const isSessionActive = pData[3] && pData[3].toLowerCase() === sessionAccount.address.toLowerCase() && Number(pData[4]) > nowSec;
+
+      if (!isSessionActive) {
+        setStatusText('✍️ Подпись ончейн-сессии в защищенном анклаве Cloudflare...');
+        const expiry = nowSec + 86400;
+
+        const sessionRes = await fetch(`${RELAYER_URL}/auth/google/authorize-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            idToken,
+            sessionKey: sessionAccount.address,
+            expiry
+          })
+        });
+
+        const sessionData = await sessionRes.json();
+        if (!sessionRes.ok || sessionData.error) {
+          throw new Error(sessionData.error || 'Cloudflare session sign failed');
+        }
+      }
+
+      setStatusText(`✅ Вход выполнен через Google! Кошелек: ${playerAddr.slice(0, 6)}...${playerAddr.slice(-4)}`);
+      if (onSuccess) onSuccess();
+      await onStateRefresh();
+    } catch (err: any) {
+      console.error('Google connect error:', err);
+      alert('Ошибка при входе через Google: ' + (err.message || err));
+    } finally {
+      setIsPlayerLoading(false);
+    }
+  };
+
+  // Вывод монет с Google-кошелька на внешний адрес
+  const handleWithdrawGoogleWallet = async (targetAddress: string) => {
+    if (!googleIdToken) {
+      alert('Вывод доступен только для сессии Google Login');
+      return;
+    }
+    if (!targetAddress || !targetAddress.startsWith('0x') || targetAddress.length !== 42) {
+      alert('Укажите корректный EVM адрес (0x...)');
+      return;
+    }
+
+    try {
+      setActionPending(true);
+      setStatusText('💸 Отправка транзакции вывода монет с Cloudflare кошелька...');
+      const res = await fetch(`${RELAYER_URL}/auth/google/withdraw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idToken: googleIdToken,
+          targetAddress
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Withdraw failed');
+      }
+
+      setStatusText(`✅ Монеты успешно выведены! Tx: ${data.txHash.slice(0, 10)}...`);
+      alert(`Успешно отправлено! Хэш транзакции: ${data.txHash}`);
+      await fetchPlayer();
+    } catch (err: any) {
+      console.error(err);
+      alert('Ошибка вывода: ' + (err.shortMessage || err.message));
+    } finally {
+      setActionPending(false);
+    }
+  };
+
   const handleExitRam = () => {
     EncryptedRamSigner.clear();
     setIsDirectSignerMode(false);
+    setIsGoogleMode(false);
+    setGoogleIdToken('');
     setConnectedAddress('');
     setPlayer(null);
   };
@@ -349,12 +467,17 @@ export function usePlayerState(
     isPlayerLoading,
     actionPending,
     isDirectSignerMode,
+    isGoogleMode,
+    googleIdToken,
     connectProvider,
     connectWithPrivateKey,
+    connectWithGoogle,
+    handleWithdrawGoogleWallet,
     handleSpawn,
     handleMove,
     handleRevokeSession,
     handleExitRam,
     fetchPlayer
   };
+
 }
