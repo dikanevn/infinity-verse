@@ -4,7 +4,7 @@ compatibility_date = "2026-10-24"
 
 [vars]
 MAIN_CONTRACT_ADDRESS = "0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B"
-AAA_CONTRACT_ADDRESS = "0x9d5d82dcfa99da2496df7c86bd998aaed70daf04"
+AAA_CONTRACT_ADDRESS = "0x035da1a59b049f9022984743f4c43fbc311d44d6"
 RPC_URL = "https://testnet-rpc.monad.xyz"
 CHAIN_ID = 10143
 GOOGLE_CLIENT_ID = "302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com"
