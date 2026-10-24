@@ -5,4 +5,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   base: './', // relative base so assets load correctly on GitHub Pages, Capacitor and Tauri
+  server: {
+    allowedHosts: true, // allow tunnels and any host
+  },
 })
