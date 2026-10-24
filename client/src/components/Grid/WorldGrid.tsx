@@ -22,8 +22,9 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const centerX = player?.exists ? player.x : 0;
   const centerY = player?.exists ? player.y : 0;
 
-  // Расширенное поле (например 9х9), где центр 5х5 — видимый мир, а за пределами 5х5 — бесконечный туман
-  const R_VIEW = 4; // 9х9 клеток (от -4 до +4 вокруг игрока)
+  // Расширенное поле 25х25 (радиус 12 клеток вокруг игрока):
+  // Видимый сектор 5х5 берется из блокчейна, а всё бесконечное пространство вокруг заполняется туманом
+  const R_VIEW = 12; // 25x25 = 625 клеток
   const gridCoords: { x: number; y: number }[] = [];
   for (let y = centerY + R_VIEW; y >= centerY - R_VIEW; y--) {
     for (let x = centerX - R_VIEW; x <= centerX + R_VIEW; x++) {
@@ -195,10 +196,10 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           transformOrigin: 'center center',
           transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(9, 62px)',
-          gridTemplateRows: 'repeat(9, 62px)',
+          gridTemplateColumns: 'repeat(25, 62px)',
+          gridTemplateRows: 'repeat(25, 62px)',
           gap: '1px',
-          backgroundColor: '#334155',
+          backgroundColor: '#1e293b',
           padding: '0px',
           border: 'none',
           boxShadow: 'none'
