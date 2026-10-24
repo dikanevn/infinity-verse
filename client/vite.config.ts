@@ -12,8 +12,9 @@ export default defineConfig({
       usePolling: true, // for instant file change detection over WSL/Windows filesystem
     },
     hmr: {
-      host: '192.168.0.152',
+      protocol: 'ws',
       port: 5173,
+      // Leaving out fixed host so Vite auto-detects: localhost on PC, 192.168.0.152 on mobile
     },
   },
 })
