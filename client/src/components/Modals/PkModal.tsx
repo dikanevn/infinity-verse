@@ -78,6 +78,10 @@ export const PkModal: React.FC<PkModalProps> = ({
           type="password"
           placeholder="0x... (приватный ключ EVM)"
           value={pkInput}
+          autoComplete="new-password"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
           onChange={(e) => onChangePkInput(e.target.value)}
           style={{
             backgroundColor: '#131826',

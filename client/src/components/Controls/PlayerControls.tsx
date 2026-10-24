@@ -103,7 +103,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           border: '1px solid #38bdf8',
           padding: '6px 12px'
         }}>
-          <span>🧑‍🚀 Игрок: <b>({player.x}, {player.y})</b></span>
+          <span>
+            🧑‍🚀 Игрок <span style={{ color: '#94a3b8', fontSize: '0.62rem' }}>({connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)})</span>: <b>({player.x}, {player.y})</b>
+          </span>
           {isDirectSignerMode ? (
             <button
               onClick={onExitRam}
