@@ -198,13 +198,27 @@ contract InfinityVerse_AAA {
 
     /**
      * @notice 3. Рождение в мире — БЕЗГАЗОВЫЙ РЕЖИМ (Gasless)
-     * @dev Газлесс-спавн через спонсора/релеер при наличии авторизованной сессии игрока
+     * @dev Газлесс-спавн через спонсора/релеер по криптографической EIP-191 подписи сессионного ключа
      * @param player Адрес кошелька игрока
+     * @param spawnSig Подпись команды "Spawn" сессионным ключом игрока
      * @return (x, y) Начальные координаты появления (1, 0)
      */
-    function spawnGasless(address player) external returns (int32, int32) {
+    function spawnGasless(address player, bytes calldata spawnSig) external returns (int32, int32) {
         (, , , address activeSessionKey, , , ) = mainContract.getPlayer(player);
-        require(msg.sender == player || isSessionValid(player, activeSessionKey), unicode"AAA: Для спавна требуется действующая сессия");
+        require(isSessionValid(player, activeSessionKey), unicode"AAA: Для спавна требуется действующая сессия");
+
+        uint256 currentNonce = mainContract.incrementNonce(player);
+
+        bytes32 spawnHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked("Spawn", player, currentNonce, block.chainid))
+            )
+        );
+
+        address signer = recoverSigner(spawnHash, spawnSig);
+        require(signer == activeSessionKey, unicode"AAA: Несовпадение сессионного ключа в подписи спавна");
+
         return _executeSpawn(player);
     }
 

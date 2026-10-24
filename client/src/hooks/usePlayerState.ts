@@ -357,13 +357,36 @@ export function usePlayerState(
         setStatusText('⏳ Ожидание подтверждения спавна в Monad...');
         await publicClient.waitForTransactionReceipt({ hash });
       }
-      // РЕЖИМ 3 & 4: GOOGLE или METAMASK СЕССИЯ (Gasless через спонсора)
+      // РЕЖИМ 3 & 4: GOOGLE или METAMASK СЕССИЯ (Gasless через спонсора с подписью сессии)
       else {
         setStatusText('⏳ Рождение игрока через спонсора (spawnGasless)...');
+        const sessionAccount = getOrCreateSessionAccount();
+        const nonce = await publicClient.readContract({
+          address: MAIN_CONTRACT_ADDRESS,
+          abi: MAIN_ABI,
+          functionName: 'nonces',
+          args: [connectedAddress as `0x${string}`]
+        });
+
+        const spawnInnerHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'uint256', 'uint256'],
+            ['Spawn', connectedAddress as `0x${string}`, nonce, BigInt(10143)]
+          )
+        );
+
+        const sig = await sessionAccount.signMessage({
+          message: { raw: spawnInnerHash }
+        });
+
         const res = await fetch(RELAYER_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'spawn', player: connectedAddress })
+          body: JSON.stringify({
+            action: 'spawn',
+            player: connectedAddress,
+            sig
+          })
         });
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error || 'Relayer error');

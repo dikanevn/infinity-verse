@@ -5,7 +5,7 @@ import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 // === АКТУАЛЬНЫЕ АДРЕСА ПОКОЛЕНИЯ 2 (MAIN_G_2 + СИММЕТРИЧНЫЙ AAA) ===
 // ============================================================================
 const MAIN_G2_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
-const AAA_ADDRESS = '0x21ba79b42716501b9c0fbee2f8da4b041fd3984d';
+const AAA_ADDRESS = '0xfa8f0d80475c27797765a3cc03feb930ddf15306';
 
 // ABI для чтения нонсов и состояния из хранилища Main_G_2
 const MAIN_ABI = parseAbi([
@@ -15,7 +15,7 @@ const MAIN_ABI = parseAbi([
 
 // Симметричный ABI логического модуля AAA (все спонсируемые действия: ...Gasless)
 const AAA_ABI = parseAbi([
-  'function spawnGasless(address player)',
+  'function spawnGasless(address player, bytes sig)',
   'function moveGasless(address player, int32 targetX, int32 targetY, bytes sig)',
   'function authorizeSessionGasless(address player, address sessionKey, uint256 expiry, bytes sig)',
   'function revokeSessionGasless(address player, bytes sig)'
@@ -409,12 +409,14 @@ export default {
 
         // 3. Спавн игрока в мир (spawnGasless)
         if (action === 'spawn') {
+          if (!sig) return jsonResponse({ error: 'sig required for spawn' }, 400);
+
           const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
             walletClient.writeContract({
               address: aaaContractAddress,
               abi: AAA_ABI,
               functionName: 'spawnGasless',
-              args: [player],
+              args: [player, sig],
               nonce
             })
           );
