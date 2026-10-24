@@ -1,0 +1,284 @@
+{
+  "contractName": "InfinityVerse",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "wallet",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "playerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "fromCell",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "toCell",
+          "type": "uint8"
+        }
+      ],
+      "name": "PlayerMoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "wallet",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "playerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "cell",
+          "type": "uint8"
+        }
+      ],
+      "name": "PlayerSpawned",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "GRID_WIDTH",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TOTAL_CELLS",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "addressToPlayerId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getGrid",
+      "outputs": [
+        {
+          "internalType": "uint256[9]",
+          "name": "",
+          "type": "uint256[9]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "wallet",
+          "type": "address"
+        }
+      ],
+      "name": "getOrCreatePlayerId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "grid",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "fromCell",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "toCell",
+          "type": "uint8"
+        }
+      ],
+      "name": "isAdjacent",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "targetCell",
+          "type": "uint8"
+        }
+      ],
+      "name": "move",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nextPlayerId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "playerIdToAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "playerPosition",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "playerSpawned",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "targetCell",
+          "type": "uint8"
+        }
+      ],
+      "name": "spawn",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60806040526001600955348015610014575f80fd5b50610985806100225f395ff3fe608060405234801561000f575f80fd5b50600436106100cb575f3560e01c806351d2cc8f1161008857806370e87aaf1161006357806370e87aaf146101dd5780637f9055ac146101f2578063e340155514610214578063fb5b6b0214610227575f80fd5b806351d2cc8f14610179578063537288d61461018c578063632b95f0146101ab575f80fd5b8063134000c0146100cf57806319863f35146100ed578063235e78eb1461010457806328a4e3c91461011e5780632de982c1146101315780634ae73cec14610171575b5f80fd5b6100d761023a565b6040516100e49190610789565b60405180910390f35b6100f660095481565b6040519081526020016100e4565b61010c600381565b60405160ff90911681526020016100e4565b6100f661012c3660046107cf565b610275565b61015961013f3660046107ef565b600b6020525f90815260409020546001600160a01b031681565b6040516001600160a01b0390911681526020016100e4565b61010c600981565b6100f66101873660046107ef565b610402565b6100f661019a366004610806565b600a6020525f908152604090205481565b6101cd6101b93660046107ef565b600d6020525f908152604090205460ff1681565b60405190151581526020016100e4565b6101f06101eb3660046107cf565b610417565b005b61010c6102003660046107ef565b600c6020525f908152604090205460ff1681565b6101cd61022236600461082c565b610636565b6100f6610235366004610806565b6106f6565b61024261076a565b60408051610120810191829052905f9060099082845b815481526020019060010190808311610258575050505050905090565b5f600960ff8316106102bd5760405162461bcd60e51b815260206004820152600c60248201526b125b9d985b1a590818d95b1b60a21b60448201526064015b60405180910390fd5b5f8260ff16600981106102d2576102d261085d565b0154156103195760405162461bcd60e51b815260206004820152601560248201527410d95b1b08185b1c9958591e481bd8d8dd5c1a5959605a1b60448201526064016102b4565b5f610323336106f6565b5f818152600d602052604090205490915060ff161561037d5760405162461bcd60e51b8152602060048201526016602482015275141b185e595c88185b1c9958591e481cdc185ddb995960521b60448201526064016102b4565b805f8460ff16600981106103935761039361085d565b01555f818152600c60209081526040808320805460ff881660ff199182168117909255600d845293829020805490941660011790935551918252829133917fbb6ca7c4686fd70728c75c2af531effb46737c0ad3b51ae722af090a0e26209c910160405180910390a392915050565b5f8160098110610410575f80fd5b0154905081565b600960ff8216106104595760405162461bcd60e51b815260206004820152600c60248201526b125b9d985b1a590818d95b1b60a21b60448201526064016102b4565b335f908152600a602052604090205480158061048357505f818152600d602052604090205460ff16155b156104965761049182610275565b505050565b5f818152600c602052604090205460ff90811690831681036104f15760405162461bcd60e51b8152602060048201526014602482015273105b1c9958591e481a5b881d1a1a5cc818d95b1b60621b60448201526064016102b4565b6104fb8184610636565b6105475760405162461bcd60e51b815260206004820152601b60248201527f5461726765742063656c6c206973206e6f742061646a6163656e74000000000060448201526064016102b4565b5f8360ff166009811061055c5761055c61085d565b0154156105a25760405162461bcd60e51b815260206004820152601460248201527315185c99d95d0818d95b1b081bd8d8dd5c1a595960621b60448201526064016102b4565b5f808260ff16600981106105b8576105b861085d565b0155815f60ff8516600981106105d0576105d061085d565b01555f828152600c6020908152604091829020805460ff191660ff8781169182179092558351918516825291810191909152839133917f8ebd880c73e0b407aa26160f5fdb64aac7f1951f356caa339398f0248d3e2d4a910160405180910390a3505050565b5f600960ff841610158061064e5750600960ff831610155b1561065a57505f6106f0565b5f610666600385610885565b90505f6106746003866108ba565b90505f610682600386610885565b90505f6106906003876108ba565b90505f61069d83866108db565b90505f6106aa83866108db565b90505f825f0b12156106c2576106bf826108fb565b91505b5f815f0b12156106d8576106d5816108fb565b90505b6106e28183610917565b5f0b60011496505050505050505b92915050565b6001600160a01b0381165f908152600a60205260408120548082036106f05750600980549081905f61072783610937565b90915550506001600160a01b0383165f818152600a60209081526040808320859055848352600b909152902080546001600160a01b031916909117905592915050565b6040518061012001604052806009906020820280368337509192915050565b610120810181835f5b60098110156107b1578151835260209283019290910190600101610792565b50505092915050565b803560ff811681146107ca575f80fd5b919050565b5f602082840312156107df575f80fd5b6107e8826107ba565b9392505050565b5f602082840312156107ff575f80fd5b5035919050565b5f60208284031215610816575f80fd5b81356001600160a01b03811681146107e8575f80fd5b5f806040838503121561083d575f80fd5b610846836107ba565b9150610854602084016107ba565b90509250929050565b634e487b7160e01b5f52603260045260245ffd5b634e487b7160e01b5f52601260045260245ffd5b5f60ff83168061089757610897610871565b8060ff84160691505092915050565b634e487b7160e01b5f52601160045260245ffd5b5f60ff8316806108cc576108cc610871565b8060ff84160491505092915050565b5f82810b9082900b03607f198112607f821317156106f0576106f06108a6565b5f81810b6080810161090f5761090f6108a6565b5f0392915050565b5f81810b9083900b01607f8113607f19821217156106f0576106f06108a6565b5f60018201610948576109486108a6565b506001019056fea264697066735822122042dd08858135ca3227935031229d44e36dc377705ce082f845fe0f081422230364736f6c63430008140033"
+}
