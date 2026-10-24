@@ -4,8 +4,22 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Обновляем PATH из системных и пользовательских переменных окружения, если процесс был запущен до установки
+# Обновляем PATH
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+# Запрещаем любые интерактивные окна и GUI/терминальные промпты Git, чтобы ничего не зависало
+$env:GIT_TERMINAL_PROMPT = "0"
+$env:GCM_INTERACTIVE = "never"
+
+# Извлекаем GITHUB_TOKEN из .private/wallet.env (если есть) для мгновенного и надежного пуша
+$token = ""
+if (Test-Path ".private\wallet.env") {
+    $line = Get-Content ".private\wallet.env" | Where-Object { $_ -match "^GITHUB_TOKEN=(.+)$" }
+    if ($line) {
+        $token = $line -replace "^GITHUB_TOKEN=", ""
+        $token = $token.Trim()
+    }
+}
 
 # 1. Если есть изменения в .private, коммитим и пушим
 if (Test-Path ".private") {
@@ -14,9 +28,24 @@ if (Test-Path ".private") {
         Write-Host "--- Syncing .private repository ---" -ForegroundColor Cyan
         git -C .private add -A
         git -C .private commit -m $Msg
-        git -C .private push origin main
+        if ($token) {
+            git -C .private push "https://${token}@github.com/dikanevn/infinity-verse-private.git" main
+        } else {
+            git -C .private push origin main
+        }
     } else {
-        Write-Host "--- .private repository is up to date ---" -ForegroundColor Green
+        # Если незакоммиченных нет, но есть неотправленные коммиты
+        $ahead = git -C .private rev-list --count origin/main..main 2>$null
+        if ($ahead -and [int]$ahead -gt 0) {
+            Write-Host "--- Pushing unpushed commits in .private ($ahead ahead) ---" -ForegroundColor Cyan
+            if ($token) {
+                git -C .private push "https://${token}@github.com/dikanevn/infinity-verse-private.git" main
+            } else {
+                git -C .private push origin main
+            }
+        } else {
+            Write-Host "--- .private repository is up to date ---" -ForegroundColor Green
+        }
     }
 }
 
@@ -26,9 +55,23 @@ if ($mainStatus) {
     Write-Host "--- Syncing main repository ---" -ForegroundColor Cyan
     git add -A
     git commit -m $Msg
-    git push origin main
+    if ($token) {
+        git push "https://${token}@github.com/dikanevn/infinity-verse.git" main
+    } else {
+        git push origin main
+    }
 } else {
-    Write-Host "--- Main repository is up to date ---" -ForegroundColor Green
+    $ahead = git rev-list --count origin/main..main 2>$null
+    if ($ahead -and [int]$ahead -gt 0) {
+        Write-Host "--- Pushing unpushed commits in main ($ahead ahead) ---" -ForegroundColor Cyan
+        if ($token) {
+            git push "https://${token}@github.com/dikanevn/infinity-verse.git" main
+        } else {
+            git push origin main
+        }
+    } else {
+        Write-Host "--- Main repository is up to date ---" -ForegroundColor Green
+    }
 }
 
 Write-Host "=== All repositories successfully pushed! ===" -ForegroundColor Green

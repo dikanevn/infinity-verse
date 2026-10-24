@@ -54,4 +54,5 @@ function compile(contractFileName, contractName) {
   console.log(`Artifact saved to artifacts/${contractName}.json`);
 }
 
-compile('InfinityVerse_V_0_0_0_0_4.sol', 'InfinityVerse_V_0_0_0_0_4');
+const targetContract = process.argv[2] || 'InfinityVerse_V_0_0_0_0_5';
+compile(`${targetContract}.sol`, targetContract);
