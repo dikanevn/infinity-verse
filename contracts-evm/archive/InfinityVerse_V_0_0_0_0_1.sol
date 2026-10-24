@@ -14,7 +14,7 @@ pragma solidity ^0.8.20;
  * 0 = Empty
  * > 0 = Player ID (each player gets a unique sequential 1-based ID: 1, 2, 3...)
  */
-contract InfinityVerse {
+contract InfinityVerse_V_0_0_0_0_1 {
     // Current grid width and size (fixed 3x3 for initial epoch, scalable via future logic)
     uint8 public constant GRID_WIDTH = 3;
     uint8 public constant TOTAL_CELLS = 9;

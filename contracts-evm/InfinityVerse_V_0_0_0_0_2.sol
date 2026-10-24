@@ -13,7 +13,7 @@ pragma solidity ^0.8.20;
  * - Instant respawn of Star upon collection (Variant A)
  * - Player star balance tracking
  */
-contract InfinityVerseV0_0_0_0_2 {
+contract InfinityVerse_V_0_0_0_0_2 {
     string public constant VERSION = "0.0.0.0.2";
     uint8 public constant GRID_WIDTH = 3;
     uint8 public constant TOTAL_CELLS = 9;

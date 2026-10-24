@@ -30,7 +30,7 @@ async function main() {
     testnet: true,
   });
 
-  const artifact = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'artifacts', 'InfinityVerseV0_0_0_0_2.json'), 'utf8'));
+  const artifact = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'artifacts', 'InfinityVerse_V_0_0_0_0_2.json'), 'utf8'));
 
   const account = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({
