@@ -104,11 +104,13 @@ async function main() {
   };
 
   const deploymentsFile = path.resolve(__dirname, '..', '.private', 'deployments.json');
-  let history = [];
+  let history = {};
   if (fs.existsSync(deploymentsFile)) {
     try { history = JSON.parse(fs.readFileSync(deploymentsFile, 'utf8')); } catch (e) {}
   }
-  history.push(deployLog);
+  if (!history.monad_testnet) history.monad_testnet = {};
+  if (!history.monad_testnet.contracts) history.monad_testnet.contracts = {};
+  history.monad_testnet.contracts['InfinityVerse_main'] = deployLog;
   fs.writeFileSync(deploymentsFile, JSON.stringify(history, null, 2));
   console.log('Saved to .private/deployments.json');
 }

@@ -4,6 +4,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 const VERSE_ABI = parseAbi([
   'function spawn(address player) returns (int32, int32)',
   'function authorizeSessionWithSig(address player, address sessionKey, uint256 expiry, bytes sig)',
+  'function revokeSessionWithSig(address player, bytes sig)',
   'function moveWithSession(address player, int32 targetX, int32 targetY, bytes moveSig)',
   'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry)',
   'function nonces(address player) view returns (uint256)'
@@ -89,6 +90,22 @@ export default {
             abi: VERSE_ABI,
             functionName: 'authorizeSessionWithSig',
             args: [player, sessionKey, BigInt(expiry), sig]
+          });
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
+        }
+
+        // 1.1 Отзыв сессии игрока (кошелёк игрока подписывает команду отзыва)
+        if (action === 'revoke_session') {
+          if (!sig) {
+            return jsonResponse({ error: 'sig required for revoke' }, 400);
+          }
+
+          const hash = await walletClient.writeContract({
+            address: env.CONTRACT_ADDRESS,
+            abi: VERSE_ABI,
+            functionName: 'revokeSessionWithSig',
+            args: [player, sig]
           });
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });

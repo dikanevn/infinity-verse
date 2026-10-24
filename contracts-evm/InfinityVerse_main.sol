@@ -46,6 +46,7 @@ contract InfinityVerse_main {
     event PlayerSpawned(address indexed player, int32 x, int32 y);
     event PlayerMoved(address indexed player, int32 fromX, int32 fromY, int32 toX, int32 toY);
     event SessionAuthorized(address indexed player, address indexed sessionKey, uint256 expiry);
+    event SessionRevoked(address indexed player);
     event RelayerUpdated(address indexed newRelayer);
 
     modifier onlyOwner() {
@@ -141,6 +142,38 @@ contract InfinityVerse_main {
         players[player].sessionExpiry = expiry;
 
         emit SessionAuthorized(player, sessionKey, expiry);
+    }
+
+    /**
+     * @notice Прямой отзыв сессии игроком (если у игрока есть газ на вызов)
+     */
+    function revokeSessionDirect() external {
+        _revokeSession(msg.sender);
+    }
+
+    /**
+     * @notice Газлесс-отзыв сессии через релеер с криптографической подписью основного кошелька игрока
+     * @param player Адрес игрока
+     * @param sig Подпись сообщения "RevokeSession" от основного кошелька игрока
+     */
+    function revokeSessionWithSig(address player, bytes calldata sig) external {
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked("RevokeSession", player, nonces[player]++, block.chainid))
+            )
+        );
+
+        address signer = recoverSigner(messageHash, sig);
+        require(signer == player, "Invalid revoke signature");
+
+        _revokeSession(player);
+    }
+
+    function _revokeSession(address player) internal {
+        players[player].sessionKey = address(0);
+        players[player].sessionExpiry = 0;
+        emit SessionRevoked(player);
     }
 
     /**

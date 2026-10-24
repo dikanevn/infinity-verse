@@ -3,6 +3,6 @@ main = "src/index.js"
 compatibility_date = "2026-10-24"
 
 [vars]
-CONTRACT_ADDRESS = "0xb0e0ba5918750d7246d04aebc7bd43d1df6a2c9a"
+CONTRACT_ADDRESS = "0x171814e6567896597dc79311b48f70ab6a79ced6"
 RPC_URL = "https://testnet-rpc.monad.xyz"
 CHAIN_ID = 10143

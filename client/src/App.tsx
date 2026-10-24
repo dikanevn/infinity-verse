@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { createPublicClient, createWalletClient, custom, http, parseAbi, defineChain, keccak256, encodePacked } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 
-// Основной контракт InfinityVerse_main (Direct X,Y Coordinate Grid 5x5 + Players + Session Keys)
-const CONTRACT_ADDRESS = '0xb0e0ba5918750d7246d04aebc7bd43d1df6a2c9a';
+// Основной контракт InfinityVerse_main (Direct X,Y Coordinate Grid 5x5 + Players + Session Keys + Revoke)
+const CONTRACT_ADDRESS = '0x171814e6567896597dc79311b48f70ab6a79ced6';
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
 
 const monadTestnet = defineChain({
@@ -32,6 +32,8 @@ const VERSE_ABI = parseAbi([
   'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry)',
   'function spawn(address player) returns (int32, int32)',
   'function authorizeSessionWithSig(address player, address sessionKey, uint256 expiry, bytes sig)',
+  'function revokeSessionWithSig(address player, bytes sig)',
+  'function revokeSessionDirect()',
   'function moveWithSession(address player, int32 targetX, int32 targetY, bytes moveSig)',
   'function nonces(address player) view returns (uint256)'
 ]);
@@ -228,6 +230,69 @@ function App() {
     } catch (err: any) {
       console.error('Ошибка подключения/сессии:', err);
       alert('Ошибка при авторизации сессии: ' + (err.shortMessage || err.message));
+    }
+  };
+
+  // Принудительный ончейн-отзыв сессии игрока (Logout / Revoke Session)
+  const handleRevokeSession = async () => {
+    if (!connectedAddress) return;
+    if (!confirm('Вы уверены, что хотите аннулировать сессию? Текущий временный ключ будет заблокирован в блокчейне.')) return;
+
+    setActionPending(true);
+    setStatusText('⏳ Аннулирование сессии ончейн...');
+
+    try {
+      const nonce = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: VERSE_ABI,
+        functionName: 'nonces',
+        args: [connectedAddress as `0x${string}`]
+      });
+
+      // Хэш: keccak256("RevokeSession", player, nonce, chainId)
+      const revokeInnerHash = keccak256(
+        encodePacked(
+          ['string', 'address', 'uint256', 'uint256'],
+          ['RevokeSession', connectedAddress as `0x${string}`, nonce, BigInt(10143)]
+        )
+      );
+
+      let prov = (window as any).ethereum;
+      if (!prov && walletProviders.length > 0) {
+        prov = walletProviders[0].provider;
+      }
+
+      const walletClient = createWalletClient({
+        chain: monadTestnet,
+        transport: custom(prov)
+      });
+
+      const sig = await walletClient.signMessage({
+        account: connectedAddress as `0x${string}`,
+        message: { raw: revokeInnerHash }
+      });
+
+      const res = await fetch(RELAYER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'revoke_session',
+          player: connectedAddress,
+          sig
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok || resData.error) throw new Error(resData.error || 'Revoke failed');
+
+      inMemorySessionAccount = null;
+      setStatusText('🔒 Сессия успешно отозвана в блокчейне!');
+      await fetchState();
+    } catch (err: any) {
+      console.error('Ошибка отзыва сессии:', err);
+      alert('Ошибка при отзыве сессии: ' + (err.shortMessage || err.message));
+    } finally {
+      setActionPending(false);
     }
   };
 
@@ -632,6 +697,24 @@ function App() {
                 padding: '6px 12px'
               }}>
                 <span>🧑‍🚀 Игрок: <b>({player.x}, {player.y})</b></span>
+                {/* Кнопка отзыва сессии для безопасности */}
+                <button
+                  onClick={handleRevokeSession}
+                  disabled={actionPending}
+                  title="Аннулировать сессионный ключ в блокчейне"
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: '#f87171',
+                    border: '1px solid #ef4444',
+                    padding: '2px 6px',
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    cursor: actionPending ? 'wait' : 'pointer',
+                    marginLeft: '4px'
+                  }}
+                >
+                  🔒 СБРОС СЕССИИ
+                </button>
                 {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
                 {(() => {
                   const dx = Math.abs(selectedCoord.x - player.x);
