@@ -5,7 +5,7 @@ import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 // === АКТУАЛЬНЫЕ АДРЕСА ПОКОЛЕНИЯ 2 (MAIN_G_2 + СИММЕТРИЧНЫЙ AAA) ===
 // ============================================================================
 const MAIN_G2_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
-const AAA_ADDRESS = '0x5486aa7b0d7042ec6a49f91d90ce7b7d4ed28faa';
+const AAA_ADDRESS = '0x9d5d82dcfa99da2496df7c86bd998aaed70daf04';
 
 // ABI для чтения нонсов и состояния из хранилища Main_G_2
 const MAIN_ABI = parseAbi([
@@ -18,6 +18,7 @@ const AAA_ABI = parseAbi([
   'function spawnGasless(address player, bytes sig)',
   'function moveGasless(address player, int32 targetX, int32 targetY, bytes sig)',
   'function discoverCellGasless(address player, int32 targetX, int32 targetY, bytes sig)',
+  'function discoverCellsBatchGasless(address player, int32[] xs, int32[] ys, bytes sig)',
   'function authorizeSessionGasless(address player, address sessionKey, uint256 expiry, bytes sig)',
   'function revokeSessionGasless(address player, bytes sig)'
 ]);
@@ -456,6 +457,29 @@ export default {
               abi: AAA_ABI,
               functionName: 'discoverCellGasless',
               args: [player, Number(targetX), Number(targetY), sig],
+              nonce
+            })
+          );
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
+        }
+
+        // 6. Пакетная разведка/создание до 9 клеток песка (discoverCellsBatchGasless)
+        if (action === 'discover_batch') {
+          const { xs, ys } = body;
+          if (!Array.isArray(xs) || !Array.isArray(ys) || xs.length === 0 || !sig) {
+            return jsonResponse({ error: 'xs, ys arrays and sig required' }, 400);
+          }
+
+          const parsedXs = xs.map(Number);
+          const parsedYs = ys.map(Number);
+
+          const hash = await executeQueuedTx(publicClient, sponsorAccount.address, (nonce) =>
+            walletClient.writeContract({
+              address: aaaContractAddress,
+              abi: AAA_ABI,
+              functionName: 'discoverCellsBatchGasless',
+              args: [player, parsedXs, parsedYs, sig],
               nonce
             })
           );
