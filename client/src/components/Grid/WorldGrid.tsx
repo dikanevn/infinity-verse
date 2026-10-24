@@ -22,17 +22,19 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Масштаб регулируется строго через кнопки + и -
   const [scale, setScale] = useState<number>(0.85);
 
-  // Центр активного окна 5х5 (фокусная точка): по умолчанию игрок или место куда кликнули
-  const centerX = focusCoord.x;
-  const centerY = focusCoord.y;
-
-  // Строго 25 интерактивных клеток (5х5) вокруг точки фокуса
-  const active5x5Coords: { x: number; y: number }[] = [];
-  for (let y = centerY + 2; y >= centerY - 2; y--) {
-    for (let x = centerX - 2; x <= centerX + 2; x++) {
-      active5x5Coords.push({ x, y });
-    }
-  }
+  // Собираем все координаты для отрисовки из загруженных cells
+  // Если клеток еще нет — дефолтно рисуем 5х5 вокруг фокуса
+  const coordsToRender = cells.length > 0 
+    ? cells.map(c => ({ x: c.x, y: c.y }))
+    : (() => {
+        const fallback: { x: number; y: number }[] = [];
+        for (let y = focusCoord.y + 2; y >= focusCoord.y - 2; y--) {
+          for (let x = focusCoord.x - 2; x <= focusCoord.x + 2; x++) {
+            fallback.push({ x, y });
+          }
+        }
+        return fallback;
+      })();
 
   // Размер одной клетки 62px + 1px разделитель = 63px
   const CELL_PITCH = 63;
@@ -52,16 +54,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     onCenterPlayer();
   };
 
-  // Клик по бесконечному туману (контейнеру) пересчитывает координаты и переносит 5х5 окно
+  // Клик по бесконечному туману (контейнеру) пересчитывает координаты и переносит фокус
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if (hasMovedRef.current || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left - rect.width / 2 - position.x;
     const clickY = e.clientY - rect.top - rect.height / 2 - position.y;
 
-    // В нашей системе координат: X вправо (+), Y вверх (+)
-    const clickedGridX = centerX + Math.round(clickX / (CELL_PITCH * scale));
-    const clickedGridY = centerY - Math.round(clickY / (CELL_PITCH * scale));
+    // В абсолютных координатах мира: X вправо (+), Y вверх (+)
+    const clickedGridX = Math.round(clickX / (CELL_PITCH * scale));
+    const clickedGridY = -Math.round(clickY / (CELL_PITCH * scale));
 
     onSelectCoord({ x: clickedGridX, y: clickedGridY });
   };
@@ -144,15 +146,13 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         cursor: isDraggingRef.current ? 'grabbing' : 'grab',
         touchAction: 'none',
         userSelect: 'none',
-        /* Бесконечный процедурный космический туман с облаками и сеткой */
-        backgroundColor: '#070a14',
+        /* Бесконечный процедурный космический туман БЕЗ лишней сетки */
+        backgroundColor: '#05070d',
         backgroundImage: `
-          radial-gradient(circle, rgba(148, 163, 184, 0.12) 1.5px, transparent 1.5px),
-          repeating-linear-gradient(0deg, transparent, transparent ${62 * scale}px, rgba(71, 85, 105, 0.35) ${62 * scale}px, rgba(71, 85, 105, 0.35) ${63 * scale}px),
-          repeating-linear-gradient(90deg, transparent, transparent ${62 * scale}px, rgba(71, 85, 105, 0.35) ${62 * scale}px, rgba(71, 85, 105, 0.35) ${63 * scale}px),
-          radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.6) 0%, rgba(5, 7, 10, 0.98) 100%)
+          radial-gradient(circle, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+          radial-gradient(circle at 50% 50%, rgba(20, 27, 45, 0.4) 0%, rgba(5, 7, 13, 0.98) 100%)
         `,
-        backgroundSize: `${31.5 * scale}px ${31.5 * scale}px, 100% 100%, 100% 100%, 100% 100%`,
+        backgroundSize: `48px 48px, 100% 100%`,
         border: '1px solid #475569',
         borderRadius: '0px',
         boxSizing: 'border-box'
@@ -227,36 +227,44 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </button>
       </div>
 
-      {/* Интерактивный слой мира (ровно 25 клеток 5х5 вокруг фокуса, нулевой оверхед на браузер) */}
+      {/* Интерактивный слой мира (отрисовывает активные клетки на абсолютных координатах мира) */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: 'center center',
           transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 62px)',
-          gridTemplateRows: 'repeat(5, 62px)',
-          gap: '1px',
-          backgroundColor: '#334155',
-          padding: '0px',
-          border: 'none',
-          boxShadow: '0 0 40px rgba(0, 0, 0, 0.9)'
+          position: 'relative',
+          width: '0px',
+          height: '0px'
         }}
       >
-        {active5x5Coords.map((coord) => {
+        {coordsToRender.map((coord) => {
           const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
           const isSelected = selectedCoord.x === coord.x && selectedCoord.y === coord.y;
 
+          // В абсолютных координатах мира относительно центра (0,0):
+          // X растет вправо: left = coord.x * 63 - 31
+          // Y растет вверх:  top = -coord.y * 63 - 31
           return (
-            <CellView
+            <div
               key={`${coord.x},${coord.y}`}
-              coord={coord}
-              cell={cell}
-              isSelected={isSelected}
-              player={player}
-              onSelect={onSelectCoord}
-            />
+              style={{
+                position: 'absolute',
+                left: `${coord.x * CELL_PITCH - 31}px`,
+                top: `${-coord.y * CELL_PITCH - 31}px`,
+                width: '62px',
+                height: '62px'
+              }}
+            >
+              <CellView
+                coord={coord}
+                cell={cell}
+                isSelected={isSelected}
+                player={player}
+                onSelect={onSelectCoord}
+              />
+            </div>
           );
         })}
       </div>

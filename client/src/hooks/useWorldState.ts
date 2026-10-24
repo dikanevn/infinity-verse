@@ -4,7 +4,10 @@ import type { CellData } from '../types';
 import { MAIN_CONTRACT_ADDRESS, MAIN_ABI, publicClient } from '../config/contracts';
 import { CONNECTION_CONFIG } from '../config/constants';
 
-export function useWorldState(connectedAddress: string, playerCoords: { x: number; y: number } | null) {
+export function useWorldState(
+  connectedAddress: string,
+  focusPoints: { x: number; y: number }[]
+) {
   const [cells, setCells] = useState<CellData[]>([]);
   const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.9-MAIN-G-2');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
@@ -13,21 +16,27 @@ export function useWorldState(connectedAddress: string, playerCoords: { x: numbe
 
   const fetchState = async () => {
     try {
-      // Вычисляем строго сетку 5х5 (радиус 2 = 25 клеток) вокруг текущего положения игрока (или (0,0) если не заспавнен)
-      const centerX = playerCoords ? playerCoords.x : 0;
-      const centerY = playerCoords ? playerCoords.y : 0;
+      // Собираем координаты 5х5 вокруг каждой точки фокуса (игрок + антенна/курсор)
+      const coordMap = new Map<string, { x: number; y: number }>();
 
-      const activeCoords: { x: number; y: number }[] = [];
-      for (let dy = 2; dy >= -2; dy--) {
-        for (let dx = -2; dx <= 2; dx++) {
-          activeCoords.push({ x: centerX + dx, y: centerY + dy });
+      // Если точек нет, по умолчанию берем (0, 0)
+      const points = focusPoints.length > 0 ? focusPoints : [{ x: 0, y: 0 }];
+
+      for (const pt of points) {
+        for (let dy = 2; dy >= -2; dy--) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const cx = pt.x + dx;
+            const cy = pt.y + dy;
+            coordMap.set(`${cx},${cy}`, { x: cx, y: cy });
+          }
         }
       }
 
+      const activeCoords = Array.from(coordMap.values());
       const xs = activeCoords.map(c => c.x);
       const ys = activeCoords.map(c => c.y);
 
-      // Запрашиваем из ноды только getCellsBatch (25 ячеек) и latestBlock
+      // Запрашиваем из ноды только активные клетки и latestBlock
       const [onchainCells, latestBlock] = await Promise.all([
         publicClient.readContract({
           address: MAIN_CONTRACT_ADDRESS,
@@ -78,7 +87,7 @@ export function useWorldState(connectedAddress: string, playerCoords: { x: numbe
     fetchState();
     const interval = setInterval(fetchState, CONNECTION_CONFIG.SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [connectedAddress, playerCoords?.x, playerCoords?.y]);
+  }, [connectedAddress, JSON.stringify(focusPoints)]);
 
   useEffect(() => {
     if (!lastBlockTimestamp) return;

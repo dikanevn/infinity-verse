@@ -37,10 +37,11 @@ function App() {
     };
   }, []);
 
-  // Точка фокуса для окна 5х5 (по умолчанию на игроке, но можно кликнуть в туман и исследовать любое место)
-  const [focusCoord, setFocusCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // Точки фокуса: по умолчанию (0,0)
+  const [focusPoints, setFocusPoints] = useState<{ x: number; y: number }[]>([{ x: 0, y: 0 }]);
+  const [antennaFocus, setAntennaFocus] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // 2. Ончейн-состояние мира (считывает строго 5х5 вокруг точки фокуса)
+  // 2. Ончейн-состояние мира (считывает оба фокуса: и вокруг человека, и вокруг антенны)
   const {
     cells,
     contractVersion,
@@ -48,7 +49,7 @@ function App() {
     statusState,
     setStatusText,
     fetchState
-  } = useWorldState(connectedAddress, focusCoord);
+  } = useWorldState(connectedAddress, focusPoints);
 
   // 3. Состояние игрока и механики ходов
   const {
@@ -70,29 +71,31 @@ function App() {
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
 
-  // При первом появлении или ходе игрока автоматически держим фокус на нём
+  // При изменении игрока или антенны всегда держим оба фокуса активными
   useEffect(() => {
     if (player?.exists) {
-      setFocusCoord({ x: player.x, y: player.y });
+      setFocusPoints([
+        { x: player.x, y: player.y },
+        antennaFocus
+      ]);
+    } else {
+      setFocusPoints([antennaFocus]);
     }
-  }, [player?.x, player?.y, player?.exists]);
+  }, [player?.x, player?.y, player?.exists, antennaFocus.x, antennaFocus.y]);
 
-  // Выбор клетки: если выбрана клетка, отличная от текущего выбора
+  // Выбор клетки: переносим антенну/фокус на неё
   const handleSelectCoord = (coord: { x: number; y: number }) => {
     setSelectedCoord(coord);
-    // Сдвигаем фокус только если кликнули далеко за пределами текущего окна фокуса (больше 2 шагов)
-    if (Math.abs(coord.x - focusCoord.x) > 2 || Math.abs(coord.y - focusCoord.y) > 2) {
-      setFocusCoord(coord);
-    }
+    setAntennaFocus(coord);
   };
 
   // Возврат фокуса к игроку
   const handleCenterPlayer = () => {
     if (player?.exists) {
-      setFocusCoord({ x: player.x, y: player.y });
+      setAntennaFocus({ x: player.x, y: player.y });
       setSelectedCoord({ x: player.x, y: player.y });
     } else {
-      setFocusCoord({ x: 0, y: 0 });
+      setAntennaFocus({ x: 0, y: 0 });
       setSelectedCoord({ x: 0, y: 0 });
     }
   };
@@ -186,12 +189,12 @@ function App() {
         {/* Заголовок и статус блокчейна */}
         <TopBar statusText={statusText} statusState={statusState} />
 
-        {/* Игровая сетка 5х5 на бесконечном фоне тумана */}
+        {/* Игровая сетка мира на бесконечном фоне тумана */}
         <WorldGrid
           cells={cells}
           selectedCoord={selectedCoord}
           player={player}
-          focusCoord={focusCoord}
+          focusCoord={antennaFocus}
           onSelectCoord={handleSelectCoord}
           onCenterPlayer={handleCenterPlayer}
         />
