@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { EIP6963ProviderDetail } from './types';
-import { CONTRACT_ADDRESS, CLIENT_VERSION } from './config/contracts';
+import { CLIENT_VERSION } from './config/contracts';
+
 import { useWorldState } from './hooks/useWorldState';
 import { usePlayerState } from './hooks/usePlayerState';
 import { TopBar } from './components/Header/TopBar';
@@ -85,7 +86,7 @@ function App() {
       boxSizing: 'border-box',
       width: '100vw',
       height: '100dvh',
-      padding: 'max(10px, env(safe-area-inset-top, 10px)) max(10px, env(safe-area-inset-right, 10px)) max(10px, env(safe-area-inset-bottom, 10px)) max(10px, env(safe-area-inset-left, 10px))',
+      padding: 0,
       backgroundColor: '#07080d',
       display: 'flex',
       overflow: 'hidden'
@@ -101,12 +102,13 @@ function App() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '16px',
+        padding: 'max(6px, env(safe-area-inset-top, 6px)) max(6px, env(safe-area-inset-right, 6px)) max(6px, env(safe-area-inset-bottom, 6px)) max(6px, env(safe-area-inset-left, 6px))',
         color: '#f8fafc',
         fontFamily: 'monospace, system-ui, sans-serif',
         userSelect: 'none',
         overflowY: 'auto'
       }}>
+
         {/* Заголовок и статус блокчейна */}
         <TopBar statusText={statusText} statusState={statusState} />
 
@@ -142,16 +144,20 @@ function App() {
 
         {/* Футер */}
         <div style={{
-          fontSize: '0.72rem',
+          fontSize: '0.68rem',
           color: '#64748b',
           textAlign: 'center',
           display: 'flex',
-          flexDirection: 'column',
-          gap: '2px'
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '2px 0'
         }}>
-          <div>Контракт: <span style={{ color: '#c084fc', fontWeight: 700 }}>v{contractVersion}</span> ({CONTRACT_ADDRESS.slice(0, 6)}...{CONTRACT_ADDRESS.slice(-4)})</div>
+          <div>Контракт: <span style={{ color: '#c084fc', fontWeight: 700 }}>v{contractVersion}</span></div>
+          <div style={{ color: '#334155' }}>|</div>
           <div>Клиент: <span style={{ color: '#38bdf8', fontWeight: 700 }}>v{CLIENT_VERSION}</span></div>
         </div>
+
       </div>
 
       {/* Модальное окно выбора кошелька */}

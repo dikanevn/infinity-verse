@@ -108,7 +108,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           padding: '6px 12px'
         }}>
           <span>
-            🧑‍🚀 Игрок <span style={{ color: '#94a3b8', fontSize: '0.62rem' }}>({connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)})</span>: <b>({player.x}, {player.y})</b>
+            🧑‍🚀 <span style={{ color: '#94a3b8', fontSize: '0.62rem' }}>{connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}</span>: <b>({player.x}, {player.y})</b>
           </span>
           {isDirectSignerMode ? (
             <button
@@ -125,7 +125,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 marginLeft: '4px'
               }}
             >
-              🔐 ВЫЙТИ ИЗ RAM
+              ВЫЙТИ
             </button>
           ) : isGoogleMode ? (
             <button
@@ -144,6 +144,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               ВЫЙТИ
             </button>
           ) : (
+
             <button
               onClick={onRevokeSession}
               disabled={actionPending}
