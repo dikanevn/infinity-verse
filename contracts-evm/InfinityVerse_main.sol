@@ -36,12 +36,22 @@ contract InfinityVerse_Main {
     // Адрес активного исполняющего контракта (AAA)
     address public logicContract;
 
+    // Адрес администратора (в будущем передается на DAO или Dead-адрес)
+    address public admin;
+
     event LogicContractSet(address indexed newLogic);
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
     event CellUpdated(int32 indexed x, int32 indexed y, uint8 terrain, uint8 object);
     event PlayerSpawned(address indexed player, int32 x, int32 y);
     event PlayerMoved(address indexed player, int32 fromX, int32 fromY, int32 toX, int32 toY);
     event SessionAuthorized(address indexed player, address indexed sessionKey, uint256 expiry);
     event SessionRevoked(address indexed player);
+
+    // Модификатор: вызовы разрешены только администратору (или DAO)
+    modifier onlyAdmin() {
+        require(msg.sender == admin, unicode"Main: Вызов разрешен только администратору");
+        _;
+    }
 
     // Модификатор: вызовы разрешены только текущему логическому контракту
     modifier onlyLogic() {
@@ -50,8 +60,10 @@ contract InfinityVerse_Main {
     }
 
     constructor() {
+        admin = msg.sender;
 
         // Инициализируем стартовую сетку 5х5 (от -2 до +2)
+
         for (int32 x = -2; x <= 2; x++) {
             for (int32 y = -2; y <= 2; y++) {
                 bytes32 key = getCellKey(x, y);
@@ -76,13 +88,24 @@ contract InfinityVerse_Main {
     }
 
     /**
-     * @notice Установка логического контракта (без владельцев/наследников на текущем этапе)
+     * @notice Установка логического контракта администратором (или DAO)
      */
-    function setLogicContract(address _logicContract) external {
-        require(logicContract == address(0) || msg.sender == logicContract, unicode"Main: Смена логики запрещена");
+    function setLogicContract(address _logicContract) external onlyAdmin {
+        require(_logicContract != address(0), unicode"Main: Некорректный адрес логики");
         logicContract = _logicContract;
         emit LogicContractSet(_logicContract);
     }
+
+    /**
+     * @notice Передача прав администратора на новый адрес (например, на контракт DAO или 0x...dead)
+     */
+    function changeAdmin(address newAdmin) external onlyAdmin {
+        require(newAdmin != address(0), unicode"Main: Новый админ не может быть нулевым адресом");
+        require(newAdmin != admin, unicode"Main: Адрес уже является текущим админом");
+        emit AdminChanged(admin, newAdmin);
+        admin = newAdmin;
+    }
+
 
     // ========================================================================
     // === VIEW МЕТОДЫ ДЛЯ ЧТЕНИЯ КЛИЕНТОМ И ЛОГИКОЙ ===
