@@ -34,9 +34,14 @@ interface IInfinityVerse_Main {
  * @notice Логический контракт версии AAA (первое поколение игровой логики).
  * Выполняет все проверки правил игры, проверку криптографических подписей (EIP-191),
  * сессионные ключи и передает проверенные команды в контракт-хранитель Main.
+ *
+ * ВСЕ ПОЛЬЗОВАТЕЛЬСКИЕ ДЕЙСТВИЯ ИМЕЮТ СТРОГУЮ ПАРНУЮ СИММЕТРИЮ:
+ * 1. ...Direct  — автономное действие со своего кошелька (без посредников, сам платишь газ)
+ * 2. ...Gasless — действие без газа через спонсора/релеер (по криптографической подписи)
  */
 contract InfinityVerse_AAA {
-    string public constant VERSION = "0.0.0.0.8-AAA";
+    string public constant VERSION = "0.0.0.0.9-AAA";
+    string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
 
     // Адрес хранилища Main (на этапе активной разработки изменяемый деплоером)
     IInfinityVerse_Main public mainContract;
@@ -89,27 +94,39 @@ contract InfinityVerse_AAA {
     function isSessionValid(address player, address sessionKey) public view returns (bool) {
         (, , bool exists, address activeKey, uint256 expiry, , ) = mainContract.getPlayer(player);
         if (!exists && activeKey == address(0)) {
-            // Разрешаем проверку сессии для нерожденного игрока (чтобы он мог заспавниться через сессию)
             return (sessionKey != address(0) && activeKey == sessionKey && block.timestamp < expiry);
         }
         return (sessionKey != address(0) && activeKey == sessionKey && block.timestamp < expiry);
     }
 
     /**
-     * @notice Авторизация сессионного ключа по криптографической подписи владельца кошелька (EIP-191)
-     * @dev Позволяет релееру отправить транзакцию регистрации сессии без газа от игрока
-     * @param player Адрес владельца аккаунта
+     * @notice 1. Авторизация сессии — ПРЯМОЙ РЕЖИМ (Direct)
+     * @dev Вызывается игроком напрямую со своего кошелька (без спонсора и без подписи)
      * @param sessionKey Временный сессионный ключ (хранится в RAM браузера)
+     * @param expiry Срок окончания сессии (unix timestamp)
+     */
+    function authorizeSessionDirect(address sessionKey, uint256 expiry) external {
+        require(block.timestamp < expiry, unicode"AAA: Срок действия сессии уже истек");
+        require(sessionKey != address(0), unicode"AAA: Некорректный сессионный ключ");
+        mainContract.setPlayerSession(msg.sender, sessionKey, expiry);
+    }
+
+    /**
+     * @notice 1. Авторизация сессии — БЕЗГАЗОВЫЙ РЕЖИМ (Gasless)
+     * @dev Отправляется спонсором/релеером по EIP-191 подписи игрока
+     * @param player Адрес владельца аккаунта
+     * @param sessionKey Временный сессионный ключ
      * @param expiry Срок окончания сессии (unix timestamp)
      * @param sig Подпись EIP-191 личным кошельком игрока
      */
-    function authorizeSessionWithSig(
+    function authorizeSessionGasless(
         address player,
         address sessionKey,
         uint256 expiry,
         bytes calldata sig
     ) external {
         require(block.timestamp < expiry, unicode"AAA: Срок действия сессии уже истек");
+        require(sessionKey != address(0), unicode"AAA: Некорректный сессионный ключ");
 
         uint256 currentNonce = mainContract.incrementNonce(player);
 
@@ -127,18 +144,20 @@ contract InfinityVerse_AAA {
     }
 
     /**
-     * @notice Мгновенный прямой отзыв сессии (вызывается игроком со своего кошелька)
+     * @notice 2. Отзыв сессии — ПРЯМОЙ РЕЖИМ (Direct)
+     * @dev Мгновенный прямой отзыв сессии игроком со своего кошелька
      */
     function revokeSessionDirect() external {
         _executeRevokeSession(msg.sender);
     }
 
     /**
-     * @notice Газлесс-отзыв сессии через релеер по подписи владельца
+     * @notice 2. Отзыв сессии — БЕЗГАЗОВЫЙ РЕЖИМ (Gasless)
+     * @dev Отзыв сессии спонсором/релеером по подписи владельца
      * @param player Адрес игрока
      * @param sig Подпись EIP-191 на команду RevokeSession
      */
-    function revokeSessionWithSig(address player, bytes calldata sig) external {
+    function revokeSessionGasless(address player, bytes calldata sig) external {
         uint256 currentNonce = mainContract.incrementNonce(player);
 
         bytes32 messageHash = keccak256(
@@ -159,7 +178,8 @@ contract InfinityVerse_AAA {
     // ========================================================================
 
     /**
-     * @notice Прямой спавн со своего адреса (требует личную транзакцию игрока)
+     * @notice 3. Рождение в мире — ПРЯМОЙ РЕЖИМ (Direct)
+     * @dev Прямой спавн со своего адреса (личная транзакция игрока в Monad RPC)
      * @return (x, y) Начальные координаты появления (1, 0)
      */
     function spawnDirect() external returns (int32, int32) {
@@ -167,24 +187,38 @@ contract InfinityVerse_AAA {
     }
 
     /**
-     * @notice Газлесс-спавн через релеер ТОЛЬКО при наличии подтвержденной сессии игрока
+     * @notice 3. Рождение в мире — БЕЗГАЗОВЫЙ РЕЖИМ (Gasless)
+     * @dev Газлесс-спавн через спонсора/релеер при наличии авторизованной сессии игрока
      * @param player Адрес кошелька игрока
      * @return (x, y) Начальные координаты появления (1, 0)
      */
-    function spawn(address player) external returns (int32, int32) {
+    function spawnGasless(address player) external returns (int32, int32) {
         (, , , address activeSessionKey, , , ) = mainContract.getPlayer(player);
         require(msg.sender == player || isSessionValid(player, activeSessionKey), unicode"AAA: Для спавна требуется действующая сессия");
         return _executeSpawn(player);
     }
 
     /**
-     * @notice Ход с криптографической подписью сессионного ключа (Gasless через релеер)
+     * @notice 4. Ход по клеткам — ПРЯМОЙ РЕЖИМ (Direct)
+     * @dev Прямой ход игрока со своего личного кошелька
+     * @param targetX Целевая координата X
+     * @param targetY Целевая координата Y
+     */
+    function moveDirect(int32 targetX, int32 targetY) external {
+        (, , bool exists, , , , ) = mainContract.getPlayer(msg.sender);
+        require(exists, unicode"AAA: Сначала необходимо родиться в мире");
+        _validateAndExecuteMove(msg.sender, targetX, targetY);
+    }
+
+    /**
+     * @notice 4. Ход по клеткам — БЕЗГАЗОВЫЙ РЕЖИМ (Gasless)
+     * @dev Ход с криптографической подписью сессионного ключа из RAM (оплачивает релеер)
      * @param player Адрес кошелька игрока
      * @param targetX Целевая координата X
      * @param targetY Целевая координата Y
      * @param moveSig Подпись команды хода сессионным ключом из RAM
      */
-    function moveWithSession(
+    function moveGasless(
         address player,
         int32 targetX,
         int32 targetY,
@@ -207,17 +241,6 @@ contract InfinityVerse_AAA {
         require(signer == sessionKey, unicode"AAA: Несовпадение сессионного ключа в подписи хода");
 
         _validateAndExecuteMove(player, targetX, targetY);
-    }
-
-    /**
-     * @notice Прямой ход игрока со своего личного кошелька (автономный режим)
-     * @param targetX Целевая координата X
-     * @param targetY Целевая координата Y
-     */
-    function moveDirect(int32 targetX, int32 targetY) external {
-        (, , bool exists, , , , ) = mainContract.getPlayer(msg.sender);
-        require(exists, unicode"AAA: Сначала необходимо родиться в мире");
-        _validateAndExecuteMove(msg.sender, targetX, targetY);
     }
 
     // ========================================================================
