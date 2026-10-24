@@ -25,8 +25,9 @@ export const CellView: React.FC<CellViewProps> = ({
       onClick={() => onSelect(coord)}
       style={{
         boxSizing: 'border-box',
-        width: '78px',
-        height: '78px',
+        width: '100%',
+        height: '100%',
+        aspectRatio: '1 / 1',
         backgroundColor: tInfo.bg,
         border: isSelected ? '2px solid #38bdf8' : '1px solid #334155',
         borderRadius: '0px',
@@ -38,7 +39,7 @@ export const CellView: React.FC<CellViewProps> = ({
         color: '#ffffff',
         fontFamily: 'inherit',
         position: 'relative',
-        padding: '3px 4px',
+        padding: '2px 3px',
         transition: 'all 0.15s ease',
         boxShadow: isSelected ? '0 0 14px rgba(56, 189, 248, 0.7)' : 'none'
       }}
