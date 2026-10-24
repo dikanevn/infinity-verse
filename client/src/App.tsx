@@ -99,6 +99,10 @@ interface EIP6963ProviderDetail {
   provider: any;
 }
 
+// Локальный аккаунт сессии строго в оперативной памяти (RAM)
+// При закрытии страницы или вкладки ключ безвозвратно уничтожается
+let inMemorySessionAccount: ReturnType<typeof privateKeyToAccount> | null = null;
+
 function App() {
   const [cells, setCells] = useState<CellData[]>([]);
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -133,14 +137,18 @@ function App() {
     };
   }, []);
 
-  // Получение или создание локального сессионного ключа
+  // Очистка устаревших ключей из localStorage ради безопасности
+  try {
+    localStorage.removeItem('iv_session_key');
+  } catch {}
+
+  // Получение или создание сессионного ключа строго в оперативной памяти (RAM)
   const getOrCreateSessionAccount = () => {
-    let sk = localStorage.getItem('iv_session_key');
-    if (!sk) {
-      sk = generatePrivateKey();
-      localStorage.setItem('iv_session_key', sk);
+    if (!inMemorySessionAccount) {
+      const sk = generatePrivateKey();
+      inMemorySessionAccount = privateKeyToAccount(sk);
     }
-    return privateKeyToAccount(sk as `0x${string}`);
+    return inMemorySessionAccount;
   };
 
   // Подключение выбранного кошелька с авторизацией сессии
