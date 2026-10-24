@@ -11,7 +11,6 @@ interface WalletModalProps {
   isLoggingInGoogle?: boolean;
 }
 
-
 export const WalletModal: React.FC<WalletModalProps> = ({
   isOpen,
   walletProviders,
@@ -22,14 +21,21 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   isLoggingInGoogle
 }) => {
   const googleBtnRef = React.useRef<HTMLDivElement>(null);
+  const isRenderedRef = React.useRef<boolean>(false);
 
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      isRenderedRef.current = false;
+      return;
+    }
+
+    let intervalId: any = null;
 
     const setupGoogle = () => {
       const google = (window as any).google;
-      if (google?.accounts?.id && googleBtnRef.current) {
+      if (google?.accounts?.id && googleBtnRef.current && !isRenderedRef.current) {
         try {
+          googleBtnRef.current.innerHTML = '';
           google.accounts.id.initialize({
             client_id: '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com',
             callback: (response: any) => {
@@ -38,25 +44,37 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               }
             }
           });
+
+          // Вычисляем точную ширину модального контейнера для стабильной отрисовки
+          const containerWidth = googleBtnRef.current.parentElement?.clientWidth || 340;
+          const targetWidth = Math.min(340, Math.max(260, containerWidth));
+
           google.accounts.id.renderButton(googleBtnRef.current, {
             theme: 'filled_black',
             size: 'large',
-            width: 340,
+            width: targetWidth,
             text: 'continue_with',
             shape: 'rectangular'
           });
+          isRenderedRef.current = true;
+          if (intervalId) clearInterval(intervalId);
         } catch (e) {
           console.error('Google button init error:', e);
         }
       }
     };
 
-    const timer = setTimeout(setupGoogle, 100);
-    return () => clearTimeout(timer);
+    setupGoogle();
+    if (!isRenderedRef.current) {
+      intervalId = setInterval(setupGoogle, 150);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [isOpen, onGoogleLoginSuccess]);
 
   if (!isOpen) return null;
-
 
   return (
     <div style={{
@@ -71,7 +89,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 9999,
-      padding: '16px'
+      padding: '16px',
+      boxSizing: 'border-box'
     }}>
       <div style={{
         backgroundColor: '#0d111a',
@@ -84,7 +103,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         gap: '12px',
         padding: '16px',
         color: '#f8fafc',
-        fontFamily: 'monospace, system-ui, sans-serif'
+        fontFamily: 'monospace, system-ui, sans-serif',
+        boxSizing: 'border-box'
       }}>
         <div style={{
           display: 'flex',
@@ -111,7 +131,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </button>
         </div>
 
-        {/* Быстрый вход через Google */}
+        {/* Быстрый вход через Google с жестко зафиксированным размером слота */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>
             🚀 БЫСТРЫЙ ВХОД (БЕЗ УСТАНОВКИ КОШЕЛЬКА):
@@ -119,12 +139,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           <div
             ref={googleBtnRef}
             style={{
+              height: '44px',
               minHeight: '44px',
+              maxHeight: '44px',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
               borderRadius: '4px',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              width: '100%'
             }}
           >
             {isLoggingInGoogle && (
@@ -147,7 +170,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
-
           {walletProviders.length > 0 ? (
             walletProviders.map((w) => (
               <button
@@ -202,12 +224,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           )}
         </div>
 
-        {/* Разделитель и кнопка автономного входа */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          margin: '4px 0',
+          margin: '2px 0',
           color: '#64748b',
           fontSize: '0.62rem'
         }}>
@@ -221,21 +242,22 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            backgroundColor: '#1e1b4b',
+            gap: '12px',
+            backgroundColor: '#1a1836',
             border: '1px solid #6366f1',
             padding: '10px 12px',
-            color: '#e0e7ff',
+            color: '#c7d2fe',
             cursor: 'pointer',
-            fontSize: '0.74rem',
+            fontSize: '0.78rem',
             fontWeight: 700,
-            textAlign: 'left'
+            textAlign: 'left',
+            boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)'
           }}
         >
-          <span style={{ fontSize: '1.1rem' }}>🔐</span>
+          <span style={{ fontSize: '1.2rem' }}>🔐</span>
           <div>
-            <div style={{ color: '#a5b4fc' }}>Вход по ключу (Шифрование в RAM)</div>
-            <div style={{ fontSize: '0.58rem', color: '#818cf8' }}>Прямой ончейн без релееров, AES-GCM-256</div>
+            <div>Вход по ключу (Шифрование в RAM)</div>
+            <div style={{ fontSize: '0.62rem', color: '#818cf8' }}>Прямой ончейн без релееров, AES-GCM-256</div>
           </div>
         </button>
       </div>
