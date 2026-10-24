@@ -69,12 +69,11 @@ contract InfinityVerse_AAA {
 
     /**
      * @notice Обновление адреса официального релеера-спонсора газа
-     * @dev Разрешено только текущему релееру
+     * @dev Разрешено только деплоеру контракта
      * @param _relayer Новый адрес релеера
      */
-    function setRelayer(address _relayer) external {
-        // На текущем этапе без владельцев: разрешаем релееру обновлять адрес при необходимости
-        require(msg.sender == relayer || relayer == address(0), unicode"AAA: Только релеер может вызвать");
+    function setRelayer(address _relayer) external onlyDeployer {
+        require(_relayer != address(0), unicode"AAA: Некорректный адрес релеера");
         relayer = _relayer;
         emit RelayerUpdated(_relayer);
     }
