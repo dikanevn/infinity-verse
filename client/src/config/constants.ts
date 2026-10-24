@@ -8,7 +8,7 @@ export const TERRAIN_CONFIG: Record<number, { name: string; icon: string; bg: st
 export const OBJECT_CONFIG: Record<number, { name: string; icon: string }> = {
   0: { name: 'Пусто', icon: '' },
   1: { name: 'Обелиск', icon: '🗿' },
-  2: { name: 'Камень', icon: '🪨' },
+  2: { name: 'Стена', icon: '🧱' },
   9: { name: 'Обелиск', icon: '🗿' },
 };
 
