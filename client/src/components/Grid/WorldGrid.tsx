@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { INITIAL_COORDS } from '../../config/constants';
 import { CellView } from './CellView';
@@ -16,32 +16,49 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   player,
   onSelectCoord
 }) => {
-  // Состояние камеры: масштаб (scale) и смещение (translateX, translateY)
-  const [scale, setScale] = useState<number>(1);
+  // Масштаб регулируется строго через кнопки + и -
+  const [scale, setScale] = useState<number>(0.85);
+
+  // Смещение поля
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const posStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const lastTouchDistRef = useRef<number | null>(null);
 
-  // Центрирование камеры на персонаже или на центре мира
-  const centerCamera = () => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
+  // Размер одной клетки 62px + 4px отступ = 66px
+  const CELL_PITCH = 66;
+
+  // Автоматически удерживаем игрока строго по центру экрана при спавне или ходах
+  useEffect(() => {
+    if (player?.exists) {
+      // Игрок на (player.x, player.y). Центр мира (0,0) в центре грида.
+      // Чтобы клетка игрока была по центру экрана, смещаем контейнер на (-player.x, player.y) * CELL_PITCH * scale
+      setPosition({
+        x: -player.x * CELL_PITCH * scale,
+        y: player.y * CELL_PITCH * scale
+      });
+    } else {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [player?.x, player?.y, player?.exists, scale]);
+
+  // Кнопка прицела центрирует камеру прямо на игроке
+  const centerOnPlayer = () => {
+    if (player?.exists) {
+      setPosition({
+        x: -player.x * CELL_PITCH * scale,
+        y: player.y * CELL_PITCH * scale
+      });
+    } else {
+      setPosition({ x: 0, y: 0 });
+    }
   };
 
-  // 1. Зум колесиком мыши
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
-    setScale((prev) => Math.min(2.5, Math.max(0.6, prev * zoomFactor)));
-  };
-
-  // 2. Drag мышью
+  // Drag мышью (только перемещение, без зума)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // только левая кнопка
+    if (e.button !== 0) return;
     isDraggingRef.current = true;
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     posStartRef.current = { ...position };
@@ -61,19 +78,12 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     isDraggingRef.current = false;
   };
 
-  // 3. Тач-жесты (Pinch-to-zoom двумя пальцами + Pan одним пальцем)
+  // Drag пальцем (только перемещение одним пальцем, жест масштабирования отключен)
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
       dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       posStartRef.current = { ...position };
-      lastTouchDistRef.current = null;
-    } else if (e.touches.length === 2) {
-      isDraggingRef.current = false;
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      lastTouchDistRef.current = dist;
     }
   };
 
@@ -85,25 +95,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         x: posStartRef.current.x + dx,
         y: posStartRef.current.y + dy
       });
-    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const ratio = newDist / lastTouchDistRef.current;
-      setScale((prev) => Math.min(2.5, Math.max(0.6, prev * ratio)));
-      lastTouchDistRef.current = newDist;
     }
   };
 
   const handleTouchEnd = () => {
     isDraggingRef.current = false;
-    lastTouchDistRef.current = null;
   };
 
   return (
     <div
       ref={containerRef}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -130,7 +131,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         boxSizing: 'border-box'
       }}
     >
-      {/* Кнопки зума и центрирования в правом верхнем углу холста */}
+      {/* Кнопки зума (+, -) и центрирования (🎯) */}
       <div style={{
         position: 'absolute',
         top: '8px',
@@ -141,16 +142,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         gap: '6px'
       }}>
         <button
-          onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(2.5, s + 0.25)); }}
+          onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(1.8, s + 0.15)); }}
           title="Приблизить"
           style={{
-            width: '28px',
-            height: '28px',
+            width: '32px',
+            height: '32px',
             backgroundColor: '#1e293b',
             border: '1px solid #475569',
             color: '#f8fafc',
             fontWeight: 800,
-            fontSize: '0.9rem',
+            fontSize: '1.1rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -160,16 +161,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           +
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(0.6, s - 0.25)); }}
+          onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(0.4, s - 0.15)); }}
           title="Отдалить"
           style={{
-            width: '28px',
-            height: '28px',
+            width: '32px',
+            height: '32px',
             backgroundColor: '#1e293b',
             border: '1px solid #475569',
             color: '#f8fafc',
             fontWeight: 800,
-            fontSize: '0.9rem',
+            fontSize: '1.1rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -179,16 +180,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           -
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); centerCamera(); }}
-          title="Центрировать камеру"
+          onClick={(e) => { e.stopPropagation(); centerOnPlayer(); }}
+          title="Центрировать на игроке"
           style={{
-            width: '28px',
-            height: '28px',
+            width: '32px',
+            height: '32px',
             backgroundColor: '#1e293b',
             border: '1px solid #8b5cf6',
             color: '#c084fc',
             fontWeight: 800,
-            fontSize: '0.75rem',
+            fontSize: '0.85rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -199,12 +200,12 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </button>
       </div>
 
-      {/* Интерактивный трансформируемый слой игрового поля */}
+      {/* Интерактивный слой 7х7 */}
       <div
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: 'center center',
-          transition: isDraggingRef.current ? 'none' : 'transform 0.1s ease-out',
+          transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 62px)',
           gridTemplateRows: 'repeat(7, 62px)',
