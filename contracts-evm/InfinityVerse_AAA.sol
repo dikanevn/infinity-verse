@@ -41,6 +41,15 @@ contract InfinityVerse_AAA {
         relayer = _relayer;
     }
 
+    // ========================================================================
+    // === АДМИНИСТРАЦИЯ И СЕТЬ ===
+    // ========================================================================
+
+    /**
+     * @notice Обновление адреса официального релеера-спонсора газа
+     * @dev Разрешено только текущему релееру
+     * @param _relayer Новый адрес релеера
+     */
     function setRelayer(address _relayer) external {
         // На текущем этапе без владельцев: разрешаем релееру обновлять адрес при необходимости
         require(msg.sender == relayer || relayer == address(0), unicode"AAA: Только релеер может вызвать");
@@ -48,11 +57,16 @@ contract InfinityVerse_AAA {
         emit RelayerUpdated(_relayer);
     }
 
-
     // ========================================================================
     // === СЕССИОННЫЕ КЛЮЧИ И КРИПТОГРАФИЯ (EIP-191) ===
     // ========================================================================
 
+    /**
+     * @notice Проверка валидности сессионного ключа игрока
+     * @param player Адрес игрока
+     * @param sessionKey Проверяемый временный сессионный ключ
+     * @return true если сессионный ключ совпадает с записанным в Main и срок еще не истек
+     */
     function isSessionValid(address player, address sessionKey) public view returns (bool) {
         (, , bool exists, address activeKey, uint256 expiry) = mainContract.getPlayer(player);
         if (!exists && activeKey == address(0)) {
@@ -62,6 +76,14 @@ contract InfinityVerse_AAA {
         return (sessionKey != address(0) && activeKey == sessionKey && block.timestamp < expiry);
     }
 
+    /**
+     * @notice Авторизация сессионного ключа по криптографической подписи владельца кошелька (EIP-191)
+     * @dev Позволяет релееру отправить транзакцию регистрации сессии без газа от игрока
+     * @param player Адрес владельца аккаунта
+     * @param sessionKey Временный сессионный ключ (хранится в RAM браузера)
+     * @param expiry Срок окончания сессии (unix timestamp)
+     * @param sig Подпись EIP-191 личным кошельком игрока
+     */
     function authorizeSessionWithSig(
         address player,
         address sessionKey,
@@ -85,10 +107,18 @@ contract InfinityVerse_AAA {
         mainContract.setPlayerSession(player, sessionKey, expiry);
     }
 
+    /**
+     * @notice Мгновенный прямой отзыв сессии (вызывается игроком со своего кошелька)
+     */
     function revokeSessionDirect() external {
         mainContract.revokePlayerSession(msg.sender);
     }
 
+    /**
+     * @notice Газлесс-отзыв сессии через релеер по подписи владельца
+     * @param player Адрес игрока
+     * @param sig Подпись EIP-191 на команду RevokeSession
+     */
     function revokeSessionWithSig(address player, bytes calldata sig) external {
         uint256 currentNonce = mainContract.incrementNonce(player);
 
@@ -111,6 +141,7 @@ contract InfinityVerse_AAA {
 
     /**
      * @notice Прямой спавн со своего адреса (требует личную транзакцию игрока)
+     * @return (x, y) Начальные координаты появления (1, 0)
      */
     function spawnDirect() external returns (int32, int32) {
         mainContract.spawnPlayer(msg.sender, 1, 0);
@@ -119,6 +150,8 @@ contract InfinityVerse_AAA {
 
     /**
      * @notice Газлесс-спавн через релеер ТОЛЬКО при наличии подтвержденной сессии игрока
+     * @param player Адрес кошелька игрока
+     * @return (x, y) Начальные координаты появления (1, 0)
      */
     function spawn(address player) external returns (int32, int32) {
         (, , , address activeSessionKey, ) = mainContract.getPlayer(player);
@@ -128,7 +161,11 @@ contract InfinityVerse_AAA {
     }
 
     /**
-     * @notice Ход с криптографической подписью сессионного ключа
+     * @notice Ход с криптографической подписью сессионного ключа (Gasless через релеер)
+     * @param player Адрес кошелька игрока
+     * @param targetX Целевая координата X
+     * @param targetY Целевая координата Y
+     * @param moveSig Подпись команды хода сессионным ключом из RAM
      */
     function moveWithSession(
         address player,
@@ -156,7 +193,9 @@ contract InfinityVerse_AAA {
     }
 
     /**
-     * @notice Прямой ход игрока со своего кошелька
+     * @notice Прямой ход игрока со своего личного кошелька (автономный режим)
+     * @param targetX Целевая координата X
+     * @param targetY Целевая координата Y
      */
     function moveDirect(int32 targetX, int32 targetY) external {
         (, , bool exists, , ) = mainContract.getPlayer(msg.sender);
@@ -168,6 +207,9 @@ contract InfinityVerse_AAA {
     // === ПРОВЕРКА ПРАВИЛ И ВЫПОЛНЕНИЕ ДЕЙСТВИЯ ===
     // ========================================================================
 
+    /**
+     * @dev Внутренняя валидация физики мира (шаг не более 1 клетки, запрет наступать на Обелиск)
+     */
     function _validateAndExecuteMove(address player, int32 targetX, int32 targetY) internal {
         (int32 currentX, int32 currentY, , , ) = mainContract.getPlayer(player);
 
@@ -186,6 +228,12 @@ contract InfinityVerse_AAA {
         mainContract.movePlayer(player, targetX, targetY);
     }
 
+    /**
+     * @notice Восстановление публичного адреса подписанта по стандарту EIP-191 / ecrecover
+     * @param messageHash Хеш сообщения с префиксом "\x19Ethereum Signed Message:\n32"
+     * @param sig 65-байтная сигнатура (r, s, v)
+     * @return Адрес кошелька, подписавшего сообщение
+     */
     function recoverSigner(bytes32 messageHash, bytes memory sig) public pure returns (address) {
         require(sig.length == 65, unicode"AAA: Некорректная длина подписи");
 
