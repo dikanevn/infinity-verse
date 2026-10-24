@@ -58,10 +58,24 @@ function App() {
     connectWithGoogle,
     handleSpawn,
     handleMove,
-
     handleRevokeSession,
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
+
+  // 4. АВТО-ВХОД ДЛЯ ЛОКАЛЬНОГО ДЕВ-ОКРУЖЕНИЯ (192.168.x.x или localhost)
+  useEffect(() => {
+    const isLocalhost = window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.startsWith('192.168.');
+
+    const devKey = (window as any).__DEV_LOCAL_PK__ || (typeof __DEV_LOCAL_PK__ !== 'undefined' ? __DEV_LOCAL_PK__ : '');
+
+    if (isLocalhost && devKey && !connectedAddress) {
+      console.log('🚀 [DEV AUTO-LOGIN] Обнаружена локальная сеть. Вход под Игроком 3 (RAM XOR/AES)...');
+      connectWithPrivateKey(devKey, 'xor');
+    }
+  }, [connectedAddress]);
+
 
 
   const curCell = cells.find(c => c.x === selectedCoord.x && c.y === selectedCoord.y) || null;
