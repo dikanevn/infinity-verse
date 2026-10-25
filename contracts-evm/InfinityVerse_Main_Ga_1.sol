@@ -49,18 +49,46 @@ contract InfinityVerse_Main_Ga_1 {
     mapping(bytes32 => bytes32) private disk;
 
     // ========================================================================
-    // 2. ETERNAL STORAGE (Резерв: типизированные данные и динамические BLOB'ы)
+    // 2. ETERNAL STORAGE (Резерв: типизированные данные всех размеров и BLOB'ы)
     // ========================================================================
-    mapping(bytes32 => uint256) private uints;
+    // Беззнаковые целые (Unsigned Integers)
+    mapping(bytes32 => uint8)   private u8s;
+    mapping(bytes32 => uint16)  private u16s;
+    mapping(bytes32 => uint32)  private u32s;
+    mapping(bytes32 => uint64)  private u64s;
+    mapping(bytes32 => uint128) private u128s;
+    mapping(bytes32 => uint256) private u256s;
+
+    // Знаковые целые (Signed Integers)
+    mapping(bytes32 => int8)    private i8s;
+    mapping(bytes32 => int16)   private i16s;
+    mapping(bytes32 => int32)   private i32s;
+    mapping(bytes32 => int64)   private i64s;
+    mapping(bytes32 => int128)  private i128s;
+    mapping(bytes32 => int256)  private i256s;
+
+    // Логические значения, адреса и фиксированные байты
+    mapping(bytes32 => bool)    private bools;
     mapping(bytes32 => address) private addrs;
-    mapping(bytes32 => bytes) private blobs;
+    mapping(bytes32 => bytes1)  private b1s;
+    mapping(bytes32 => bytes4)  private b4s;
+    mapping(bytes32 => bytes8)  private b8s;
+    mapping(bytes32 => bytes16) private b16s;
+
+    // Динамические типы (Строки и BLOB'ы произвольной длины)
+    mapping(bytes32 => string)  private strings;
+    mapping(bytes32 => bytes)   private blobs;
 
     // ========================================================================
     // СОБЫТИЯ
     // ========================================================================
     event SectorWritten(bytes32 indexed sector, bytes32 data);
     event UintSet(bytes32 indexed key, uint256 value);
+    event IntSet(bytes32 indexed key, int256 value);
+    event BoolSet(bytes32 indexed key, bool value);
     event AddressSet(bytes32 indexed key, address value);
+    event BytesSet(bytes32 indexed key);
+    event StringSet(bytes32 indexed key);
     event BlobSet(bytes32 indexed key, uint256 length);
     event SlotWritten(bytes32 indexed slot, bytes32 value);
 
@@ -178,35 +206,73 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     // ========================================================================
-    // МЕТОД 2: ETERNAL STORAGE (УНИВЕРСАЛЬНЫЕ ТИПЫ И ДИНАМИЧЕСКИЕ БЛОБЫ)
+    // МЕТОД 2: ETERNAL STORAGE (УНИВЕРСАЛЬНЫЕ ТИПЫ ВСЕХ РАЗМЕРОВ И ДИНАМИЧЕСКИЕ БЛОБЫ)
     // ========================================================================
 
-    function getUint(bytes32 key) external view returns (uint256) {
-        return uints[key];
-    }
+    // --- Беззнаковые целые (uint8 ... uint256) ---
+    function getUint8(bytes32 key) external view returns (uint8) { return u8s[key]; }
+    function setUint8(bytes32 key, uint8 val) external onlyAllowed { u8s[key] = val; emit UintSet(key, val); }
 
-    function setUint(bytes32 key, uint256 val) external onlyAllowed {
-        uints[key] = val;
-        emit UintSet(key, val);
-    }
+    function getUint16(bytes32 key) external view returns (uint16) { return u16s[key]; }
+    function setUint16(bytes32 key, uint16 val) external onlyAllowed { u16s[key] = val; emit UintSet(key, val); }
 
-    function getAddress(bytes32 key) external view returns (address) {
-        return addrs[key];
-    }
+    function getUint32(bytes32 key) external view returns (uint32) { return u32s[key]; }
+    function setUint32(bytes32 key, uint32 val) external onlyAllowed { u32s[key] = val; emit UintSet(key, val); }
 
-    function setAddress(bytes32 key, address val) external onlyAllowed {
-        addrs[key] = val;
-        emit AddressSet(key, val);
-    }
+    function getUint64(bytes32 key) external view returns (uint64) { return u64s[key]; }
+    function setUint64(bytes32 key, uint64 val) external onlyAllowed { u64s[key] = val; emit UintSet(key, val); }
 
-    function getBlob(bytes32 key) external view returns (bytes memory) {
-        return blobs[key];
-    }
+    function getUint128(bytes32 key) external view returns (uint128) { return u128s[key]; }
+    function setUint128(bytes32 key, uint128 val) external onlyAllowed { u128s[key] = val; emit UintSet(key, val); }
 
-    function setBlob(bytes32 key, bytes calldata val) external onlyAllowed {
-        blobs[key] = val;
-        emit BlobSet(key, val.length);
-    }
+    function getUint256(bytes32 key) external view returns (uint256) { return u256s[key]; }
+    function setUint256(bytes32 key, uint256 val) external onlyAllowed { u256s[key] = val; emit UintSet(key, val); }
+
+    // --- Знаковые целые (int8 ... int256) ---
+    function getInt8(bytes32 key) external view returns (int8) { return i8s[key]; }
+    function setInt8(bytes32 key, int8 val) external onlyAllowed { i8s[key] = val; emit IntSet(key, val); }
+
+    function getInt16(bytes32 key) external view returns (int16) { return i16s[key]; }
+    function setInt16(bytes32 key, int16 val) external onlyAllowed { i16s[key] = val; emit IntSet(key, val); }
+
+    function getInt32(bytes32 key) external view returns (int32) { return i32s[key]; }
+    function setInt32(bytes32 key, int32 val) external onlyAllowed { i32s[key] = val; emit IntSet(key, val); }
+
+    function getInt64(bytes32 key) external view returns (int64) { return i64s[key]; }
+    function setInt64(bytes32 key, int64 val) external onlyAllowed { i64s[key] = val; emit IntSet(key, val); }
+
+    function getInt128(bytes32 key) external view returns (int128) { return i128s[key]; }
+    function setInt128(bytes32 key, int128 val) external onlyAllowed { i128s[key] = val; emit IntSet(key, val); }
+
+    function getInt256(bytes32 key) external view returns (int256) { return i256s[key]; }
+    function setInt256(bytes32 key, int256 val) external onlyAllowed { i256s[key] = val; emit IntSet(key, val); }
+
+    // --- Булевы значения и адреса ---
+    function getBool(bytes32 key) external view returns (bool) { return bools[key]; }
+    function setBool(bytes32 key, bool val) external onlyAllowed { bools[key] = val; emit BoolSet(key, val); }
+
+    function getAddress(bytes32 key) external view returns (address) { return addrs[key]; }
+    function setAddress(bytes32 key, address val) external onlyAllowed { addrs[key] = val; emit AddressSet(key, val); }
+
+    // --- Фиксированные байты ---
+    function getBytes1(bytes32 key) external view returns (bytes1) { return b1s[key]; }
+    function setBytes1(bytes32 key, bytes1 val) external onlyAllowed { b1s[key] = val; emit BytesSet(key); }
+
+    function getBytes4(bytes32 key) external view returns (bytes4) { return b4s[key]; }
+    function setBytes4(bytes32 key, bytes4 val) external onlyAllowed { b4s[key] = val; emit BytesSet(key); }
+
+    function getBytes8(bytes32 key) external view returns (bytes8) { return b8s[key]; }
+    function setBytes8(bytes32 key, bytes8 val) external onlyAllowed { b8s[key] = val; emit BytesSet(key); }
+
+    function getBytes16(bytes32 key) external view returns (bytes16) { return b16s[key]; }
+    function setBytes16(bytes32 key, bytes16 val) external onlyAllowed { b16s[key] = val; emit BytesSet(key); }
+
+    // --- Динамические строки и произвольные байты (BLOBs) ---
+    function getString(bytes32 key) external view returns (string memory) { return strings[key]; }
+    function setString(bytes32 key, string calldata val) external onlyAllowed { strings[key] = val; emit StringSet(key); }
+
+    function getBlob(bytes32 key) external view returns (bytes memory) { return blobs[key]; }
+    function setBlob(bytes32 key, bytes calldata val) external onlyAllowed { blobs[key] = val; emit BlobSet(key, val.length); }
 
     // ========================================================================
     // МЕТОД 3: LOW-LEVEL SLOTS (DIAMOND / ASSEMBLY SLOAD & SSTORE)
