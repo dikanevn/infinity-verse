@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { CellView } from './CellView';
 
@@ -42,6 +42,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Смещение поля
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Автоматически удерживаем камеру на игроке при начальной загрузке и ходах
+  useEffect(() => {
+    if (player?.exists) {
+      setPosition({
+        x: -player.x * CELL_PITCH * scale,
+        y: player.y * CELL_PITCH * scale
+      });
+    }
+  }, [player?.x, player?.y, player?.exists, scale]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -50,7 +60,14 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   // Кнопка прицела центрирует камеру прямо на игроке и возвращает фокус на него
   const handleResetToPlayer = () => {
-    setPosition({ x: 0, y: 0 });
+    if (player?.exists) {
+      setPosition({
+        x: -player.x * CELL_PITCH * scale,
+        y: player.y * CELL_PITCH * scale
+      });
+    } else {
+      setPosition({ x: 0, y: 0 });
+    }
     onCenterPlayer();
   };
 

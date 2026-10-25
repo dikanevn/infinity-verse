@@ -73,17 +73,16 @@ function App() {
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
 
-  // При изменении игрока или антенны всегда держим оба фокуса активными
+  // При первом появлении или обновлении данных игрока — сразу центрируем фокус и выбор на персонаже
   useEffect(() => {
     if (player?.exists) {
+      setAntennaFocus({ x: player.x, y: player.y });
+      setSelectedCoord({ x: player.x, y: player.y });
       setFocusPoints([
-        { x: player.x, y: player.y },
-        antennaFocus
+        { x: player.x, y: player.y }
       ]);
-    } else {
-      setFocusPoints([antennaFocus]);
     }
-  }, [player?.x, player?.y, player?.exists, antennaFocus.x, antennaFocus.y]);
+  }, [player?.exists, player?.x, player?.y]);
 
   // Выбор клетки: переносим антенну/фокус на неё
   const handleSelectCoord = (coord: { x: number; y: number }) => {
