@@ -78,7 +78,7 @@ contract InfinityVerse_Main_Ga_1 {
     // Реестр адресов администраторов для перечисления
     address[] public allowedAdminsList;
 
-    event AdminAllowed(address indexed adminAddress);
+    event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
     event NextMainSet(address indexed nextMainAddress);
@@ -173,7 +173,7 @@ contract InfinityVerse_Main_Ga_1 {
         assembly {
             sstore(slot, packed)
         }
-        emit AdminAllowed(superAdmin);
+        emit AdminAllowed(superAdmin, PERM_ALL, 255);
     }
 
     // ========================================================================
@@ -597,30 +597,55 @@ contract InfinityVerse_Main_Ga_1 {
     // ========================================================================
 
     /**
-     * @notice Авторизация администратора или модуля логики (AAA, BBB, CCC и др.)
-     * @param adminAddress Адрес авторизуемого администратора или контракта
+     * @notice Назначение или обновление прав администратора с полным набором модульных параметров.
+     * @dev Упаковывает все поля ровно в 1 физический слот EVM: (1 << 160) | uint160(admin).
      */
-    function allowAdmin(address adminAddress) external onlySuperAdmin {
-        require(adminAddress != address(0), "Main: admin address cannot be zero");
+    function allowAdmin(
+        address adminAddress,
+        uint8 perms,
+        uint8 role,
+        uint48 validFrom,
+        uint64 validUntil,
+        uint8 paramA,
+        uint8 paramB,
+        uint16 paramC,
+        uint32 paramD
+    ) external onlySuperAdmin {
+        require(adminAddress != address(0), "Main: zero address");
+        require(perms != 0, "Main: empty permissions");
+
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
-        uint256 currentPacked;
+        uint256 idxPlusOne;
         assembly {
-            currentPacked := sload(slot)
+            idxPlusOne := shr(128, sload(slot))
         }
-        require(uint8(currentPacked) == 0, "Main: admin already authorized");
-        
-        allowedAdminsList.push(adminAddress);
-        uint64 idxPlusOne = uint64(allowedAdminsList.length);
-        uint256 packed = uint256(PERM_STORAGE) | (uint256(idxPlusOne) << 128);
+
+        if (idxPlusOne == 0) {
+            allowedAdminsList.push(adminAddress);
+            idxPlusOne = allowedAdminsList.length;
+        }
+
+        uint256 packed;
         assembly {
+            packed := or(
+                or(
+                    or(perms, shl(8, role)),
+                    or(shl(16, validFrom), shl(64, validUntil))
+                ),
+                or(
+                    or(shl(128, idxPlusOne), shl(192, paramA)),
+                    or(shl(200, paramB), or(shl(208, paramC), shl(224, paramD)))
+                )
+            )
             sstore(slot, packed)
         }
-        emit AdminAllowed(adminAddress);
+
+        emit AdminAllowed(adminAddress, perms, role);
     }
 
     /**
-     * @notice Отзыв авторизации у администратора или модуля логики
-     * @param adminAddress Адрес отзываемого администратора или контракта
+     * @notice Отзыв авторизации у администратора за O(1) со Swap & Pop и очисткой памяти.
+     * @dev sstore(slot, 0) освобождает 32 байта и возвращает газ (Gas Refund).
      */
     function disallowAdmin(address adminAddress) external onlySuperAdmin {
         require(adminAddress != superAdmin, "Main: cannot disallow current superAdmin directly");
@@ -629,11 +654,37 @@ contract InfinityVerse_Main_Ga_1 {
         assembly {
             packed := sload(slot)
         }
-        require(uint8(packed) != 0, "Main: admin is not authorized");
+
+        uint64 idxPlusOne = uint64(packed >> 128);
+        require(idxPlusOne != 0, "Main: admin not found");
+
+        uint256 index = idxPlusOne - 1;
+        uint256 lastIndex = allowedAdminsList.length - 1;
+
+        // Мгновенное удаление методом Swap & Pop за O(1)
+        if (index != lastIndex) {
+            address lastAdmin = allowedAdminsList[lastIndex];
+            allowedAdminsList[index] = lastAdmin;
+
+            // Обновляем indexPlusOne у перенесённого админа в его личном слоте
+            uint256 lastSlot = ADMIN_SLOT_PREFIX | uint160(lastAdmin);
+            uint256 lastPacked;
+            assembly {
+                lastPacked := sload(lastSlot)
+            }
+            lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(idxPlusOne) << 128);
+            assembly {
+                sstore(lastSlot, lastPacked)
+            }
+        }
+
+        allowedAdminsList.pop();
+
+        // Полная очистка ячейки памяти с возвратом газа (Gas Refund)
         assembly {
             sstore(slot, 0)
         }
-        _removeAllowedAdmin(adminAddress);
+
         emit AdminDisallowed(adminAddress);
     }
 
@@ -647,17 +698,6 @@ contract InfinityVerse_Main_Ga_1 {
     // Сохраняем для обратной совместимости с интерфейсом IInfinityVerse_PrevMain
     function getAllowedContracts() external view returns (address[] memory) {
         return allowedAdminsList;
-    }
-
-    function _removeAllowedAdmin(address adminAddress) internal {
-        uint256 len = allowedAdminsList.length;
-        for (uint256 i = 0; i < len; i++) {
-            if (allowedAdminsList[i] == adminAddress) {
-                allowedAdminsList[i] = allowedAdminsList[len - 1];
-                allowedAdminsList.pop();
-                break;
-            }
-        }
     }
 
     /**
@@ -676,20 +716,41 @@ contract InfinityVerse_Main_Ga_1 {
      * @notice Передача прав главного администратора (SuperAdmin) на новый адрес
      * @dev При финализации миграции передается на 0x...dEaD.
      * Защита запрещает сжечь админа, если список администраторов не пуст или nextMain не задан!
-     * При смене текущий SuperAdmin автоматически удаляется из allowedAdmins, а новый добавляется.
      * @param newSuperAdmin Адрес нового главного администратора
      */
     function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
         require(newSuperAdmin != address(0), "Main: new superAdmin cannot be zero");
         require(newSuperAdmin != superAdmin, "Main: address is already superAdmin");
 
-        // 1. Автоматически отзываем права у предыдущего SuperAdmin
+        // 1. Автоматически отзываем права у предыдущего SuperAdmin за O(1)
         if (_isAdmin(superAdmin)) {
             uint256 prevSlot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
+            uint256 prevPacked;
+            assembly {
+                prevPacked := sload(prevSlot)
+            }
+            uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
+            if (prevIdxPlusOne != 0) {
+                uint256 prevIdx = prevIdxPlusOne - 1;
+                uint256 lastIdx = allowedAdminsList.length - 1;
+                if (prevIdx != lastIdx) {
+                    address lastAdmin = allowedAdminsList[lastIdx];
+                    allowedAdminsList[prevIdx] = lastAdmin;
+                    uint256 lastSlot = ADMIN_SLOT_PREFIX | uint160(lastAdmin);
+                    uint256 lastPacked;
+                    assembly {
+                        lastPacked := sload(lastSlot)
+                    }
+                    lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(prevIdxPlusOne) << 128);
+                    assembly {
+                        sstore(lastSlot, lastPacked)
+                    }
+                }
+                allowedAdminsList.pop();
+            }
             assembly {
                 sstore(prevSlot, 0)
             }
-            _removeAllowedAdmin(superAdmin);
             emit AdminDisallowed(superAdmin);
         }
 
@@ -710,7 +771,7 @@ contract InfinityVerse_Main_Ga_1 {
                 assembly {
                     sstore(newSlot, packed)
                 }
-                emit AdminAllowed(newSuperAdmin);
+                emit AdminAllowed(newSuperAdmin, PERM_ALL, 255);
             }
         }
 
