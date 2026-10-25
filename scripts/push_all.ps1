@@ -4,24 +4,33 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# РћР±РЅРѕРІР»СЏРµРј PATH
+# Обновляем PATH
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-# Р—Р°РїСЂРµС‰Р°РµРј Р»СЋР±С‹Рµ РёРЅС‚РµСЂР°РєС‚РёРІРЅС‹Рµ РѕРєРЅР° Рё GUI/С‚РµСЂРјРёРЅР°Р»СЊРЅС‹Рµ РїСЂРѕРјРїС‚С‹ Git, С‡С‚РѕР±С‹ РЅРёС‡РµРіРѕ РЅРµ Р·Р°РІРёСЃР°Р»Рѕ
+# Запрещаем любые интерактивные окна и GUI/терминальные промпты Git, чтобы ничего не зависало
 $env:GIT_TERMINAL_PROMPT = "0"
 $env:GCM_INTERACTIVE = "never"
 
-# РР·РІР»РµРєР°РµРј GITHUB_TOKEN РёР· .private/wallets.env (РµСЃР»Рё РµСЃС‚СЊ) РґР»СЏ РјРіРЅРѕРІРµРЅРЅРѕРіРѕ Рё РЅР°РґРµР¶РЅРѕРіРѕ РїСѓС€Р°
+# Извлекаем GITHUB_TOKEN для мгновенного и надежного пуша:
+# 1. Из .private/wallets.env (если есть)
+# 2. Из ..\.env (папкой выше: C:\Users\dikan\projects\.env)
 $token = ""
 if (Test-Path ".private\wallets.env") {
     $line = Get-Content ".private\wallets.env" | Where-Object { $_ -match "^GITHUB_TOKEN=(.+)$" }
     if ($line) {
-        $token = $line -replace "^GITHUB_TOKEN=", ""
-        $token = $token.Trim()
+        $token = ($line -replace "^GITHUB_TOKEN=", "").Trim()
+    }
+}
+if (-not $token -and (Test-Path "..\.env")) {
+    $raw = (Get-Content "..\.env" -Raw).Trim()
+    if ($raw -match "ghp_[A-Za-z0-9]+") {
+        $token = $matches[0]
+    } else {
+        $token = $raw
     }
 }
 
-# 1. Р•СЃР»Рё РµСЃС‚СЊ РёР·РјРµРЅРµРЅРёСЏ РІ .private, РєРѕРјРјРёС‚РёРј Рё РїСѓС€РёРј
+# 1. Если есть изменения в .private, коммитим и пушим
 if (Test-Path ".private") {
     $privateStatus = git -C .private status --porcelain
     if ($privateStatus) {
@@ -34,7 +43,7 @@ if (Test-Path ".private") {
             git -C .private push origin main
         }
     } else {
-        # Р•СЃР»Рё РЅРµР·Р°РєРѕРјРјРёС‡РµРЅРЅС‹С… РЅРµС‚, РЅРѕ РµСЃС‚СЊ РЅРµРѕС‚РїСЂР°РІР»РµРЅРЅС‹Рµ РєРѕРјРјРёС‚С‹
+        # Если незакоммиченных нет, но есть неотправленные коммиты
         $ahead = git -C .private rev-list --count origin/main..main 2>$null
         if ($ahead -and [int]$ahead -gt 0) {
             Write-Host "--- Pushing unpushed commits in .private ($ahead ahead) ---" -ForegroundColor Cyan
@@ -49,7 +58,7 @@ if (Test-Path ".private") {
     }
 }
 
-# 2. РљРѕРјРјРёС‚РёРј Рё РїСѓС€РёРј РѕСЃРЅРѕРІРЅРѕР№ СЂРµРїРѕР·РёС‚РѕСЂРёР№
+# 2. Коммитим и пушим основной репозиторий
 $mainStatus = git status --porcelain
 if ($mainStatus) {
     Write-Host "--- Syncing main repository ---" -ForegroundColor Cyan
