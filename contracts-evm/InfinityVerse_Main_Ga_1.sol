@@ -147,6 +147,23 @@ contract InfinityVerse_Main_Ga_1 {
      * @param count Количество непрерывных секторов для чтения подряд
      * @return result Массив считанных 32-байтных секторов
      */
+    /**
+     * @notice Чтение среза байт из 32-байтного сектора (Offset / Length Sub-slice в стиле MUD Store)
+     * @dev Позволяет извлечь компактное поле (например, 2 байта hp или 4 байта таймстампа) без загрузки всего сектора в память
+     * @param sector 32-байтный адрес сектора
+     * @param offset Смещение от 0 до 31 байта внутри сектора
+     * @param length Длина среза в байтах (offset + length <= 32)
+     * @return slice Срез данных заданной длины
+     */
+    function readSectorSlice(bytes32 sector, uint256 offset, uint256 length) external view returns (bytes memory slice) {
+        require(offset + length <= 32, "Main: slice out of sector bounds");
+        bytes32 val = disk[sector];
+        slice = new bytes(length);
+        for (uint256 i = 0; i < length; i++) {
+            slice[i] = val[offset + i];
+        }
+    }
+
     function readSequential(bytes32 baseSector, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSector);
@@ -540,7 +557,31 @@ contract InfinityVerse_Main_Ga_1 {
      * @param namespaceId Текстовый идентификатор модуля/пространства (например, "infinity.module.movement")
      * @return rootSlot Уникальный базовый слот физической памяти EVM, гарантированно свободный от коллизий
      */
-    function getNamespaceSlot(string calldata namespaceId) external pure returns (bytes32 rootSlot) {
+    /**
+     * @notice Очистка физического слота EVM (TRIM / sstore zero) с возвратом газа
+     * @param slot Физический слот памяти
+     */
+    function trimSlot(bytes32 slot) external onlyAdmins {
+        assembly {
+            sstore(slot, 0)
+        }
+    }
+
+    /**
+     * @notice Пакетная очистка массива физических слотов (TRIM Slot Batch) с возвратом газа
+     * @param slots Массив физических слотов памяти
+     */
+    function trimSlotBatch(bytes32[] calldata slots) external onlyAdmins {
+        uint256 len = slots.length;
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 slot = slots[i];
+            assembly {
+                sstore(slot, 0)
+            }
+        }
+    }
+
+        function getNamespaceSlot(string calldata namespaceId) external pure returns (bytes32 rootSlot) {
         return keccak256(abi.encode(uint256(keccak256(bytes(namespaceId))) - 1)) & ~bytes32(uint256(0xff));
     }
 
