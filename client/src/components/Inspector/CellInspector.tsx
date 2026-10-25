@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { CellData } from '../../types';
 
 interface CellInspectorProps {
@@ -6,6 +6,7 @@ interface CellInspectorProps {
 }
 
 export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
+  const [showChaosHint, setShowChaosHint] = useState<boolean>(false);
   if (!curCell) {
     return (
       <div style={{ color: '#94a3b8', fontSize: '0.72rem', textAlign: 'center' }}>
@@ -148,9 +149,75 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
             gap: '4px',
             textAlign: 'center'
           }}>
-            <div style={{ backgroundColor: '#131826', padding: '4px 6px' }}>
+            <div style={{ backgroundColor: '#131826', padding: '4px 6px', position: 'relative' }}>
               <div style={{ color: '#94a3b8', fontSize: '0.60rem' }}>terrain</div>
-              <div style={{ color: '#4ade80', fontWeight: 700 }}>{curCell.terrain}</div>
+              <div style={{ color: '#4ade80', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '3px', flexWrap: 'wrap' }}>
+                <span>{curCell.terrain}</span>
+                {curCell.terrain === 0 && (
+                  <span style={{ color: '#c084fc', fontSize: '0.62rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                    (хаос
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowChaosHint((prev) => !prev);
+                      }}
+                      onMouseEnter={() => setShowChaosHint(true)}
+                      onMouseLeave={() => setShowChaosHint(false)}
+                      title="Квантовый хаос. Для декогеренции необходим наблюдатель поблизости."
+                      style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        backgroundColor: '#8b5cf6',
+                        color: '#fff',
+                        fontSize: '9px',
+                        fontWeight: 900,
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        lineHeight: 1
+                      }}
+                    >
+                      i
+                    </button>
+                    )
+                  </span>
+                )}
+              </div>
+              {curCell.terrain === 0 && showChaosHint && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowChaosHint(false);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    marginBottom: '6px',
+                    backgroundColor: '#1e1b4b',
+                    color: '#e0e7ff',
+                    border: '1px solid #8b5cf6',
+                    borderRadius: '4px',
+                    padding: '6px 8px',
+                    fontSize: '0.65rem',
+                    lineHeight: '1.2',
+                    zIndex: 100,
+                    width: '180px',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+                    cursor: 'pointer',
+                    whiteSpace: 'normal'
+                  }}
+                >
+                  Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.
+                </div>
+              )}
             </div>
             <div style={{ backgroundColor: '#131826', padding: '4px 6px' }}>
               <div style={{ color: '#94a3b8', fontSize: '0.60rem' }}>object</div>
