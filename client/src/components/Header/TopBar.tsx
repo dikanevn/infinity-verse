@@ -3,12 +3,29 @@ import React from 'react';
 interface TopBarProps {
   statusText: string;
   statusState: 'green' | 'yellow' | 'red' | 'blue';
+  connectedAddress?: string;
   onOpenNetworkModal?: () => void;
+  onExit?: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ statusText, statusState, onOpenNetworkModal }) => {
+export const TopBar: React.FC<TopBarProps> = ({
+  statusText,
+  statusState,
+  connectedAddress,
+  onOpenNetworkModal,
+  onExit
+}) => {
   return (
-    <div style={{ textAlign: 'center', margin: '0 0 4px 0', width: '100%' }}>
+    <div style={{
+      width: '100%',
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: '0 0 6px 0',
+      minHeight: '44px'
+    }}>
       {/* CSS-анимация мигания для критической ошибки связи */}
       <style>{`
         @keyframes pulse-red-alert {
@@ -17,6 +34,62 @@ export const TopBar: React.FC<TopBarProps> = ({ statusText, statusState, onOpenN
         }
       `}</style>
 
+      {/* Кнопка "ВЫБРАТЬ СЕТЬ" в самом верху СЛЕВА */}
+      {onOpenNetworkModal && (
+        <button
+          onClick={onOpenNetworkModal}
+          style={{
+            position: 'absolute',
+            left: '4px',
+            top: '2px',
+            backgroundColor: '#1e293b',
+            border: '1px solid #475569',
+            color: '#38bdf8',
+            fontSize: '0.62rem',
+            fontWeight: 700,
+            padding: '3px 8px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            borderRadius: '0px',
+            zIndex: 10
+          }}
+        >
+          <span>🌐</span>
+          <span>СЕТЬ</span>
+        </button>
+      )}
+
+      {/* Кнопка "ВЫЙТИ" в самом верху СПРАВА (если кошелек подключен) */}
+      {connectedAddress && onExit && (
+        <button
+          onClick={onExit}
+          title="Отключить кошелек"
+          style={{
+            position: 'absolute',
+            right: '4px',
+            top: '2px',
+            backgroundColor: 'transparent',
+            border: '1px solid #475569',
+            color: '#94a3b8',
+            fontSize: '0.62rem',
+            fontWeight: 700,
+            padding: '3px 8px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            borderRadius: '0px',
+            zIndex: 10
+          }}
+        >
+          <span>ВЫЙТИ</span>
+          <span>➔</span>
+        </button>
+      )}
+
+      {/* Название игры строго по центру */}
       <div style={{
         fontSize: '1rem',
         color: '#c084fc',
@@ -27,56 +100,27 @@ export const TopBar: React.FC<TopBarProps> = ({ statusText, statusState, onOpenN
       }}>
         INFINITY-VERSE
       </div>
+
+      {/* Статус связи */}
       <div style={{
-        minHeight: '22px',
+        fontSize: '0.68rem',
+        fontWeight: statusState === 'red' ? 800 : 600,
+        letterSpacing: '0.04em',
+        color: statusState === 'red'
+          ? '#ef4444'
+          : statusState === 'yellow'
+            ? '#f59e0b'
+            : statusState === 'blue'
+              ? '#38bdf8'
+              : '#10b981',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '8px',
-        marginTop: '2px',
-        flexWrap: 'wrap'
+        gap: '4px',
+        marginTop: '3px',
+        animation: statusState === 'red' ? 'pulse-red-alert 1s infinite ease-in-out' : 'none'
       }}>
-        <div style={{
-          fontSize: '0.68rem',
-          fontWeight: statusState === 'red' ? 800 : 600,
-          letterSpacing: '0.04em',
-          color: statusState === 'red'
-            ? '#ef4444'
-            : statusState === 'yellow'
-              ? '#f59e0b'
-              : statusState === 'blue'
-                ? '#38bdf8'
-                : '#10b981',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          animation: statusState === 'red' ? 'pulse-red-alert 1s infinite ease-in-out' : 'none'
-        }}>
-          {statusText}
-        </div>
-
-        {onOpenNetworkModal && (
-          <button
-            onClick={onOpenNetworkModal}
-            style={{
-              backgroundColor: '#1e293b',
-              border: '1px solid #475569',
-              color: '#38bdf8',
-              fontSize: '0.62rem',
-              fontWeight: 700,
-              padding: '2px 8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              borderRadius: '0px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <span>🌐</span>
-            <span>ВЫБРАТЬ СЕТЬ</span>
-          </button>
-        )}
+        {statusText}
       </div>
     </div>
   );

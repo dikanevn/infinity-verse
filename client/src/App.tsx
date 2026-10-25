@@ -69,7 +69,6 @@ function App() {
     handleSpawn,
     handleMove,
     handleDiscoverBatch,
-    handleRevokeSession,
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
 
@@ -187,11 +186,13 @@ function App() {
         overflowY: 'auto'
       }}>
 
-        {/* Заголовок и статус блокчейна с кнопкой выбора сети */}
+        {/* Заголовок и статус блокчейна с кнопкой выбора сети слева и кнопкой выхода справа */}
         <TopBar
           statusText={statusText}
           statusState={statusState}
+          connectedAddress={connectedAddress}
           onOpenNetworkModal={() => setIsNetworkModalOpen(true)}
+          onExit={handleExitRam}
         />
 
         {/* Игровая сетка мира на бесконечном фоне тумана */}
@@ -219,8 +220,6 @@ function App() {
           onOpenWalletModal={() => setIsWalletModalOpen(true)}
           onSpawn={handleSpawn}
           onMove={handleMove}
-          onRevokeSession={handleRevokeSession}
-          onExitRam={handleExitRam}
         />
 
         {/* 64-битный инспектор выбранной клетки */}

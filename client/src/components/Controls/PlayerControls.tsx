@@ -15,8 +15,6 @@ interface PlayerControlsProps {
   onOpenWalletModal: () => void;
   onSpawn: () => void;
   onMove: (x: number, y: number) => void;
-  onRevokeSession: () => void;
-  onExitRam: () => void;
 }
 
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
@@ -25,15 +23,12 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   isPlayerLoading,
   actionPending,
   isDirectSignerMode,
-  isGoogleMode,
   isMetaMaskMode,
   selectedCoord,
   walletProvidersCount,
   onOpenWalletModal,
   onSpawn,
-  onMove,
-  onRevokeSession,
-  onExitRam
+  onMove
 }) => {
   return (
     <div style={{
@@ -132,44 +127,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           }}>
             {isMetaMaskMode ? 'METAMASK' : isDirectSignerMode ? 'RAM' : 'GOOGLE'}
           </span>
-
-          {/* Кнопка выхода или сброса */}
-          {isDirectSignerMode || isMetaMaskMode || isGoogleMode ? (
-            <button
-              onClick={onExitRam}
-              title="Отключить кошелек"
-              style={{
-                backgroundColor: 'transparent',
-                color: '#94a3b8',
-                border: '1px solid #475569',
-                padding: '2px 6px',
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                marginLeft: '4px'
-              }}
-            >
-              ВЫЙТИ
-            </button>
-          ) : (
-            <button
-              onClick={onRevokeSession}
-              disabled={actionPending}
-              title="Аннулировать сессионный ключ в блокчейне"
-              style={{
-                backgroundColor: 'transparent',
-                color: '#f87171',
-                border: '1px solid #ef4444',
-                padding: '2px 6px',
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                cursor: actionPending ? 'wait' : 'pointer',
-                marginLeft: '4px'
-              }}
-            >
-              🔒 СБРОС СЕССИИ
-            </button>
-          )}
 
           {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
           {(() => {
