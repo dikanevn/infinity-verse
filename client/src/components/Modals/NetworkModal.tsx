@@ -207,7 +207,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
                     ) : (
                       <>
                         <span style={{
-                          color: pingInfo.latency! < 150 ? '#10b981' : pingInfo.latency! < 350 ? '#f59e0b' : '#ef4444',
+                          color: pingInfo.latency! <= 250 ? '#10b981' : pingInfo.latency! <= 600 ? '#f59e0b' : '#ef4444',
                           fontSize: '0.72rem',
                           fontWeight: 800,
                           fontFamily: 'monospace'
