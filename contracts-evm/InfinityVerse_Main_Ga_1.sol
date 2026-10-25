@@ -12,10 +12,11 @@ interface IInfinityVerse_PrevMain {
  * @title InfinityVerse_Main_Ga_1
  * @notice Вечный универсальный ончейн-накопитель данных (Universal Onchain Storage) - Эпоха Ga, Поколение 1.
  * Полностью лишен жестких игровых структур (координат, клеток, игроков).
- * Предоставляет 3 универсальных уровня абстракции хранения:
- * 1. Raw Disk: прямое блочное чтение/запись 32-байтных секторов (основной скоростной режим).
- * 2. Eternal Storage: типизированное хранилище (uint256, address, bytes-blobs).
- * 3. Low-Level Slots: прямой доступ к слотам памяти EVM через ассемблер (Diamond-style Yul).
+ * Архитектура строго разделена на 3 независимых блока хранения + блок управления:
+ * 1. БЛОК 1: RAW DISK (Сырые 32-байтные секторы bytes32 => bytes32).
+ * 2. БЛОК 2: ETERNAL STORAGE (Универсальное типизированное хранилище и BLOB'ы).
+ * 3. БЛОК 3: LOW-LEVEL SLOTS (Прямой доступ к слотам памяти EVM через ассемблер Yul).
+ * 4. БЛОК 4: АДМИНИСТРИРОВАНИЕ И НАСЛЕДОВАНИЕ (Система SuperAdmin/allowAdmin и Золотой Канон).
  *
  * Полный регламент эволюции и правила наследования описаны в:
  * contracts-evm/правила наследования.md
@@ -27,10 +28,9 @@ contract InfinityVerse_Main_Ga_1 {
     string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
 
     // ========================================================================
-    // ИЕРАРХИЯ ПОКОЛЕНИЙ И АДМИНИСТРИРОВАНИЕ
+    // ИЕРАРХИЯ ПОКОЛЕНИЙ И СИСТЕМА ДОСТУПА
     // ========================================================================
     address public immutable prevMain;
-
     address public nextMain;
     address public superAdmin;
 
@@ -38,63 +38,11 @@ contract InfinityVerse_Main_Ga_1 {
     mapping(address => bool) public allowedAdmins;
     address[] public allowedAdminsList;
 
-    // ========================================================================
-    // 1. RAW DISK (Основной режим: 32-байтные секторы bytes32 => bytes32)
-    // ========================================================================
-    mapping(bytes32 => bytes32) private disk;
-
-    // ========================================================================
-    // 2. ETERNAL STORAGE (Резерв: типизированные данные всех размеров и BLOB'ы)
-    // ========================================================================
-    // Беззнаковые целые (Unsigned Integers)
-    mapping(bytes32 => uint8)   private u8s;
-    mapping(bytes32 => uint16)  private u16s;
-    mapping(bytes32 => uint32)  private u32s;
-    mapping(bytes32 => uint64)  private u64s;
-    mapping(bytes32 => uint128) private u128s;
-    mapping(bytes32 => uint256) private u256s;
-
-    // Знаковые целые (Signed Integers)
-    mapping(bytes32 => int8)    private i8s;
-    mapping(bytes32 => int16)   private i16s;
-    mapping(bytes32 => int32)   private i32s;
-    mapping(bytes32 => int64)   private i64s;
-    mapping(bytes32 => int128)  private i128s;
-    mapping(bytes32 => int256)  private i256s;
-
-    // Логические значения, адреса и фиксированные байты
-    mapping(bytes32 => bool)    private bools;
-    mapping(bytes32 => address) private addrs;
-    mapping(bytes32 => bytes1)  private b1s;
-    mapping(bytes32 => bytes4)  private b4s;
-    mapping(bytes32 => bytes8)  private b8s;
-    mapping(bytes32 => bytes16) private b16s;
-
-    // Динамические типы (Строки и BLOB'ы произвольной длины)
-    mapping(bytes32 => string)  private strings;
-    mapping(bytes32 => bytes)   private blobs;
-
-    // ========================================================================
-    // СОБЫТИЯ
-    // ========================================================================
-    event SectorWritten(bytes32 indexed sector, bytes32 data);
-    event UintSet(bytes32 indexed key, uint256 value);
-    event IntSet(bytes32 indexed key, int256 value);
-    event BoolSet(bytes32 indexed key, bool value);
-    event AddressSet(bytes32 indexed key, address value);
-    event BytesSet(bytes32 indexed key);
-    event StringSet(bytes32 indexed key);
-    event BlobSet(bytes32 indexed key, uint256 length);
-    event SlotWritten(bytes32 indexed slot, bytes32 value);
-
     event AdminAllowed(address indexed adminAddress);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
     event NextMainSet(address indexed nextMainAddress);
 
-    // ========================================================================
-    // МОДИФИКАТОРЫ
-    // ========================================================================
     modifier onlySuperAdmin() {
         require(msg.sender == superAdmin, unicode"Main: Вызов разрешен только главному администратору");
         _;
@@ -148,9 +96,18 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     // ========================================================================
-    // МЕТОД 1: RAW DISK (СЫРЫЕ 32-БАЙТНЫЕ СЕКТОРЫ) - ОСНОВНОЙ РЕЖИМ
+    // ========================================================================
+    // === БЛОК 1: RAW DISK (СЫРЫЕ 32-БАЙТНЫЕ СЕКТОРЫ) - ОСНОВНОЙ РЕЖИМ   ===
+    // ========================================================================
     // ========================================================================
 
+    // 1.1. Хранилище секторов (Сектор => 32 байта данных)
+    mapping(bytes32 => bytes32) private disk;
+
+    // 1.2. События диска
+    event SectorWritten(bytes32 indexed sector, bytes32 data);
+
+    // 1.3. Методы чтения и записи диска
     /**
      * @notice Чтение одного 32-байтного сектора по ключу
      * @param sector 32-байтный хеш-адрес сектора
@@ -199,11 +156,46 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     // ========================================================================
-    // МЕТОД 2: ETERNAL STORAGE (УНИВЕРСАЛЬНЫЕ ТИПЫ ВСЕХ РАЗМЕРОВ И ДИНАМИЧЕСКИЕ БЛОБЫ)
+    // ========================================================================
+    // === БЛОК 2: ETERNAL STORAGE (УНИВЕРСАЛЬНЫЕ ТИПЫ И BLOB'Ы)           ===
+    // ========================================================================
     // ========================================================================
 
-    // --- Беззнаковые целые (uint8 ... uint256) ---
+    // 2.1. Маппинги типов данных
+    mapping(bytes32 => uint8)   private u8s;
+    mapping(bytes32 => uint16)  private u16s;
+    mapping(bytes32 => uint32)  private u32s;
+    mapping(bytes32 => uint64)  private u64s;
+    mapping(bytes32 => uint128) private u128s;
+    mapping(bytes32 => uint256) private u256s;
 
+    mapping(bytes32 => int8)    private i8s;
+    mapping(bytes32 => int16)   private i16s;
+    mapping(bytes32 => int32)   private i32s;
+    mapping(bytes32 => int64)   private i64s;
+    mapping(bytes32 => int128)  private i128s;
+    mapping(bytes32 => int256)  private i256s;
+
+    mapping(bytes32 => bool)    private bools;
+    mapping(bytes32 => address) private addrs;
+    mapping(bytes32 => bytes1)  private b1s;
+    mapping(bytes32 => bytes4)  private b4s;
+    mapping(bytes32 => bytes8)  private b8s;
+    mapping(bytes32 => bytes16) private b16s;
+
+    mapping(bytes32 => string)  private strings;
+    mapping(bytes32 => bytes)   private blobs;
+
+    // 2.2. События Eternal Storage
+    event UintSet(bytes32 indexed key, uint256 value);
+    event IntSet(bytes32 indexed key, int256 value);
+    event BoolSet(bytes32 indexed key, bool value);
+    event AddressSet(bytes32 indexed key, address value);
+    event BytesSet(bytes32 indexed key);
+    event StringSet(bytes32 indexed key);
+    event BlobSet(bytes32 indexed key, uint256 length);
+
+    // 2.3. Методы чтения и записи: Беззнаковые целые (uint8 ... uint256)
     /**
      * @notice Получение 8-битного беззнакового числа по ключу
      * @param key 32-байтный хеш-ключ переменной
@@ -268,8 +260,7 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function setUint256(bytes32 key, uint256 val) external onlyAllowed { u256s[key] = val; emit UintSet(key, val); }
 
-    // --- Знаковые целые (int8 ... int256) ---
-
+    // 2.4. Методы чтения и записи: Знаковые целые (int8 ... int256)
     /**
      * @notice Получение 8-битного знакового числа по ключу
      */
@@ -330,8 +321,7 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function setInt256(bytes32 key, int256 val) external onlyAllowed { i256s[key] = val; emit IntSet(key, val); }
 
-    // --- Булевы значения и адреса ---
-
+    // 2.5. Методы чтения и записи: Булевы значения и адреса
     /**
      * @notice Получение логического флага (bool) по ключу
      */
@@ -352,8 +342,7 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function setAddress(bytes32 key, address val) external onlyAllowed { addrs[key] = val; emit AddressSet(key, val); }
 
-    // --- Фиксированные байты ---
-
+    // 2.6. Методы чтения и записи: Фиксированные байты
     /**
      * @notice Получение 1-байтового значения по ключу
      */
@@ -394,8 +383,7 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function setBytes16(bytes32 key, bytes16 val) external onlyAllowed { b16s[key] = val; emit BytesSet(key); }
 
-    // --- Динамические строки и произвольные байты (BLOBs) ---
-
+    // 2.7. Методы чтения и записи: Динамические строки и произвольные байты (BLOBs)
     /**
      * @notice Получение текстовой строки по ключу (имена игроков, описания, JSON)
      */
@@ -417,9 +405,15 @@ contract InfinityVerse_Main_Ga_1 {
     function setBlob(bytes32 key, bytes calldata val) external onlyAllowed { blobs[key] = val; emit BlobSet(key, val.length); }
 
     // ========================================================================
-    // МЕТОД 3: LOW-LEVEL SLOTS (DIAMOND / ASSEMBLY SLOAD & SSTORE)
+    // ========================================================================
+    // === БЛОК 3: LOW-LEVEL SLOTS (DIAMOND / ASSEMBLY SLOAD & SSTORE)     ===
+    // ========================================================================
     // ========================================================================
 
+    // 3.1. События прямых слотов
+    event SlotWritten(bytes32 indexed slot, bytes32 value);
+
+    // 3.2. Методы прямого чтения и записи в слоты EVM
     /**
      * @notice Прямое чтение физического слота памяти EVM
      * @param slot 32-байтный номер слота storage
@@ -444,7 +438,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     // ========================================================================
-    // АДМИНИСТРИРОВАНИЕ И ПРАВИЛА НАСЛЕДОВАНИЯ
+    // ========================================================================
+    // === БЛОК 4: АДМИНИСТРИРОВАНИЕ И ПРАВИЛА НАСЛЕДОВАНИЯ                 ===
+    // ========================================================================
     // ========================================================================
 
     /**
