@@ -1,5 +1,5 @@
 export const TERRAIN_CONFIG: Record<number, { name: string; icon: string; bg: string }> = {
-  0: { name: 'Пустота', icon: '', bg: '#0d1117' },
+  0: { name: 'Хаос', icon: '🌀', bg: '#06080f' },
   1: { name: 'Песок', icon: '', bg: '#b58941' },
   2: { name: 'Вода', icon: '🌊', bg: '#0f2744' },
   3: { name: 'Скала', icon: '⛰️', bg: '#272b38' },

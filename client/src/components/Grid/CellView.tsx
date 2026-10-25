@@ -29,8 +29,8 @@ export const CellView: React.FC<CellViewProps> = ({
   const isSand = !isFog && cell.terrain === 1;
   const sandBgPattern = isSand ? getSandTextureForCoord(coord.x, coord.y) : undefined;
 
-  // Если прочитано из блокчейна и terrain === 0 — это Космос (глубокий чёрный космический фон)
-  const isSpace = !isFog && cell.terrain === 0;
+  // Если прочитано из блокчейна и terrain === 0 — это Квантовый Хаос
+  const isChaos = !isFog && cell.terrain === 0;
 
   return (
     <button
@@ -41,7 +41,7 @@ export const CellView: React.FC<CellViewProps> = ({
         height: '62px',
         background: isFog 
           ? 'radial-gradient(circle, #0e1322 0%, #05070d 100%)' 
-          : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : (isSpace ? '#06080f' : tInfo.bg)),
+          : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : (isChaos ? '#06080f' : tInfo.bg)),
         border: isSelected ? '2px solid #38bdf8' : 'none',
         opacity: isFog ? 0.35 : 1,
         borderRadius: '0px',
@@ -82,8 +82,8 @@ export const CellView: React.FC<CellViewProps> = ({
           alignItems: 'flex-end',
           textAlign: 'right'
         }}>
-          <span style={{ fontSize: '0.52rem', color: isFog ? '#64748b' : (isSpace ? '#38bdf8' : '#fef08a'), fontWeight: 700 }}>
-            {isFog ? '🌫️ Туман' : (isSpace ? '🌌 Космос' : tInfo.name)}
+          <span style={{ fontSize: '0.52rem', color: isFog ? '#64748b' : (isChaos ? '#a78bfa' : '#fef08a'), fontWeight: 700 }}>
+            {isFog ? '🌫️ Туман' : (isChaos ? '🌀 Хаос' : tInfo.name)}
           </span>
           <span style={{
             fontSize: '0.48rem',
@@ -95,7 +95,7 @@ export const CellView: React.FC<CellViewProps> = ({
         </div>
       </div>
 
-      {/* Центр клетки: Обелиск или Игрок */}
+      {/* Центр клетки: Обелиск или Игрок или водоворот Хаоса */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -110,7 +110,7 @@ export const CellView: React.FC<CellViewProps> = ({
             🧑‍🚀
           </span>
         ) : (
-          (!isFog && cell?.object) ? oInfo.icon : (isFog ? '☁️' : '')
+          (!isFog && cell?.object) ? oInfo.icon : (isChaos ? '🌀' : (isFog ? '☁️' : ''))
         )}
       </div>
     </button>
