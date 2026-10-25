@@ -49,9 +49,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
         justifyContent: 'space-between'
       }}>
         <span>ДАННЫЕ БЛОКЧЕЙНА: ({curCell.x}, {curCell.y})</span>
-        <span style={{ color: '#a78bfa' }}>8 БАЙТ (64 БИТА)</span>
       </div>
-
 
       <div style={{
         display: 'grid',
@@ -60,86 +58,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
         minWidth: '320px'
       }}>
 
-        {/* Колонка 1: Координаты в EVM */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{
-            backgroundColor: '#0a0d14',
-            border: '1px solid #334155',
-            borderRadius: '0px',
-            padding: '6px 8px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '0.66rem' }}>
-                КООРДИНАТЫ В EVM (int32):
-              </span>
-              <span style={{ color: '#64748b', fontSize: '0.60rem' }}>Two's Complement</span>
-            </div>
-
-            <div style={{
-              fontFamily: 'monospace',
-              fontSize: '0.62rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1px',
-              overflowX: 'auto',
-              whiteSpace: 'nowrap',
-              WebkitOverflowScrolling: 'touch',
-              paddingBottom: '2px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: curCell.x < 0 ? '#c084fc' : '#4ade80' }}>
-                  X = {curCell.x} {curCell.x < 0 ? '(минус)' : ''}:
-                </span>
-                <span>HEX: <b style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex}</b></span>
-              </div>
-              <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
-                BIN: {xBin.slice(0, 8)} {xBin.slice(8, 16)} {xBin.slice(16, 24)} {xBin.slice(24, 32)}
-              </div>
-            </div>
-
-            <div style={{
-              fontFamily: 'monospace',
-              fontSize: '0.62rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1px',
-              overflowX: 'auto',
-              whiteSpace: 'nowrap',
-              WebkitOverflowScrolling: 'touch',
-              paddingBottom: '2px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: curCell.y < 0 ? '#c084fc' : '#4ade80' }}>
-                  Y = {curCell.y} {curCell.y < 0 ? '(минус)' : ''}:
-                </span>
-                <span>HEX: <b style={{ color: curCell.y < 0 ? '#c084fc' : '#38bdf8' }}>{yHex}</b></span>
-              </div>
-              <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
-                BIN: {yBin.slice(0, 8)} {yBin.slice(8, 16)} {yBin.slice(16, 24)} {yBin.slice(24, 32)}
-              </div>
-            </div>
-
-
-            <div style={{
-              marginTop: '2px',
-              paddingTop: '3px',
-              borderTop: '1px dashed #1e293b',
-              fontSize: '0.60rem',
-              fontFamily: 'monospace'
-            }}>
-              <div style={{ color: '#fbbf24' }}>abi.encodePacked(x, y) [8 байт]:</div>
-              <div style={{ color: '#e2e8f0', wordBreak: 'break-all' }}>
-                0x<span style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex.slice(2)}</span>
-                <span style={{ color: curCell.y < 0 ? '#c084fc' : '#a78bfa' }}>{yHex.slice(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Колонка 2: Структура Cell (8 байт) */}
+        {/* Колонка 1: Структура Cell (terrain, object, state, reserved) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{
             display: 'grid',
@@ -244,7 +163,6 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
             whiteSpace: 'nowrap',
             WebkitOverflowScrolling: 'touch'
           }}>
-
             <span style={{ color: '#94a3b8' }}>8B HEX:</span>
             <span style={{ color: '#f8fafc', fontWeight: 700 }}>
               <span style={{ color: '#38bdf8' }}>0x</span>
@@ -255,6 +173,84 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
               <span style={{ color: '#c084fc' }}>{curCell.paramA.toString(16).padStart(4, '0')}</span>_
               <span style={{ color: '#f472b6' }}>{curCell.paramB.toString(16).padStart(4, '0')}</span>
             </span>
+          </div>
+        </div>
+
+        {/* Колонка 2: Координаты в EVM */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{
+            backgroundColor: '#0a0d14',
+            border: '1px solid #334155',
+            borderRadius: '0px',
+            padding: '6px 8px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '0.66rem' }}>
+                КООРДИНАТЫ В EVM (int32):
+              </span>
+              <span style={{ color: '#64748b', fontSize: '0.60rem' }}>Two's Complement</span>
+            </div>
+
+            <div style={{
+              fontFamily: 'monospace',
+              fontSize: '0.62rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1px',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: '2px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: curCell.x < 0 ? '#c084fc' : '#4ade80' }}>
+                  X = {curCell.x} {curCell.x < 0 ? '(минус)' : ''}:
+                </span>
+                <span>HEX: <b style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex}</b></span>
+              </div>
+              <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
+                BIN: {xBin.slice(0, 8)} {xBin.slice(8, 16)} {xBin.slice(16, 24)} {xBin.slice(24, 32)}
+              </div>
+            </div>
+
+            <div style={{
+              fontFamily: 'monospace',
+              fontSize: '0.62rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1px',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: '2px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: curCell.y < 0 ? '#c084fc' : '#4ade80' }}>
+                  Y = {curCell.y} {curCell.y < 0 ? '(минус)' : ''}:
+                </span>
+                <span>HEX: <b style={{ color: curCell.y < 0 ? '#c084fc' : '#38bdf8' }}>{yHex}</b></span>
+              </div>
+              <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
+                BIN: {yBin.slice(0, 8)} {yBin.slice(8, 16)} {yBin.slice(16, 24)} {yBin.slice(24, 32)}
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: '2px',
+              paddingTop: '3px',
+              borderTop: '1px dashed #1e293b',
+              fontSize: '0.60rem',
+              fontFamily: 'monospace'
+            }}>
+              <div style={{ color: '#fbbf24' }}>abi.encodePacked(x, y) [8 байт]:</div>
+              <div style={{ color: '#e2e8f0', wordBreak: 'break-all' }}>
+                0x<span style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex.slice(2)}</span>
+                <span style={{ color: curCell.y < 0 ? '#c084fc' : '#a78bfa' }}>{yHex.slice(2)}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
