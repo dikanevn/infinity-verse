@@ -727,6 +727,30 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
+     * @notice Пагинация списка администраторов для безопасного чтения при больших объемах (защита от Out of Gas)
+     * @param offset Начальный индекс смещения
+     * @param limit Максимальное количество возвращаемых адресов
+     * @return list Массив адресов запрошенной страницы
+     */
+    function getAllowedAdminsPaginated(uint256 offset, uint256 limit) external view returns (address[] memory list) {
+        uint256 count = allowedAdminsCount;
+        if (offset >= count || limit == 0) {
+            return new address[](0);
+        }
+
+        uint256 end = offset + limit;
+        if (end > count) {
+            end = count;
+        }
+
+        uint256 resultLen = end - offset;
+        list = new address[](resultLen);
+        for (uint256 i = 0; i < resultLen; i++) {
+            list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + offset + i)))));
+        }
+    }
+
+    /**
      * @notice Установка адреса следующего поколения Main (наследника)
      * @dev Может обновляться действующим superAdmin до момента сжигания superAdmin на 0x...dEaD.
      * После сжигания superAdmin вызов становится недостижим навсегда.
