@@ -43,14 +43,14 @@ contract InfinityVerse_Main_Ga_1 {
     event NextMainSet(address indexed nextMainAddress);
 
     modifier onlySuperAdmin() {
-        require(msg.sender == superAdmin, unicode"Main: Р’С‹Р·РѕРІ СЂР°Р·СЂРµС€РµРЅ С‚РѕР»СЊРєРѕ РіР»Р°РІРЅРѕРјСѓ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂСѓ");
+        require(msg.sender == superAdmin, "Main: caller is not superAdmin");
         _;
     }
 
     modifier onlyAdmins() {
         require(
             allowedAdmins[msg.sender] || msg.sender == superAdmin,
-            unicode"Main: Р’С‹Р·РѕРІ СЂР°Р·СЂРµС€РµРЅ С‚РѕР»СЊРєРѕ Р°РІС‚РѕСЂРёР·РѕРІР°РЅРЅРѕРјСѓ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂСѓ РёР»Рё РјРѕРґСѓР»СЋ"
+            "Main: caller is not an allowed admin or superAdmin"
         );
         _;
     }
@@ -62,19 +62,19 @@ contract InfinityVerse_Main_Ga_1 {
             address prevAdmin = IInfinityVerse_PrevMain(_prevMain).admin();
             require(
                 prevAdmin == 0x000000000000000000000000000000000000dEaD,
-                unicode"Main: РђРґРјРёРЅ РїСЂРµРґС‹РґСѓС‰РµРіРѕ РїРѕРєРѕР»РµРЅРёСЏ РµС‰Рµ РЅРµ СЃРѕР¶Р¶РµРЅ (РЅРµ dead)"
+                "Main: previous admin is not burned (not dead)"
             );
 
             // 2. Р’СЃРµ РјРѕРґСѓР»Рё Рё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂС‹ СЃС‚Р°СЂРѕРіРѕ РєРѕРЅС‚СЂР°РєС‚Р° РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РѕС‚РєР»СЋС‡РµРЅС‹
             require(
                 IInfinityVerse_PrevMain(_prevMain).getAllowedContracts().length == 0,
-                unicode"Main: РЎРїРёСЃРѕРє Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ РїСЂРµРґС‹РґСѓС‰РµРіРѕ РїРѕРєРѕР»РµРЅРёСЏ РЅРµ РїСѓСЃС‚"
+                "Main: previous generation allowed admins list is not empty"
             );
 
             // 3. РЎС‚Р°СЂС‹Р№ РєРѕРЅС‚СЂР°РєС‚ РѕР±СЏР·Р°РЅ СЏРІРЅРѕ СѓРєР°Р·Р°С‚СЊ СЌС‚РѕС‚ РЅРѕРІС‹Р№ РєРѕРЅС‚СЂР°РєС‚ СЃРІРѕРёРј РЅР°СЃР»РµРґРЅРёРєРѕРј
             require(
                 IInfinityVerse_PrevMain(_prevMain).nextMain() == address(this),
-                unicode"Main: Р­С‚РѕС‚ РєРѕРЅС‚СЂР°РєС‚ РЅРµ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ РєР°Рє nextMain РІ РїСЂРµРґС‹РґСѓС‰РµРј РїРѕРєРѕР»РµРЅРёРё"
+                "Main: this contract is not registered as nextMain in previous generation"
             );
         }
 
@@ -135,7 +135,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param data РњР°СЃСЃРёРІ 32-Р±Р°Р№С‚РЅС‹С… Р·РЅР°С‡РµРЅРёР№
      */
     function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external onlyAdmins {
-        require(sectors.length == data.length, unicode"Main: РќРµСЃРѕРІРїР°РґРµРЅРёРµ РґР»РёРЅС‹ РјР°СЃСЃРёРІРѕРІ СЃРµРєС‚РѕСЂРѕРІ Рё РґР°РЅРЅС‹С…");
+        require(sectors.length == data.length, "Main: sectors and data length mismatch");
         uint256 len = sectors.length;
         for (uint256 i = 0; i < len; i++) {
             disk[sectors[i]] = data[i];
@@ -168,6 +168,25 @@ contract InfinityVerse_Main_Ga_1 {
             disk[bytes32(base + i)] = data[i];
         }
     }
+    /**
+     * @notice Очистка сектора (TRIM / delete) с возвратом газа EVM (Gas Refund)
+     * @param sector 32-байтный адрес очищаемого сектора
+     */
+    function trimSector(bytes32 sector) external onlyAdmins {
+        delete disk[sector];
+    }
+
+    /**
+     * @notice Пакетная очистка массива секторов (TRIM Batch) с возвратом газа
+     * @param sectors Массив адресов очищаемых секторов
+     */
+    function trimSectorBatch(bytes32[] calldata sectors) external onlyAdmins {
+        uint256 len = sectors.length;
+        for (uint256 i = 0; i < len; i++) {
+            delete disk[sectors[i]];
+        }
+    }
+
 
 
     // ========================================================================
@@ -468,7 +487,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param vals Массив 32-байтных значений
      */
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlyAdmins {
-        require(slots.length == vals.length, unicode"Main: Несовпадение длины массивов слотов и значений");
+        require(slots.length == vals.length, "Main: slots and vals length mismatch");
         uint256 len = slots.length;
         for (uint256 i = 0; i < len; i++) {
             bytes32 slot = slots[i];
@@ -514,6 +533,17 @@ contract InfinityVerse_Main_Ga_1 {
             }
         }
     }
+    /**
+     * @notice Официальный хелпер стандарта ERC-7201: вычисление корня изолированного пространства имен
+     * @dev Формула: keccak256(uint256(keccak256(namespaceId)) - 1) & ~0xff
+     * Полностью отвязывает логические данные мира от сменных физических адресов контрактов (AAA, BBB, CCC)!
+     * @param namespaceId Текстовый идентификатор модуля/пространства (например, "infinity.module.movement")
+     * @return rootSlot Уникальный базовый слот физической памяти EVM, гарантированно свободный от коллизий
+     */
+    function getNamespaceSlot(string calldata namespaceId) external pure returns (bytes32 rootSlot) {
+        return keccak256(abi.encode(uint256(keccak256(bytes(namespaceId))) - 1)) & ~bytes32(uint256(0xff));
+    }
+
 
 
     // ========================================================================
@@ -527,8 +557,8 @@ contract InfinityVerse_Main_Ga_1 {
      * @param adminAddress РђРґСЂРµСЃ Р°РІС‚РѕСЂРёР·СѓРµРјРѕРіРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р°
      */
     function allowAdmin(address adminAddress) external onlySuperAdmin {
-        require(adminAddress != address(0), unicode"Main: РђРґСЂРµСЃ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РЅСѓР»РµРІС‹Рј");
-        require(!allowedAdmins[adminAddress], unicode"Main: РђРґСЂРµСЃ СѓР¶Рµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ");
+        require(adminAddress != address(0), "Main: admin address cannot be zero");
+        require(!allowedAdmins[adminAddress], "Main: admin already authorized");
         allowedAdmins[adminAddress] = true;
         allowedAdminsList.push(adminAddress);
         emit AdminAllowed(adminAddress);
@@ -539,7 +569,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param adminAddress РђРґСЂРµСЃ РѕС‚Р·С‹РІР°РµРјРѕРіРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р°
      */
     function disallowAdmin(address adminAddress) external onlySuperAdmin {
-        require(allowedAdmins[adminAddress], unicode"Main: РђРґСЂРµСЃ РЅРµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ");
+        require(allowedAdmins[adminAddress], "Main: admin is not authorized");
         allowedAdmins[adminAddress] = false;
         _removeAllowedAdmin(adminAddress);
         emit AdminDisallowed(adminAddress);
@@ -573,8 +603,8 @@ contract InfinityVerse_Main_Ga_1 {
      * @param _nextMain РђРґСЂРµСЃ РєРѕРЅС‚СЂР°РєС‚Р°-РЅР°СЃР»РµРґРЅРёРєР° Main
      */
     function setNextMain(address _nextMain) external onlySuperAdmin {
-        require(_nextMain != address(0), unicode"Main: РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ Р°РґСЂРµСЃ СЃР»РµРґСѓСЋС‰РµРіРѕ Main");
-        require(nextMain == address(0), unicode"Main: РЎР»РµРґСѓСЋС‰РёР№ Main СѓР¶Рµ Р·Р°С„РёРєСЃРёСЂРѕРІР°РЅ");
+        require(_nextMain != address(0), "Main: invalid nextMain address");
+        require(nextMain == address(0), "Main: nextMain is already locked");
         nextMain = _nextMain;
        
     }
@@ -586,14 +616,14 @@ contract InfinityVerse_Main_Ga_1 {
      * @param newSuperAdmin РђРґСЂРµСЃ РЅРѕРІРѕРіРѕ РіР»Р°РІРЅРѕРіРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°
      */
     function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
-        require(newSuperAdmin != address(0), unicode"Main: РќРѕРІС‹Р№ СЃСѓРїРµСЂ-Р°РґРјРёРЅ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РЅСѓР»РµРІС‹Рј Р°РґСЂРµСЃРѕРј");
-        require(newSuperAdmin != superAdmin, unicode"Main: РђРґСЂРµСЃ СѓР¶Рµ СЏРІР»СЏРµС‚СЃСЏ С‚РµРєСѓС‰РёРј СЃСѓРїРµСЂ-Р°РґРјРёРЅРѕРј");
+        require(newSuperAdmin != address(0), "Main: new superAdmin cannot be zero");
+        require(newSuperAdmin != superAdmin, "Main: address is already superAdmin");
 
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
-            require(nextMain != address(0), unicode"Main: РЎРЅР°С‡Р°Р»Р° Р·Р°С„РёРєСЃРёСЂСѓР№С‚Рµ nextMain РїРµСЂРµРґ СЃР¶РёРіР°РЅРёРµРј Р°РґРјРёРЅР°");
+            require(nextMain != address(0), "Main: lock nextMain before burning admin");
             require(
                 allowedAdminsList.length == 0,
-                unicode"Main: РћС‚РєР»СЋС‡РёС‚Рµ РІСЃРµС… Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ (СЃРїРёСЃРѕРє РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РїСѓСЃС‚) РїРµСЂРµРґ СЃР¶РёРіР°РЅРёРµРј"
+                "Main: revoke all admins before burning superAdmin"
             );
         }
 
