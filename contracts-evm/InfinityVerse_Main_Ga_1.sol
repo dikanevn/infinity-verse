@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 interface IInfinityVerse_PrevMain {
     function admin() external view returns (address);
-    function contractAAA() external view returns (address);
     function nextMain() external view returns (address);
     function getAllowedContracts() external view returns (address[] memory);
 }
@@ -67,17 +66,10 @@ contract InfinityVerse_Main_Ga_1 {
             );
 
             // 2. Все модули и администраторы старого контракта должны быть отключены
-            try IInfinityVerse_PrevMain(_prevMain).getAllowedContracts() returns (address[] memory prevList) {
-                require(
-                    prevList.length == 0,
-                    unicode"Main: Список администраторов предыдущего поколения не пуст"
-                );
-            } catch {
-                require(
-                    IInfinityVerse_PrevMain(_prevMain).contractAAA() == address(0),
-                    unicode"Main: Логика предыдущего поколения еще не отключена"
-                );
-            }
+            require(
+                IInfinityVerse_PrevMain(_prevMain).getAllowedContracts().length == 0,
+                unicode"Main: Список администраторов предыдущего поколения не пуст"
+            );
 
             // 3. Старый контракт обязан явно указать этот новый контракт своим наследником
             require(
