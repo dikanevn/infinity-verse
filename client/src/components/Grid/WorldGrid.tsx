@@ -44,7 +44,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   const isFirstMountRef = useRef<boolean>(true);
 
-  // Автоматически удерживаем камеру на игроке при начальной загрузке и ходах
+  // Автоматически удерживаем камеру на игроке при начальной загрузке
   useEffect(() => {
     if (player?.exists && isFirstMountRef.current) {
       isFirstMountRef.current = false;
@@ -53,7 +53,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         y: player.y * CELL_PITCH * scale
       });
     }
-  }, [player?.x, player?.y, player?.exists, scale]);
+  }, [player?.x, player?.y, player?.exists]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<boolean>(false);
@@ -115,7 +115,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     isDraggingRef.current = false;
   };
 
-  // Тач-жесты: Drag 1 пальцем + Pinch-to-zoom 2 пальцами
+  // Тач-жесты: Drag 1 пальцем + Pinch-to-zoom 2 пальцами с фокусом на центре жеста
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
@@ -144,12 +144,27 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         x: posStartRef.current.x + dx,
         y: posStartRef.current.y + dy
       });
-    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
+    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null && containerRef.current) {
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       const ratio = newDist / lastTouchDistRef.current;
-      setScale((prev) => Math.min(2.5, Math.max(0.08, prev * ratio)));
+      const newScale = Math.min(2.5, Math.max(0.08, scale * ratio));
+
+      // Центр жеста между пальцами
+      const rect = containerRef.current.getBoundingClientRect();
+      const midClientX = (t1.clientX + t2.clientX) / 2;
+      const midClientY = (t1.clientY + t2.clientY) / 2;
+      const cx = midClientX - rect.left - rect.width / 2;
+      const cy = midClientY - rect.top - rect.height / 2;
+
+      // Масштабируем относительно точки под пальцами:
+      // (cx - newPos) / newScale = (cx - pos) / scale
+      const newPosX = cx - (cx - position.x) * (newScale / scale);
+      const newPosY = cy - (cy - position.y) * (newScale / scale);
+
+      setScale(newScale);
+      setPosition({ x: newPosX, y: newPosY });
       lastTouchDistRef.current = newDist;
     }
   };
@@ -161,8 +176,19 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
+    if (!containerRef.current) return;
     const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-    setScale((prev) => Math.min(2.5, Math.max(0.08, prev * zoomFactor)));
+    const newScale = Math.min(2.5, Math.max(0.08, scale * zoomFactor));
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width / 2;
+    const cy = e.clientY - rect.top - rect.height / 2;
+
+    const newPosX = cx - (cx - position.x) * (newScale / scale);
+    const newPosY = cy - (cy - position.y) * (newScale / scale);
+
+    setScale(newScale);
+    setPosition({ x: newPosX, y: newPosY });
   };
 
   return (
