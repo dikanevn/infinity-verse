@@ -334,6 +334,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint32 paramD
     ) external onlySuperAdmin {
         require(adminAddress != address(0), "error");
+        require(adminAddress != superAdmin, "error");
         require(perms != 0, "error");
         require(validUntil == 0 || validUntil >= validFrom, "error");
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
@@ -430,18 +431,20 @@ contract InfinityVerse_Main_Ga_1 {
             require(
                 allowedAdminsCount == 0, "error");
         } else {
-            if (!_isAdmin(newSuperAdmin)) {
-                uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
+            uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
+            uint256 existingPacked = _readAdminSlot(newSuperAdmin);
+            uint64 idxPlusOne = uint64(existingPacked >> 128);
+            if (idxPlusOne == 0) {
                 uint256 count = allowedAdminsCount;
                 _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(newSuperAdmin))));
                 allowedAdminsCount = count + 1;
-                uint64 idxPlusOne = uint64(count + 1);
-                uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
-                assembly {
-                    sstore(newSlot, packed)
-                }
-                emit AdminAllowed(newSuperAdmin, PERM_ALL, 255);
+                idxPlusOne = uint64(count + 1);
             }
+            uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
+            assembly {
+                sstore(newSlot, packed)
+            }
+            emit AdminAllowed(newSuperAdmin, PERM_ALL, 255);
         }
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
         superAdmin = newSuperAdmin;

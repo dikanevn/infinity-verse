@@ -638,6 +638,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint32 paramD
     ) external onlySuperAdmin {
         require(adminAddress != address(0), "Main: zero address");
+        require(adminAddress != superAdmin, "Main: cannot reconfigure superAdmin via allowAdmin");
         require(perms != 0, "Main: empty permissions");
         require(validUntil == 0 || validUntil >= validFrom, "Main: invalid time range");
 
@@ -777,19 +778,25 @@ contract InfinityVerse_Main_Ga_1 {
                 "Main: revoke all admins before burning superAdmin"
             );
         } else {
-            // 3. Если передаем новому SuperAdmin — вносим его в общий реестр админов
-            if (!_isAdmin(newSuperAdmin)) {
-                uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
+            // 3. Если передаем новому SuperAdmin — обновляем его статус и реестр
+            uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
+            uint256 existingPacked = _readAdminSlot(newSuperAdmin);
+            uint64 idxPlusOne = uint64(existingPacked >> 128);
+
+            // Если нового SuperAdmin еще не было в списке — добавляем в конец реестра
+            if (idxPlusOne == 0) {
                 uint256 count = allowedAdminsCount;
                 _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(newSuperAdmin))));
                 allowedAdminsCount = count + 1;
-                uint64 idxPlusOne = uint64(count + 1);
-                uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
-                assembly {
-                    sstore(newSlot, packed)
-                }
-                emit AdminAllowed(newSuperAdmin, PERM_ALL, 255);
+                idxPlusOne = uint64(count + 1);
             }
+
+            // Принудительно наделяем SuperAdmin высшими вечными правами (PERM_ALL, role 255, без срока истечения)
+            uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
+            assembly {
+                sstore(newSlot, packed)
+            }
+            emit AdminAllowed(newSuperAdmin, PERM_ALL, 255);
         }
 
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
