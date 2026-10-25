@@ -95,16 +95,23 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
+     * @dev Изолированное низкоуровневое чтение персонального слота администратора.
+     */
+    function _readAdminSlot(address _account) internal view returns (uint256 packed) {
+        uint256 slot = ADMIN_SLOT_PREFIX | uint160(_account);
+        assembly {
+            packed := sload(slot)
+        }
+    }
+
+    /**
      * @dev Единая внутренняя проверка прав доступа.
      * superAdmin всегда обладает абсолютным доступом.
      * Для остальных проверяются битовая маска прав и временные рамки действия.
      */
     function _checkAdmin(address _caller, uint8 requiredPerm) internal view {
         if (_caller == superAdmin) return;
-        uint256 packed;
-        assembly {
-            packed := sload(or(ADMIN_SLOT_PREFIX, _caller))
-        }
+        uint256 packed = _readAdminSlot(_caller);
         require((uint8(packed) & requiredPerm) == requiredPerm, "Main: insufficient permissions");
         require(block.timestamp >= uint48(packed >> 16), "Main: rights not active yet");
         uint64 until = uint64(packed >> 64);
@@ -130,19 +137,52 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @dev Внутренняя быстрая проверка активности администратора
+     * @notice Возвращает полную информацию об администраторе в распакованном виде.
+     * @param _account Адрес администратора или модуля
+     */
+    function getAdminInfo(address _account) public view returns (AdminInfo memory info) {
+        if (_account == superAdmin) {
+            info.isActive = true;
+            info.permissions = PERM_ALL;
+            info.role = 255;
+            return info;
+        }
+
+        uint256 packed = _readAdminSlot(_account);
+        uint8 perms = uint8(packed);
+        uint48 validFrom = uint48(packed >> 16);
+        uint64 validUntil = uint64(packed >> 64);
+        uint64 idxPlusOne = uint64(packed >> 128);
+
+        bool active = (perms != 0)
+            && (block.timestamp >= validFrom)
+            && (validUntil == 0 || block.timestamp <= validUntil);
+
+        info.isActive = active;
+        info.permissions = perms;
+        info.role = uint8(packed >> 8);
+        info.validFrom = validFrom;
+        info.validUntil = validUntil;
+        info.listIndex = idxPlusOne > 0 ? idxPlusOne - 1 : 0;
+        info.paramA = uint8(packed >> 192);
+        info.paramB = uint8(packed >> 200);
+        info.paramC = uint16(packed >> 208);
+        info.paramD = uint32(packed >> 224);
+    }
+
+    /**
+     * @notice Быстрая проверка активности администратора прямо сейчас
+     * @param _account Адрес для проверки
+     */
+    function isAdmin(address _account) public view returns (bool) {
+        return getAdminInfo(_account).isActive;
+    }
+
+    /**
+     * @dev Внутренняя проверка для сохранения совместимости внутренних вызовов
      */
     function _isAdmin(address _account) internal view returns (bool) {
-        if (_account == superAdmin) return true;
-        uint256 packed;
-        assembly {
-            packed := sload(or(ADMIN_SLOT_PREFIX, _account))
-        }
-        if (uint8(packed) == 0) return false;
-        if (block.timestamp < uint48(packed >> 16)) return false;
-        uint64 until = uint64(packed >> 64);
-        if (until != 0 && block.timestamp > until) return false;
-        return true;
+        return isAdmin(_account);
     }
 
     constructor(address _prevMain) {
