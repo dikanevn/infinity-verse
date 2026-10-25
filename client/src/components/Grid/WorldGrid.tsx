@@ -61,6 +61,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const posStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hasMovedRef = useRef<boolean>(false);
   const lastTouchDistRef = useRef<number | null>(null);
+  const touch2StartCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Кнопка прицела центрирует камеру прямо на игроке и возвращает фокус на него
   const handleResetToPlayer = () => {
@@ -115,7 +116,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     isDraggingRef.current = false;
   };
 
-  // Тач-жесты: Drag 1 пальцем + Pinch-to-zoom 2 пальцами с фокусом на центре жеста
+  // Тач-жесты: Drag 1 пальцем + перемещение & зум 2 пальцами относительно центра экрана
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
@@ -130,6 +131,11 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
       const t2 = e.touches[1];
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       lastTouchDistRef.current = dist;
+      touch2StartCenterRef.current = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      };
+      posStartRef.current = { ...position };
     }
   };
 
@@ -144,51 +150,58 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         x: posStartRef.current.x + dx,
         y: posStartRef.current.y + dy
       });
-    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null && containerRef.current) {
+    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       const ratio = newDist / lastTouchDistRef.current;
       const newScale = Math.min(2.5, Math.max(0.08, scale * ratio));
 
-      // Центр жеста между пальцами
-      const rect = containerRef.current.getBoundingClientRect();
-      const midClientX = (t1.clientX + t2.clientX) / 2;
-      const midClientY = (t1.clientY + t2.clientY) / 2;
-      const cx = midClientX - rect.left - rect.width / 2;
-      const cy = midClientY - rect.top - rect.height / 2;
+      // Движение двумя пальцами: сдвиг центра между пальцами
+      const curMidX = (t1.clientX + t2.clientX) / 2;
+      const curMidY = (t1.clientY + t2.clientY) / 2;
+      const panDx = curMidX - touch2StartCenterRef.current.x;
+      const panDy = curMidY - touch2StartCenterRef.current.y;
 
-      // Масштабируем относительно точки под пальцами:
-      // (cx - newPos) / newScale = (cx - pos) / scale
-      const newPosX = cx - (cx - position.x) * (newScale / scale);
-      const newPosY = cy - (cy - position.y) * (newScale / scale);
+      // Зум строго относительно текущего центра экрана (0,0 экрана):
+      // Масштабируем position относительно центра экрана (cx=0, cy=0)
+      const scaleMultiplier = newScale / scale;
+      const newPosX = (position.x + panDx) * scaleMultiplier;
+      const newPosY = (position.y + panDy) * scaleMultiplier;
 
       setScale(newScale);
       setPosition({ x: newPosX, y: newPosY });
+      touch2StartCenterRef.current = { x: curMidX, y: curMidY };
+      posStartRef.current = { x: newPosX, y: newPosY };
       lastTouchDistRef.current = newDist;
     }
   };
 
-  const handleTouchEnd = () => {
-    isDraggingRef.current = false;
-    lastTouchDistRef.current = null;
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      // Переход с 2 пальцев на 1 палец без рывка
+      isDraggingRef.current = true;
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      posStartRef.current = { ...position };
+      lastTouchDistRef.current = null;
+    } else if (e.touches.length === 0) {
+      isDraggingRef.current = false;
+      lastTouchDistRef.current = null;
+    }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    if (!containerRef.current) return;
     const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
     const newScale = Math.min(2.5, Math.max(0.08, scale * zoomFactor));
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const cx = e.clientX - rect.left - rect.width / 2;
-    const cy = e.clientY - rect.top - rect.height / 2;
-
-    const newPosX = cx - (cx - position.x) * (newScale / scale);
-    const newPosY = cy - (cy - position.y) * (newScale / scale);
-
+    // Масштаб относительно текущего центра экрана
+    const scaleMultiplier = newScale / scale;
     setScale(newScale);
-    setPosition({ x: newPosX, y: newPosY });
+    setPosition(prev => ({
+      x: prev.x * scaleMultiplier,
+      y: prev.y * scaleMultiplier
+    }));
   };
 
   return (
