@@ -83,10 +83,18 @@ function App() {
     }
   }, [player?.exists, player?.x, player?.y]);
 
-  // Выбор клетки: переносим антенну/фокус на неё
+  // Выбор клетки: переносим антенну/фокус на неё и обновляем список опрашиваемых центров
   const handleSelectCoord = (coord: { x: number; y: number }) => {
     setSelectedCoord(coord);
     setAntennaFocus(coord);
+    if (player?.exists) {
+      setFocusPoints([
+        { x: player.x, y: player.y },
+        coord
+      ]);
+    } else {
+      setFocusPoints([coord]);
+    }
   };
 
   // Возврат фокуса к игроку
@@ -94,9 +102,13 @@ function App() {
     if (player?.exists) {
       setAntennaFocus({ x: player.x, y: player.y });
       setSelectedCoord({ x: player.x, y: player.y });
+      setFocusPoints([
+        { x: player.x, y: player.y }
+      ]);
     } else {
       setAntennaFocus({ x: 0, y: 0 });
       setSelectedCoord({ x: 0, y: 0 });
+      setFocusPoints([{ x: 0, y: 0 }]);
     }
   };
 
