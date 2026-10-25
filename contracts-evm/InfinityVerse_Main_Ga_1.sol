@@ -9,16 +9,16 @@ interface IInfinityVerse_PrevMain {
 
 /**
  * @title InfinityVerse_Main_Ga_1
- * @notice Р’РµС‡РЅС‹Р№ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РѕРЅС‡РµР№РЅ-РЅР°РєРѕРїРёС‚РµР»СЊ РґР°РЅРЅС‹С… (Universal Onchain Storage) - Р­РїРѕС…Р° Ga, РџРѕРєРѕР»РµРЅРёРµ 1.
- * РџРѕР»РЅРѕСЃС‚СЊСЋ Р»РёС€РµРЅ Р¶РµСЃС‚РєРёС… РёРіСЂРѕРІС‹С… СЃС‚СЂСѓРєС‚СѓСЂ (РєРѕРѕСЂРґРёРЅР°С‚, РєР»РµС‚РѕРє, РёРіСЂРѕРєРѕРІ).
- * РђСЂС…РёС‚РµРєС‚СѓСЂР° СЃС‚СЂРѕРіРѕ СЂР°Р·РґРµР»РµРЅР° РЅР° 3 РЅРµР·Р°РІРёСЃРёРјС‹С… Р±Р»РѕРєР° С…СЂР°РЅРµРЅРёСЏ + Р±Р»РѕРє СѓРїСЂР°РІР»РµРЅРёСЏ:
- * 1. Р‘Р›РћРљ 1: RAW DISK (РЎС‹СЂС‹Рµ 32-Р±Р°Р№С‚РЅС‹Рµ СЃРµРєС‚РѕСЂС‹ bytes32 => bytes32).
- * 2. Р‘Р›РћРљ 2: ETERNAL STORAGE (РЈРЅРёРІРµСЂСЃР°Р»СЊРЅРѕРµ С‚РёРїРёР·РёСЂРѕРІР°РЅРЅРѕРµ С…СЂР°РЅРёР»РёС‰Рµ Рё BLOB'С‹).
- * 3. Р‘Р›РћРљ 3: LOW-LEVEL SLOTS (РџСЂСЏРјРѕР№ РґРѕСЃС‚СѓРї Рє СЃР»РѕС‚Р°Рј РїР°РјСЏС‚Рё EVM С‡РµСЂРµР· Р°СЃСЃРµРјР±Р»РµСЂ Yul).
- * 4. Р‘Р›РћРљ 4: РђР”РњРРќРРЎРўР РР РћР’РђРќРР• Р РќРђРЎР›Р•Р”РћР’РђРќРР• (РЎРёСЃС‚РµРјР° SuperAdmin/allowAdmin Рё Р—РѕР»РѕС‚РѕР№ РљР°РЅРѕРЅ).
+ * @notice Вечный универсальный ончейн-накопитель данных (Universal Onchain Storage) - Эпоха Ga, Поколение 1.
+ * Полностью лишен жестких игровых структур (координат, клеток, игроков).
+ * Архитектура строго разделена на 3 независимых блока хранения + блок управления:
+ * 1. БЛОК 1: RAW DISK (Сырые 32-байтные секторы bytes32 => bytes32).
+ * 2. БЛОК 2: ETERNAL STORAGE (Универсальное типизированное хранилище и BLOB'ы).
+ * 3. БЛОК 3: LOW-LEVEL SLOTS (Прямой доступ к слотам памяти EVM через ассемблер Yul).
+ * 4. БЛОК 4: АДМИНИСТРИРОВАНИЕ И НАСЛЕДОВАНИЕ (Система SuperAdmin/allowAdmin и Золотой Канон).
  *
- * РџРѕР»РЅС‹Р№ СЂРµРіР»Р°РјРµРЅС‚ СЌРІРѕР»СЋС†РёРё Рё РїСЂР°РІРёР»Р° РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ РѕРїРёСЃР°РЅС‹ РІ:
- * contracts-evm/РїСЂР°РІРёР»Р° РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ.md
+ * Полный регламент эволюции и правила наследования описаны в:
+ * contracts-evm/правила наследования.md
  */
 contract InfinityVerse_Main_Ga_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Ga-1";
@@ -27,13 +27,13 @@ contract InfinityVerse_Main_Ga_1 {
     string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
 
     // ========================================================================
-    // РР•Р РђР РҐРРЇ РџРћРљРћР›Р•РќРР™ Р РЎРРЎРўР•РњРђ Р”РћРЎРўРЈРџРђ
+    // ИЕРАРХИЯ ПОКОЛЕНИЙ И СИСТЕМА ДОСТУПА
     // ========================================================================
     address public immutable prevMain;
     address public nextMain;
     address public superAdmin;
 
-    // Р РµРµСЃС‚СЂ Р°РІС‚РѕСЂРёР·РѕРІР°РЅРЅС‹С… Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ / РјРѕРґСѓР»РµР№ Р»РѕРіРёРєРё (AAA, BBB, CCC, СЃСѓР±-Р°РґРјРёРЅС‹)
+    // Реестр авторизованных администраторов / модулей логики (AAA, BBB, CCC, суб-админы)
     mapping(address => bool) public allowedAdmins;
     address[] public allowedAdminsList;
 
@@ -57,21 +57,21 @@ contract InfinityVerse_Main_Ga_1 {
 
     constructor(address _prevMain) {
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
-            // РџСЂРѕРІРµСЂРєР° Р·Р°РїРµС‡Р°С‚С‹РІР°РЅРёСЏ РїСЂРµРґС‹РґСѓС‰РµРіРѕ РїРѕРєРѕР»РµРЅРёСЏ:
-            // 1. Р“Р»Р°РІРЅС‹Р№ Р°РґРјРёРЅ СЃС‚Р°СЂРѕРіРѕ РєРѕРЅС‚СЂР°РєС‚Р° РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ СЃРѕР¶Р¶РµРЅ РЅР° Dead-Р°РґСЂРµСЃ
+            // Проверка запечатывания предыдущего поколения:
+            // 1. Главный админ старого контракта должен быть сожжен на Dead-адрес
             address prevAdmin = IInfinityVerse_PrevMain(_prevMain).admin();
             require(
                 prevAdmin == 0x000000000000000000000000000000000000dEaD,
                 "Main: previous admin is not burned (not dead)"
             );
 
-            // 2. Р’СЃРµ РјРѕРґСѓР»Рё Рё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂС‹ СЃС‚Р°СЂРѕРіРѕ РєРѕРЅС‚СЂР°РєС‚Р° РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РѕС‚РєР»СЋС‡РµРЅС‹
+            // 2. Все модули и администраторы старого контракта должны быть отключены
             require(
                 IInfinityVerse_PrevMain(_prevMain).getAllowedContracts().length == 0,
                 "Main: previous generation allowed admins list is not empty"
             );
 
-            // 3. РЎС‚Р°СЂС‹Р№ РєРѕРЅС‚СЂР°РєС‚ РѕР±СЏР·Р°РЅ СЏРІРЅРѕ СѓРєР°Р·Р°С‚СЊ СЌС‚РѕС‚ РЅРѕРІС‹Р№ РєРѕРЅС‚СЂР°РєС‚ СЃРІРѕРёРј РЅР°СЃР»РµРґРЅРёРєРѕРј
+            // 3. Старый контракт обязан явно указать этот новый контракт своим наследником
             require(
                 IInfinityVerse_PrevMain(_prevMain).nextMain() == address(this),
                 "Main: this contract is not registered as nextMain in previous generation"
@@ -81,7 +81,7 @@ contract InfinityVerse_Main_Ga_1 {
         superAdmin = msg.sender;
         prevMain = _prevMain;
 
-        // РџСЂРµРґРѕСЃС‚Р°РІР»СЏРµРј СЃСѓРїРµСЂ-Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂСѓ РїСЂСЏРјС‹Рµ РїСЂР°РІР° РІ allowedAdmins СЃ СЂРѕР¶РґРµРЅРёСЏ С…СЂР°РЅРёР»РёС‰Р°
+        // Предоставляем супер-администратору прямые права в allowedAdmins с рождения хранилища
         allowedAdmins[superAdmin] = true;
         allowedAdminsList.push(superAdmin);
         emit AdminAllowed(superAdmin);
@@ -89,27 +89,27 @@ contract InfinityVerse_Main_Ga_1 {
 
     // ========================================================================
     // ========================================================================
-    // === Р‘Р›РћРљ 1: RAW DISK (РЎР«Р Р«Р• 32-Р‘РђР™РўРќР«Р• РЎР•РљРўРћР Р«) - РћРЎРќРћР’РќРћР™ Р Р•Р–РРњ   ===
+    // === БЛОК 1: RAW DISK (СЫРЫЕ 32-БАЙТНЫЕ СЕКТОРЫ) - ОСНОВНОЙ РЕЖИМ   ===
     // ========================================================================
     // ========================================================================
 
-    // 1.1. РҐСЂР°РЅРёР»РёС‰Рµ СЃРµРєС‚РѕСЂРѕРІ (РЎРµРєС‚РѕСЂ => 32 Р±Р°Р№С‚Р° РґР°РЅРЅС‹С…)
+    // 1.1. Хранилище секторов (Сектор => 32 байта данных)
     mapping(bytes32 => bytes32) private disk;
 
-    // 1.2. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё РґРёСЃРєР°
+    // 1.2. Методы чтения и записи диска
     /**
-     * @notice Р§С‚РµРЅРёРµ РѕРґРЅРѕРіРѕ 32-Р±Р°Р№С‚РЅРѕРіРѕ СЃРµРєС‚РѕСЂР° РїРѕ РєР»СЋС‡Сѓ
-     * @param sector 32-Р±Р°Р№С‚РЅС‹Р№ С…РµС€-Р°РґСЂРµСЃ СЃРµРєС‚РѕСЂР°
-     * @return 32 Р±Р°Р№С‚Р° РґР°РЅРЅС‹С… СЃРµРєС‚РѕСЂР°
+     * @notice Чтение одного 32-байтного сектора по ключу
+     * @param sector 32-байтный хеш-адрес сектора
+     * @return 32 байта данных сектора
      */
     function readSector(bytes32 sector) external view returns (bytes32) {
         return disk[sector];
     }
 
     /**
-     * @notice РџР°РєРµС‚РЅРѕРµ С‡С‚РµРЅРёРµ РјР°СЃСЃРёРІР° СЃРµРєС‚РѕСЂРѕРІ Р·Р° РѕРґРёРЅ РІС‹Р·РѕРІ (РґР»СЏ РєР»РёРµРЅС‚РѕРІ Рё РјРѕРґСѓР»РµР№)
-     * @param sectors РњР°СЃСЃРёРІ 32-Р±Р°Р№С‚РЅС‹С… Р°РґСЂРµСЃРѕРІ СЃРµРєС‚РѕСЂРѕРІ
-     * @return РњР°СЃСЃРёРІ 32-Р±Р°Р№С‚РЅС‹С… Р·РЅР°С‡РµРЅРёР№ РґР°РЅРЅС‹С…
+     * @notice Пакетное чтение массива секторов за один вызов (для клиентов и модулей)
+     * @param sectors Массив 32-байтных адресов секторов
+     * @return Массив 32-байтных значений данных
      */
     function readSectorBatch(bytes32[] calldata sectors) external view returns (bytes32[] memory) {
         uint256 len = sectors.length;
@@ -121,18 +121,18 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ РѕРґРЅРѕРіРѕ 32-Р±Р°Р№С‚РЅРѕРіРѕ СЃРµРєС‚РѕСЂР°
-     * @param sector 32-Р±Р°Р№С‚РЅС‹Р№ Р°РґСЂРµСЃ СЃРµРєС‚РѕСЂР°
-     * @param data 32 Р±Р°Р№С‚Р° Р·Р°РїРёСЃС‹РІР°РµРјС‹С… РґР°РЅРЅС‹С…
+     * @notice Запись одного 32-байтного сектора
+     * @param sector 32-байтный адрес сектора
+     * @param data 32 байта записываемых данных
      */
     function writeSector(bytes32 sector, bytes32 data) external onlyAdmins {
         disk[sector] = data;
     }
 
     /**
-     * @notice РџР°РєРµС‚РЅР°СЏ Р·Р°РїРёСЃСЊ РјР°СЃСЃРёРІР° СЃРµРєС‚РѕСЂРѕРІ (РґР»СЏ СЂР°Р·РІРµРґРєРё РїР°С‡РµРє РєР»РµС‚РѕРє Рё РѕР±РЅРѕРІР»РµРЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ)
-     * @param sectors РњР°СЃСЃРёРІ Р°РґСЂРµСЃРѕРІ СЃРµРєС‚РѕСЂРѕРІ
-     * @param data РњР°СЃСЃРёРІ 32-Р±Р°Р№С‚РЅС‹С… Р·РЅР°С‡РµРЅРёР№
+     * @notice Пакетная запись массива секторов (для разведки пачек клеток и обновления состояния)
+     * @param sectors Массив адресов секторов
+     * @param data Массив 32-байтных значений
      */
     function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external onlyAdmins {
         require(sectors.length == data.length, "Main: sectors and data length mismatch");
@@ -142,18 +142,18 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     /**
-     * @notice Последовательное непрерывное чтение дорожки секторов (Chunk Read)
-     * @param baseSector Начальный сектор
-     * @param count Количество непрерывных секторов для чтения подряд
-     * @return result Массив считанных 32-байтных секторов
+     * @notice ���������������� ����������� ������ ������� �������� (Chunk Read)
+     * @param baseSector ��������� ������
+     * @param count ���������� ����������� �������� ��� ������ ������
+     * @return result ������ ��������� 32-������� ��������
      */
     /**
-     * @notice Чтение среза байт из 32-байтного сектора (Offset / Length Sub-slice в стиле MUD Store)
-     * @dev Позволяет извлечь компактное поле (например, 2 байта hp или 4 байта таймстампа) без загрузки всего сектора в память
-     * @param sector 32-байтный адрес сектора
-     * @param offset Смещение от 0 до 31 байта внутри сектора
-     * @param length Длина среза в байтах (offset + length <= 32)
-     * @return slice Срез данных заданной длины
+     * @notice ������ ����� ���� �� 32-�������� ������� (Offset / Length Sub-slice � ����� MUD Store)
+     * @dev ��������� ������� ���������� ���� (��������, 2 ����� hp ��� 4 ����� ����������) ��� �������� ����� ������� � ������
+     * @param sector 32-������� ����� �������
+     * @param offset �������� �� 0 �� 31 ����� ������ �������
+     * @param length ����� ����� � ������ (offset + length <= 32)
+     * @return slice ���� ������ �������� �����
      */
     function readSectorSlice(bytes32 sector, uint256 offset, uint256 length) external view returns (bytes memory slice) {
         require(offset + length <= 32, "Main: slice out of sector bounds");
@@ -174,9 +174,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Последовательная непрерывная запись дорожки секторов (Chunk Stream Write, экономия 50% calldata)
-     * @param baseSector Начальный сектор
-     * @param data Массив 32-байтных данных, записываемых подряд в baseSector + i
+     * @notice ���������������� ����������� ������ ������� �������� (Chunk Stream Write, �������� 50% calldata)
+     * @param baseSector ��������� ������
+     * @param data ������ 32-������� ������, ������������ ������ � baseSector + i
      */
     function writeSequential(bytes32 baseSector, bytes32[] calldata data) external onlyAdmins {
         uint256 len = data.length;
@@ -186,16 +186,16 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     /**
-     * @notice Очистка сектора (TRIM / delete) с возвратом газа EVM (Gas Refund)
-     * @param sector 32-байтный адрес очищаемого сектора
+     * @notice ������� ������� (TRIM / delete) � ��������� ���� EVM (Gas Refund)
+     * @param sector 32-������� ����� ���������� �������
      */
     function trimSector(bytes32 sector) external onlyAdmins {
         delete disk[sector];
     }
 
     /**
-     * @notice Пакетная очистка массива секторов (TRIM Batch) с возвратом газа
-     * @param sectors Массив адресов очищаемых секторов
+     * @notice �������� ������� ������� �������� (TRIM Batch) � ��������� ����
+     * @param sectors ������ ������� ��������� ��������
      */
     function trimSectorBatch(bytes32[] calldata sectors) external onlyAdmins {
         uint256 len = sectors.length;
@@ -208,11 +208,11 @@ contract InfinityVerse_Main_Ga_1 {
 
     // ========================================================================
     // ========================================================================
-    // === Р‘Р›РћРљ 2: ETERNAL STORAGE (РЈРќРР’Р•Р РЎРђР›Р¬РќР«Р• РўРРџР« Р BLOB'Р«)           ===
+    // === БЛОК 2: ETERNAL STORAGE (УНИВЕРСАЛЬНЫЕ ТИПЫ И BLOB'Ы)           ===
     // ========================================================================
     // ========================================================================
 
-    // 2.1. РњР°РїРїРёРЅРіРё С‚РёРїРѕРІ РґР°РЅРЅС‹С…
+    // 2.1. Маппинги типов данных
     mapping(bytes32 => uint8)   private u8s;
     mapping(bytes32 => uint16)  private u16s;
     mapping(bytes32 => uint32)  private u32s;
@@ -238,229 +238,229 @@ contract InfinityVerse_Main_Ga_1 {
     mapping(bytes32 => bytes)   private blobs;
 
     
-    // 2.3. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р‘РµР·Р·РЅР°РєРѕРІС‹Рµ С†РµР»С‹Рµ (uint8 ... uint256)
+    // 2.3. Методы чтения и записи: Беззнаковые целые (uint8 ... uint256)
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 8-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
-     * @param key 32-Р±Р°Р№С‚РЅС‹Р№ С…РµС€-РєР»СЋС‡ РїРµСЂРµРјРµРЅРЅРѕР№
-     * @return Р—РЅР°С‡РµРЅРёРµ uint8 (0..255)
+     * @notice Получение 8-битного беззнакового числа по ключу
+     * @param key 32-байтный хеш-ключ переменной
+     * @return Значение uint8 (0..255)
      */
     function getUint8(bytes32 key) external view returns (uint8) { return u8s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 8-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
-     * @param key 32-Р±Р°Р№С‚РЅС‹Р№ С…РµС€-РєР»СЋС‡
-     * @param val Р—РЅР°С‡РµРЅРёРµ uint8
+     * @notice Запись 8-битного беззнакового числа
+     * @param key 32-байтный хеш-ключ
+     * @param val Значение uint8
      */
     function setUint8(bytes32 key, uint8 val) external onlyAdmins { u8s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 16-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 16-битного беззнакового числа по ключу
      */
     function getUint16(bytes32 key) external view returns (uint16) { return u16s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 16-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 16-битного беззнакового числа
      */
     function setUint16(bytes32 key, uint16 val) external onlyAdmins { u16s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 32-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 32-битного беззнакового числа по ключу
      */
     function getUint32(bytes32 key) external view returns (uint32) { return u32s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 32-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 32-битного беззнакового числа
      */
     function setUint32(bytes32 key, uint32 val) external onlyAdmins { u32s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 64-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ (С‚Р°Р№РјСЃС‚Р°РјРїС‹, Р±Р»РѕРєРё)
+     * @notice Получение 64-битного беззнакового числа по ключу (таймстампы, блоки)
      */
     function getUint64(bytes32 key) external view returns (uint64) { return u64s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 64-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 64-битного беззнакового числа
      */
     function setUint64(bytes32 key, uint64 val) external onlyAdmins { u64s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 128-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 128-битного беззнакового числа по ключу
      */
     function getUint128(bytes32 key) external view returns (uint128) { return u128s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 128-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 128-битного беззнакового числа
      */
     function setUint128(bytes32 key, uint128 val) external onlyAdmins { u128s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ 256-Р±РёС‚РЅРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ (Р±Р°Р»Р°РЅСЃС‹, СЃС‡РµС‚С‡РёРєРё)
+     * @notice Получение стандартного 256-битного числа по ключу (балансы, счетчики)
      */
     function getUint256(bytes32 key) external view returns (uint256) { return u256s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 256-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 256-битного беззнакового числа
      */
     function setUint256(bytes32 key, uint256 val) external onlyAdmins { u256s[key] = val; }
 
-    // 2.4. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р—РЅР°РєРѕРІС‹Рµ С†РµР»С‹Рµ (int8 ... int256)
+    // 2.4. Методы чтения и записи: Знаковые целые (int8 ... int256)
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 8-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 8-битного знакового числа по ключу
      */
     function getInt8(bytes32 key) external view returns (int8) { return i8s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 8-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 8-битного знакового числа
      */
     function setInt8(bytes32 key, int8 val) external onlyAdmins { i8s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 16-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 16-битного знакового числа по ключу
      */
     function getInt16(bytes32 key) external view returns (int16) { return i16s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 16-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 16-битного знакового числа
      */
     function setInt16(bytes32 key, int16 val) external onlyAdmins { i16s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 32-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ (РєРѕРѕСЂРґРёРЅР°С‚С‹ X, Y)
+     * @notice Получение 32-битного знакового числа по ключу (координаты X, Y)
      */
     function getInt32(bytes32 key) external view returns (int32) { return i32s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 32-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 32-битного знакового числа
      */
     function setInt32(bytes32 key, int32 val) external onlyAdmins { i32s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 64-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 64-битного знакового числа по ключу
      */
     function getInt64(bytes32 key) external view returns (int64) { return i64s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 64-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 64-битного знакового числа
      */
     function setInt64(bytes32 key, int64 val) external onlyAdmins { i64s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 128-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 128-битного знакового числа по ключу
      */
     function getInt128(bytes32 key) external view returns (int128) { return i128s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 128-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 128-битного знакового числа
      */
     function setInt128(bytes32 key, int128 val) external onlyAdmins { i128s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 256-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 256-битного знакового числа по ключу
      */
     function getInt256(bytes32 key) external view returns (int256) { return i256s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 256-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
+     * @notice Запись 256-битного знакового числа
      */
     function setInt256(bytes32 key, int256 val) external onlyAdmins { i256s[key] = val; }
 
-    // 2.5. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р‘СѓР»РµРІС‹ Р·РЅР°С‡РµРЅРёСЏ Рё Р°РґСЂРµСЃР°
+    // 2.5. Методы чтения и записи: Булевы значения и адреса
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ Р»РѕРіРёС‡РµСЃРєРѕРіРѕ С„Р»Р°РіР° (bool) РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение логического флага (bool) по ключу
      */
     function getBool(bytes32 key) external view returns (bool) { return bools[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ Р»РѕРіРёС‡РµСЃРєРѕРіРѕ С„Р»Р°РіР° (bool)
+     * @notice Запись логического флага (bool)
      */
     function setBool(bytes32 key, bool val) external onlyAdmins { bools[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ Р°РґСЂРµСЃР° РєРѕС€РµР»СЊРєР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р° РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение адреса кошелька или контракта по ключу
      */
     function getAddress(bytes32 key) external view returns (address) { return addrs[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ Р°РґСЂРµСЃР° РєРѕС€РµР»СЊРєР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р°
+     * @notice Запись адреса кошелька или контракта
      */
     function setAddress(bytes32 key, address val) external onlyAdmins { addrs[key] = val; }
 
-    // 2.6. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р¤РёРєСЃРёСЂРѕРІР°РЅРЅС‹Рµ Р±Р°Р№С‚С‹
+    // 2.6. Методы чтения и записи: Фиксированные байты
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 1-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 1-байтового значения по ключу
      */
     function getBytes1(bytes32 key) external view returns (bytes1) { return b1s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 1-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
+     * @notice Запись 1-байтового значения
      */
     function setBytes1(bytes32 key, bytes1 val) external onlyAdmins { b1s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 4-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РєР»СЋС‡Сѓ (С…РµС€ СЃРµР»РµРєС‚РѕСЂР° С„СѓРЅРєС†РёРё)
+     * @notice Получение 4-байтового значения по ключу (хеш селектора функции)
      */
     function getBytes4(bytes32 key) external view returns (bytes4) { return b4s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 4-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
+     * @notice Запись 4-байтового значения
      */
     function setBytes4(bytes32 key, bytes4 val) external onlyAdmins { b4s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 8-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РєР»СЋС‡Сѓ
+     * @notice Получение 8-байтового значения по ключу
      */
     function getBytes8(bytes32 key) external view returns (bytes8) { return b8s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 8-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
+     * @notice Запись 8-байтового значения
      */
     function setBytes8(bytes32 key, bytes8 val) external onlyAdmins { b8s[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ 16-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РєР»СЋС‡Сѓ (UUID)
+     * @notice Получение 16-байтового значения по ключу (UUID)
      */
     function getBytes16(bytes32 key) external view returns (bytes16) { return b16s[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ 16-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
+     * @notice Запись 16-байтового значения
      */
     function setBytes16(bytes32 key, bytes16 val) external onlyAdmins { b16s[key] = val; }
 
-    // 2.7. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р”РёРЅР°РјРёС‡РµСЃРєРёРµ СЃС‚СЂРѕРєРё Рё РїСЂРѕРёР·РІРѕР»СЊРЅС‹Рµ Р±Р°Р№С‚С‹ (BLOBs)
+    // 2.7. Методы чтения и записи: Динамические строки и произвольные байты (BLOBs)
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ С‚РµРєСЃС‚РѕРІРѕР№ СЃС‚СЂРѕРєРё РїРѕ РєР»СЋС‡Сѓ (РёРјРµРЅР° РёРіСЂРѕРєРѕРІ, РѕРїРёСЃР°РЅРёСЏ, JSON)
+     * @notice Получение текстовой строки по ключу (имена игроков, описания, JSON)
      */
     function getString(bytes32 key) external view returns (string memory) { return strings[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ С‚РµРєСЃС‚РѕРІРѕР№ СЃС‚СЂРѕРєРё
+     * @notice Запись текстовой строки
      */
     function setString(bytes32 key, string calldata val) external onlyAdmins { strings[key] = val; }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ РґРёРЅР°РјРёС‡РµСЃРєРѕРіРѕ РјР°СЃСЃРёРІР° Р±Р°Р№С‚ (BLOB) РїСЂРѕРёР·РІРѕР»СЊРЅРѕРіРѕ СЂР°Р·РјРµСЂР°
+     * @notice Получение динамического массива байт (BLOB) произвольного размера
      */
     function getBlob(bytes32 key) external view returns (bytes memory) { return blobs[key]; }
 
     /**
-     * @notice Р—Р°РїРёСЃСЊ РґРёРЅР°РјРёС‡РµСЃРєРѕРіРѕ РјР°СЃСЃРёРІР° Р±Р°Р№С‚ (BLOB) РїСЂРѕРёР·РІРѕР»СЊРЅРѕРіРѕ СЂР°Р·РјРµСЂР°
+     * @notice Запись динамического массива байт (BLOB) произвольного размера
      */
     function setBlob(bytes32 key, bytes calldata val) external onlyAdmins { blobs[key] = val; }
 
     // ========================================================================
     // ========================================================================
-    // === Р‘Р›РћРљ 3: LOW-LEVEL SLOTS (DIAMOND / ASSEMBLY SLOAD & SSTORE)     ===
+    // === БЛОК 3: LOW-LEVEL SLOTS (DIAMOND / ASSEMBLY SLOAD & SSTORE)     ===
     // ========================================================================
     // ========================================================================
 
-    // 3.1. РЎРѕР±С‹С‚РёСЏ РїСЂСЏРјС‹С… СЃР»РѕС‚РѕРІ
+    // 3.1. События прямых слотов
     event SlotWritten(bytes32 indexed slot, bytes32 value);
 
-    // 3.2. РњРµС‚РѕРґС‹ РїСЂСЏРјРѕРіРѕ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё РІ СЃР»РѕС‚С‹ EVM
+    // 3.2. Методы прямого чтения и записи в слоты EVM
     /**
-     * @notice РџСЂСЏРјРѕРµ С‡С‚РµРЅРёРµ С„РёР·РёС‡РµСЃРєРѕРіРѕ СЃР»РѕС‚Р° РїР°РјСЏС‚Рё EVM
-     * @param slot 32-Р±Р°Р№С‚РЅС‹Р№ РЅРѕРјРµСЂ СЃР»РѕС‚Р° storage
-     * @return val Р—РЅР°С‡РµРЅРёРµ, С…СЂР°РЅСЏС‰РµРµСЃСЏ РІ СЃР»РѕС‚Рµ
+     * @notice Прямое чтение физического слота памяти EVM
+     * @param slot 32-байтный номер слота storage
+     * @return val Значение, хранящееся в слоте
      */
     function readSlot(bytes32 slot) external view returns (bytes32 val) {
         assembly {
@@ -469,9 +469,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice РџСЂСЏРјР°СЏ Р·Р°РїРёСЃСЊ РІ С„РёР·РёС‡РµСЃРєРёР№ СЃР»РѕС‚ РїР°РјСЏС‚Рё EVM С‡РµСЂРµР· Yul
-     * @param slot 32-Р±Р°Р№С‚РЅС‹Р№ РЅРѕРјРµСЂ СЃР»РѕС‚Р° storage
-     * @param val Р—Р°РїРёСЃС‹РІР°РµРјРѕРµ 32-Р±Р°Р№С‚РЅРѕРµ Р·РЅР°С‡РµРЅРёРµ
+     * @notice Прямая запись в физический слот памяти EVM через Yul
+     * @param slot 32-байтный номер слота storage
+     * @param val Записываемое 32-байтное значение
      */
     function writeSlot(bytes32 slot, bytes32 val) external onlyAdmins {
         assembly {
@@ -480,9 +480,9 @@ contract InfinityVerse_Main_Ga_1 {
         emit SlotWritten(slot, val);
     }
     /**
-     * @notice Пакетное чтение произвольных физических слотов EVM через Yul
-     * @param slots Массив номеров слотов
-     * @return result Массив считанных 32-байтных значений
+     * @notice �������� ������ ������������ ���������� ������ EVM ����� Yul
+     * @param slots ������ ������� ������
+     * @return result ������ ��������� 32-������� ��������
      */
     function readSlotBatch(bytes32[] calldata slots) external view returns (bytes32[] memory) {
         uint256 len = slots.length;
@@ -499,9 +499,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Пакетная запись в произвольные физические слоты EVM через Yul
-     * @param slots Массив номеров слотов
-     * @param vals Массив 32-байтных значений
+     * @notice �������� ������ � ������������ ���������� ����� EVM ����� Yul
+     * @param slots ������ ������� ������
+     * @param vals ������ 32-������� ��������
      */
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlyAdmins {
         require(slots.length == vals.length, "Main: slots and vals length mismatch");
@@ -516,12 +516,12 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Чтение среза байт из физического слота EVM (Offset / Length Sub-slice через Yul sload)
-     * @dev Позволяет извлечь упакованное поле из физического слота памяти без передачи всех 32 байт
-     * @param slot Физический слот памяти EVM
-     * @param offset Смещение от 0 до 31 байта внутри слота
-     * @param length Длина среза в байтах (offset + length <= 32)
-     * @return slice Срез данных заданной длины
+     * @notice ������ ����� ���� �� ����������� ����� EVM (Offset / Length Sub-slice ����� Yul sload)
+     * @dev ��������� ������� ����������� ���� �� ����������� ����� ������ ��� �������� ���� 32 ����
+     * @param slot ���������� ���� ������ EVM
+     * @param offset �������� �� 0 �� 31 ����� ������ �����
+     * @param length ����� ����� � ������ (offset + length <= 32)
+     * @return slice ���� ������ �������� �����
      */
     function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
         require(offset + length <= 32, "Main: slice out of slot bounds");
@@ -536,9 +536,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Последовательное чтение непрерывных физических слотов EVM через Yul
-     * @param baseSlot Начальный физический слот памяти
-     * @param count Количество слотов подряд
+     * @notice ���������������� ������ ����������� ���������� ������ EVM ����� Yul
+     * @param baseSlot ��������� ���������� ���� ������
+     * @param count ���������� ������ ������
      */
     function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
@@ -555,9 +555,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Последовательная потоковая запись в непрерывные физические слоты памяти EVM через Yul
-     * @param baseSlot Начальный физический слот
-     * @param vals Массив значений для записи подряд
+     * @notice ���������������� ��������� ������ � ����������� ���������� ����� ������ EVM ����� Yul
+     * @param baseSlot ��������� ���������� ����
+     * @param vals ������ �������� ��� ������ ������
      */
     function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlyAdmins {
         uint256 len = vals.length;
@@ -571,15 +571,15 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     /**
-     * @notice Официальный хелпер стандарта ERC-7201: вычисление корня изолированного пространства имен
-     * @dev Формула: keccak256(uint256(keccak256(namespaceId)) - 1) & ~0xff
-     * Полностью отвязывает логические данные мира от сменных физических адресов контрактов (AAA, BBB, CCC)!
-     * @param namespaceId Текстовый идентификатор модуля/пространства (например, "infinity.module.movement")
-     * @return rootSlot Уникальный базовый слот физической памяти EVM, гарантированно свободный от коллизий
+     * @notice ����������� ������ ��������� ERC-7201: ���������� ����� �������������� ������������ ����
+     * @dev �������: keccak256(uint256(keccak256(namespaceId)) - 1) & ~0xff
+     * ��������� ���������� ���������� ������ ���� �� ������� ���������� ������� ���������� (AAA, BBB, CCC)!
+     * @param namespaceId ��������� ������������� ������/������������ (��������, "infinity.module.movement")
+     * @return rootSlot ���������� ������� ���� ���������� ������ EVM, �������������� ��������� �� ��������
      */
     /**
-     * @notice Очистка физического слота EVM (TRIM / sstore zero) с возвратом газа
-     * @param slot Физический слот памяти
+     * @notice ������� ����������� ����� EVM (TRIM / sstore zero) � ��������� ����
+     * @param slot ���������� ���� ������
      */
     function trimSlot(bytes32 slot) external onlyAdmins {
         assembly {
@@ -588,8 +588,8 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Пакетная очистка массива физических слотов (TRIM Slot Batch) с возвратом газа
-     * @param slots Массив физических слотов памяти
+     * @notice �������� ������� ������� ���������� ������ (TRIM Slot Batch) � ��������� ����
+     * @param slots ������ ���������� ������ ������
      */
     function trimSlotBatch(bytes32[] calldata slots) external onlyAdmins {
         uint256 len = slots.length;
@@ -609,13 +609,13 @@ contract InfinityVerse_Main_Ga_1 {
 
     // ========================================================================
     // ========================================================================
-    // === Р‘Р›РћРљ 4: РђР”РњРРќРРЎРўР РР РћР’РђРќРР• Р РџР РђР’РР›Рђ РќРђРЎР›Р•Р”РћР’РђРќРРЇ                 ===
+    // === БЛОК 4: АДМИНИСТРИРОВАНИЕ И ПРАВИЛА НАСЛЕДОВАНИЯ                 ===
     // ========================================================================
     // ========================================================================
 
     /**
-     * @notice РђРІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РёР»Рё РјРѕРґСѓР»СЏ Р»РѕРіРёРєРё (AAA, BBB, CCC Рё РґСЂ.)
-     * @param adminAddress РђРґСЂРµСЃ Р°РІС‚РѕСЂРёР·СѓРµРјРѕРіРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р°
+     * @notice Авторизация администратора или модуля логики (AAA, BBB, CCC и др.)
+     * @param adminAddress Адрес авторизуемого администратора или контракта
      */
     function allowAdmin(address adminAddress) external onlySuperAdmin {
         require(adminAddress != address(0), "Main: admin address cannot be zero");
@@ -626,8 +626,8 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice РћС‚Р·С‹РІ Р°РІС‚РѕСЂРёР·Р°С†РёРё Сѓ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РёР»Рё РјРѕРґСѓР»СЏ Р»РѕРіРёРєРё
-     * @param adminAddress РђРґСЂРµСЃ РѕС‚Р·С‹РІР°РµРјРѕРіРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р°
+     * @notice Отзыв авторизации у администратора или модуля логики
+     * @param adminAddress Адрес отзываемого администратора или контракта
      */
     function disallowAdmin(address adminAddress) external onlySuperAdmin {
         require(allowedAdmins[adminAddress], "Main: admin is not authorized");
@@ -637,13 +637,13 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice РџРѕР»СѓС‡РµРЅРёРµ РїРѕР»РЅРѕРіРѕ СЃРїРёСЃРєР° РІСЃРµС… Р°РІС‚РѕСЂРёР·РѕРІР°РЅРЅС‹С… Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ / РјРѕРґСѓР»РµР№
+     * @notice Получение полного списка всех авторизованных администраторов / модулей
      */
     function getAllowedAdmins() external view returns (address[] memory) {
         return allowedAdminsList;
     }
 
-    // РЎРѕС…СЂР°РЅСЏРµРј РґР»СЏ РѕР±СЂР°С‚РЅРѕР№ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё СЃ РёРЅС‚РµСЂС„РµР№СЃРѕРј IInfinityVerse_PrevMain
+    // Сохраняем для обратной совместимости с интерфейсом IInfinityVerse_PrevMain
     function getAllowedContracts() external view returns (address[] memory) {
         return allowedAdminsList;
     }
@@ -660,8 +660,8 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice РЈСЃС‚Р°РЅРѕРІРєР° Р°РґСЂРµСЃР° СЃР»РµРґСѓСЋС‰РµРіРѕ РїРѕРєРѕР»РµРЅРёСЏ Main (РЅР°СЃР»РµРґРЅРёРєР°)
-     * @param _nextMain РђРґСЂРµСЃ РєРѕРЅС‚СЂР°РєС‚Р°-РЅР°СЃР»РµРґРЅРёРєР° Main
+     * @notice Установка адреса следующего поколения Main (наследника)
+     * @param _nextMain Адрес контракта-наследника Main
      */
     function setNextMain(address _nextMain) external onlySuperAdmin {
         require(_nextMain != address(0), "Main: invalid nextMain address");
@@ -671,10 +671,10 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice РџРµСЂРµРґР°С‡Р° РїСЂР°РІ РіР»Р°РІРЅРѕРіРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° (SuperAdmin) РЅР° РЅРѕРІС‹Р№ Р°РґСЂРµСЃ
-     * @dev РџСЂРё С„РёРЅР°Р»РёР·Р°С†РёРё РјРёРіСЂР°С†РёРё РїРµСЂРµРґР°РµС‚СЃСЏ РЅР° 0x...dEaD.
-     * Р—Р°С‰РёС‚Р° Р·Р°РїСЂРµС‰Р°РµС‚ СЃР¶РµС‡СЊ Р°РґРјРёРЅР°, РµСЃР»Рё СЃРїРёСЃРѕРє Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ РЅРµ РїСѓСЃС‚ РёР»Рё nextMain РЅРµ Р·Р°РґР°РЅ!
-     * @param newSuperAdmin РђРґСЂРµСЃ РЅРѕРІРѕРіРѕ РіР»Р°РІРЅРѕРіРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°
+     * @notice Передача прав главного администратора (SuperAdmin) на новый адрес
+     * @dev При финализации миграции передается на 0x...dEaD.
+     * Защита запрещает сжечь админа, если список администраторов не пуст или nextMain не задан!
+     * @param newSuperAdmin Адрес нового главного администратора
      */
     function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
         require(newSuperAdmin != address(0), "Main: new superAdmin cannot be zero");
@@ -692,23 +692,23 @@ contract InfinityVerse_Main_Ga_1 {
         superAdmin = newSuperAdmin;
     }
 
-    // РћР±СЂР°С‚РЅР°СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ РґР»СЏ СЃС‡РёС‚С‹РІР°РЅРёСЏ Р°РґРјРёРЅР° РїСЂРµРґС‹РґСѓС‰РёРјРё РїРѕРєРѕР»РµРЅРёСЏРјРё
+    // Обратная совместимость для считывания админа предыдущими поколениями
     function admin() external view returns (address) {
         return superAdmin;
     }
 
     // =========================================================================
-    // БЛОК 5: СТАНДАРТ ОБНАРУЖЕНИЯ ИНТЕРФЕЙСОВ (ERC-165)
+    // ���� 5: �������� ����������� ����������� (ERC-165)
     // =========================================================================
 
     /**
-     * @notice Проверка поддерживаемых стандартов и интерфейсов (ERC-165)
-     * @dev Позволяет внешним контрактам, индексаторам и dApp мгновенно проверять возможности Main:
+     * @notice �������� �������������� ���������� � ����������� (ERC-165)
+     * @dev ��������� ������� ����������, ������������ � dApp ��������� ��������� ����������� Main:
      *      - 0x01ffc9a7: ERC-165 (supportsInterface)
-     *      - 0x93309a63: Raw Disk SSD Interface (чтение/запись секторов и батчей)
-     *      - 0x72017201: Метка поддержки ERC-7201 (Namespaced Storage Layout)
-     * @param interfaceId 4-байтный идентификатор запрашиваемого интерфейса
-     * @return true если интерфейс поддерживается контрактом
+     *      - 0x93309a63: Raw Disk SSD Interface (������/������ �������� � ������)
+     *      - 0x72017201: ����� ��������� ERC-7201 (Namespaced Storage Layout)
+     * @param interfaceId 4-������� ������������� �������������� ����������
+     * @return true ���� ��������� �������������� ����������
      */
     function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
         return interfaceId == 0x01ffc9a7 // ERC-165
