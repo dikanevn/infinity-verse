@@ -696,25 +696,4 @@ contract InfinityVerse_Main_Ga_1 {
     function admin() external view returns (address) {
         return superAdmin;
     }
-
-    // =========================================================================
-    // ���� 5: �������� ����������� ����������� (ERC-165)
-    // =========================================================================
-
-    /**
-     * @notice �������� �������������� ���������� � ����������� (ERC-165)
-     * @dev ��������� ������� ����������, ������������ � dApp ��������� ��������� ����������� Main:
-     *      - 0x01ffc9a7: ERC-165 (supportsInterface)
-     *      - 0x93309a63: Raw Disk SSD Interface (������/������ �������� � ������)
-     *      - 0x72017201: ����� ��������� ERC-7201 (Namespaced Storage Layout)
-     * @param interfaceId 4-������� ������������� �������������� ����������
-     * @return true ���� ��������� �������������� ����������
-     */
-    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
-        return interfaceId == 0x01ffc9a7 // ERC-165
-            || interfaceId == 0x93309a63 // Raw Disk SSD Interface
-            || interfaceId == 0x72017201; // ERC-7201 Namespaced Storage marker
-    }
 }
-
-
