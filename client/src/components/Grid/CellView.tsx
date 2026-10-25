@@ -95,7 +95,7 @@ export const CellView: React.FC<CellViewProps> = ({
         </div>
       </div>
 
-      {/* Центр клетки: Обелиск или Игрок или водоворот Хаоса */}
+      {/* Центр клетки: Обелиск или Игрок */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -110,7 +110,7 @@ export const CellView: React.FC<CellViewProps> = ({
             🧑‍🚀
           </span>
         ) : (
-          (!isFog && cell?.object) ? oInfo.icon : (isChaos ? '🌀' : (isFog ? '☁️' : ''))
+          (!isFog && cell?.object) ? oInfo.icon : (isFog ? '☁️' : '')
         )}
       </div>
     </button>
