@@ -9,16 +9,27 @@ interface IInfinityVerse_PrevMain {
 
 /**
  * @title InfinityVerse_Main_Ga_1
- * @notice Вечный универсальный ончейн-накопитель данных (Universal Onchain Storage) - Эпоха Ga, Поколение 1.
+ * @notice Это главный контракт и постоянная память мультивселенной на миллион лет.
+ * Вечный универсальный ончейн-накопитель данных (Universal Onchain Storage) - Эпоха Ga, Поколение 1.
  * Полностью лишен жестких игровых структур (координат, клеток, игроков).
  * Архитектура строго разделена на 3 независимых блока хранения + блок управления:
  * 1. БЛОК 1: RAW DISK (Сырые 32-байтные секторы bytes32 => bytes32).
  * 2. БЛОК 2: ETERNAL STORAGE (Универсальное типизированное хранилище и BLOB'ы).
  * 3. БЛОК 3: LOW-LEVEL SLOTS (Прямой доступ к слотам памяти EVM через ассемблер Yul).
  * 4. БЛОК 4: АДМИНИСТРИРОВАНИЕ И НАСЛЕДОВАНИЕ (Система SuperAdmin/allowAdmin и Золотой Канон).
+ *    Верховный администратор (superAdmin) в перспективе будет передан в смарт-контракт,
+ *    управляемый децентрализованным сообществом (DAO / Timelock).
  *
  * Полный регламент эволюции и правила наследования описаны в:
  * contracts-evm/правила наследования.md
+ *
+ * ПРАВИЛО КОМПИЛЯЦИИ И ОПТИМИЗАЦИИ (MAX RUNS):
+ * - Compiler: solc 0.8.20
+ * - Optimizer: enabled = true, runs = 4294967295 (максимум uint32)
+ * - Обоснование: максимальное число runs обеспечивает предельно дешевый газ для вызовов функций
+ *   в течение всей жизни контракта. Текущий размер байткода составляет 23 428 байт (в пределах лимита в 24 576 байт).
+ *   Если в будущем при добавлении нового кода контракт перестанет влезать в лимит 24 576 байт,
+ *   значение runs необходимо ступенчато снижать (например: 50000 -> 10000 -> 200).
  */
 contract InfinityVerse_Main_Ga_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Ga-1";
@@ -32,6 +43,7 @@ contract InfinityVerse_Main_Ga_1 {
     // ========================================================================
     address public immutable prevMain;
     address public nextMain;
+    // Верховный администратор (в перспективе передается в смарт-контракт под управлением DAO)
     address public superAdmin;
 
     // Реестр авторизованных администраторов / модулей логики (AAA, BBB, CCC, суб-админы)
@@ -95,6 +107,10 @@ contract InfinityVerse_Main_Ga_1 {
     mapping(bytes32 => bytes32) private disk;
 
     // 1.2. Методы чтения и записи диска
+    // Примечание по пакетным операциям (Batch):
+    // Размеры входных массивов намеренно не ограничиваются жесткими лимитами в смарт-контракте.
+    // Это исключает лишний расход газа на проверки и оставляет пространство для расширения
+    // при росте Block Gas Limit сети. Контроль разбиения на порции возложен на вызывающие модули.
     /**
      * @notice Чтение одного 32-байтного сектора по ключу
      * @param sector 32-байтный хеш-адрес сектора
@@ -237,222 +253,108 @@ contract InfinityVerse_Main_Ga_1 {
     mapping(bytes32 => bytes)   private blobs;
 
     
-    // 2.3. Методы чтения и записи: Беззнаковые целые (uint8 ... uint256)
-    /**
-     * @notice Получение 8-битного беззнакового числа по ключу
-     * @param key 32-байтный хеш-ключ переменной
-     * @return Значение uint8 (0..255)
-     */
+    // 2.3. Методы чтения, записи и очистки: Беззнаковые целые (uint8 ... uint256)
     function getUint8(bytes32 key) external view returns (uint8) { return u8s[key]; }
-
-    /**
-     * @notice Запись 8-битного беззнакового числа
-     * @param key 32-байтный хеш-ключ
-     * @param val Значение uint8
-     */
     function setUint8(bytes32 key, uint8 val) external onlyAdmins { u8s[key] = val; }
+    function trimUint8(bytes32 key) external onlyAdmins { delete u8s[key]; }
 
-    /**
-     * @notice Получение 16-битного беззнакового числа по ключу
-     */
     function getUint16(bytes32 key) external view returns (uint16) { return u16s[key]; }
-
-    /**
-     * @notice Запись 16-битного беззнакового числа
-     */
     function setUint16(bytes32 key, uint16 val) external onlyAdmins { u16s[key] = val; }
+    function trimUint16(bytes32 key) external onlyAdmins { delete u16s[key]; }
 
-    /**
-     * @notice Получение 32-битного беззнакового числа по ключу
-     */
     function getUint32(bytes32 key) external view returns (uint32) { return u32s[key]; }
-
-    /**
-     * @notice Запись 32-битного беззнакового числа
-     */
     function setUint32(bytes32 key, uint32 val) external onlyAdmins { u32s[key] = val; }
+    function trimUint32(bytes32 key) external onlyAdmins { delete u32s[key]; }
 
-    /**
-     * @notice Получение 64-битного беззнакового числа по ключу (таймстампы, блоки)
-     */
     function getUint64(bytes32 key) external view returns (uint64) { return u64s[key]; }
-
-    /**
-     * @notice Запись 64-битного беззнакового числа
-     */
     function setUint64(bytes32 key, uint64 val) external onlyAdmins { u64s[key] = val; }
+    function trimUint64(bytes32 key) external onlyAdmins { delete u64s[key]; }
 
-    /**
-     * @notice Получение 128-битного беззнакового числа по ключу
-     */
     function getUint128(bytes32 key) external view returns (uint128) { return u128s[key]; }
-
-    /**
-     * @notice Запись 128-битного беззнакового числа
-     */
     function setUint128(bytes32 key, uint128 val) external onlyAdmins { u128s[key] = val; }
+    function trimUint128(bytes32 key) external onlyAdmins { delete u128s[key]; }
 
-    /**
-     * @notice Получение стандартного 256-битного числа по ключу (балансы, счетчики)
-     */
     function getUint256(bytes32 key) external view returns (uint256) { return u256s[key]; }
-
-    /**
-     * @notice Запись 256-битного беззнакового числа
-     */
     function setUint256(bytes32 key, uint256 val) external onlyAdmins { u256s[key] = val; }
+    function trimUint256(bytes32 key) external onlyAdmins { delete u256s[key]; }
 
-    // 2.4. Методы чтения и записи: Знаковые целые (int8 ... int256)
-    /**
-     * @notice Получение 8-битного знакового числа по ключу
-     */
+    // 2.4. Методы чтения, записи и очистки: Знаковые целые (int8 ... int256)
     function getInt8(bytes32 key) external view returns (int8) { return i8s[key]; }
-
-    /**
-     * @notice Запись 8-битного знакового числа
-     */
     function setInt8(bytes32 key, int8 val) external onlyAdmins { i8s[key] = val; }
+    function trimInt8(bytes32 key) external onlyAdmins { delete i8s[key]; }
 
-    /**
-     * @notice Получение 16-битного знакового числа по ключу
-     */
     function getInt16(bytes32 key) external view returns (int16) { return i16s[key]; }
-
-    /**
-     * @notice Запись 16-битного знакового числа
-     */
     function setInt16(bytes32 key, int16 val) external onlyAdmins { i16s[key] = val; }
+    function trimInt16(bytes32 key) external onlyAdmins { delete i16s[key]; }
 
-    /**
-     * @notice Получение 32-битного знакового числа по ключу (координаты X, Y)
-     */
     function getInt32(bytes32 key) external view returns (int32) { return i32s[key]; }
-
-    /**
-     * @notice Запись 32-битного знакового числа
-     */
     function setInt32(bytes32 key, int32 val) external onlyAdmins { i32s[key] = val; }
+    function trimInt32(bytes32 key) external onlyAdmins { delete i32s[key]; }
 
-    /**
-     * @notice Получение 64-битного знакового числа по ключу
-     */
     function getInt64(bytes32 key) external view returns (int64) { return i64s[key]; }
-
-    /**
-     * @notice Запись 64-битного знакового числа
-     */
     function setInt64(bytes32 key, int64 val) external onlyAdmins { i64s[key] = val; }
+    function trimInt64(bytes32 key) external onlyAdmins { delete i64s[key]; }
 
-    /**
-     * @notice Получение 128-битного знакового числа по ключу
-     */
     function getInt128(bytes32 key) external view returns (int128) { return i128s[key]; }
-
-    /**
-     * @notice Запись 128-битного знакового числа
-     */
     function setInt128(bytes32 key, int128 val) external onlyAdmins { i128s[key] = val; }
+    function trimInt128(bytes32 key) external onlyAdmins { delete i128s[key]; }
 
-    /**
-     * @notice Получение 256-битного знакового числа по ключу
-     */
     function getInt256(bytes32 key) external view returns (int256) { return i256s[key]; }
-
-    /**
-     * @notice Запись 256-битного знакового числа
-     */
     function setInt256(bytes32 key, int256 val) external onlyAdmins { i256s[key] = val; }
+    function trimInt256(bytes32 key) external onlyAdmins { delete i256s[key]; }
 
-    // 2.5. Методы чтения и записи: Булевы значения и адреса
-    /**
-     * @notice Получение логического флага (bool) по ключу
-     */
+    // 2.5. Методы чтения, записи и очистки: Булевы значения и адреса
     function getBool(bytes32 key) external view returns (bool) { return bools[key]; }
-
-    /**
-     * @notice Запись логического флага (bool)
-     */
     function setBool(bytes32 key, bool val) external onlyAdmins { bools[key] = val; }
+    function trimBool(bytes32 key) external onlyAdmins { delete bools[key]; }
 
-    /**
-     * @notice Получение адреса кошелька или контракта по ключу
-     */
     function getAddress(bytes32 key) external view returns (address) { return addrs[key]; }
-
-    /**
-     * @notice Запись адреса кошелька или контракта
-     */
     function setAddress(bytes32 key, address val) external onlyAdmins { addrs[key] = val; }
+    function trimAddress(bytes32 key) external onlyAdmins { delete addrs[key]; }
 
-    // 2.6. Методы чтения и записи: Фиксированные байты
-    /**
-     * @notice Получение 1-байтового значения по ключу
-     */
+    // 2.6. Методы чтения, записи и очистки: Фиксированные байты
     function getBytes1(bytes32 key) external view returns (bytes1) { return b1s[key]; }
-
-    /**
-     * @notice Запись 1-байтового значения
-     */
     function setBytes1(bytes32 key, bytes1 val) external onlyAdmins { b1s[key] = val; }
+    function trimBytes1(bytes32 key) external onlyAdmins { delete b1s[key]; }
 
-    /**
-     * @notice Получение 4-байтового значения по ключу (хеш селектора функции)
-     */
     function getBytes4(bytes32 key) external view returns (bytes4) { return b4s[key]; }
-
-    /**
-     * @notice Запись 4-байтового значения
-     */
     function setBytes4(bytes32 key, bytes4 val) external onlyAdmins { b4s[key] = val; }
+    function trimBytes4(bytes32 key) external onlyAdmins { delete b4s[key]; }
 
-    /**
-     * @notice Получение 8-байтового значения по ключу
-     */
     function getBytes8(bytes32 key) external view returns (bytes8) { return b8s[key]; }
-
-    /**
-     * @notice Запись 8-байтового значения
-     */
     function setBytes8(bytes32 key, bytes8 val) external onlyAdmins { b8s[key] = val; }
+    function trimBytes8(bytes32 key) external onlyAdmins { delete b8s[key]; }
 
-    /**
-     * @notice Получение 16-байтового значения по ключу (UUID)
-     */
     function getBytes16(bytes32 key) external view returns (bytes16) { return b16s[key]; }
-
-    /**
-     * @notice Запись 16-байтового значения
-     */
     function setBytes16(bytes32 key, bytes16 val) external onlyAdmins { b16s[key] = val; }
+    function trimBytes16(bytes32 key) external onlyAdmins { delete b16s[key]; }
 
-    // 2.7. Методы чтения и записи: Динамические строки и произвольные байты (BLOBs)
-    /**
-     * @notice Получение текстовой строки по ключу (имена игроков, описания, JSON)
-     */
+    // 2.7. Методы чтения, записи и очистки: Динамические строки и произвольные байты (BLOBs)
     function getString(bytes32 key) external view returns (string memory) { return strings[key]; }
-
-    /**
-     * @notice Запись текстовой строки
-     */
     function setString(bytes32 key, string calldata val) external onlyAdmins { strings[key] = val; }
+    function trimString(bytes32 key) external onlyAdmins { delete strings[key]; }
 
-    /**
-     * @notice Получение динамического массива байт (BLOB) произвольного размера
-     */
     function getBlob(bytes32 key) external view returns (bytes memory) { return blobs[key]; }
-
-    /**
-     * @notice Запись динамического массива байт (BLOB) произвольного размера
-     */
     function setBlob(bytes32 key, bytes calldata val) external onlyAdmins { blobs[key] = val; }
+    function trimBlob(bytes32 key) external onlyAdmins { delete blobs[key]; }
 
     // ========================================================================
     // ========================================================================
     // === БЛОК 3: LOW-LEVEL SLOTS (DIAMOND / ASSEMBLY SLOAD & SSTORE)     ===
     // ========================================================================
     // ========================================================================
+    // Архитектурное примечание по безопасности:
+    // Диапазон RESERVED_SLOTS (первые 1000 слотов) гарантированно защищает критические
+    // скалярные переменные: слот 0 (nextMain) и слот 1 (superAdmin).
+    // Осознанный архитектурный компромисс: скомпрометированный или вредоносный админ-модуль
+    // за счет прямого доступа к физической памяти (Yul sstore) потенциально может вычислить
+    // хеш маппинга и дописать адрес в allowedAdmins. Однако он ни при каких условиях не способен
+    // изменить или перехватить superAdmin (слот 1). Это не критично: верховная власть
+    // и управление сменой поколений хранилища остаются монопольно за SuperAdmin.
 
     // 3.1. Методы прямого чтения и записи в слоты EVM
+    // Примечание: размеры массивов в пакетных операциях со слотами также намеренно не лимитируются
+    // ради максимальной экономии газа и свободы расширения модулей.
     /**
      * @notice Прямое чтение физического слота памяти EVM
      * @param slot 32-байтный номер слота storage
@@ -664,11 +566,12 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Установка адреса следующего поколения Main (наследника)
+     * @dev Может обновляться действующим superAdmin до момента сжигания superAdmin на 0x...dEaD.
+     * После сжигания superAdmin вызов становится недостижим навсегда.
      * @param _nextMain Адрес контракта-наследника Main
      */
     function setNextMain(address _nextMain) external onlySuperAdmin {
         require(_nextMain != address(0), "Main: invalid nextMain address");
-        require(nextMain == address(0), "Main: nextMain is already locked");
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
     }
