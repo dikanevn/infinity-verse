@@ -63,12 +63,14 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const lastTouchDistRef = useRef<number | null>(null);
   const touch2StartCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Кнопка прицела центрирует камеру прямо на игроке и возвращает фокус на него
+  // Кнопка прицела центрирует камеру прямо на игроке, сбрасывает масштаб к базовому (0.85) и возвращает фокус на него
   const handleResetToPlayer = () => {
+    const defaultScale = 0.85;
+    setScale(defaultScale);
     if (player?.exists) {
       setPosition({
-        x: -player.x * CELL_PITCH * scale,
-        y: player.y * CELL_PITCH * scale
+        x: -player.x * CELL_PITCH * defaultScale,
+        y: player.y * CELL_PITCH * defaultScale
       });
     } else {
       setPosition({ x: 0, y: 0 });
