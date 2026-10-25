@@ -29,7 +29,6 @@ contract InfinityVerse_Main_Ga_1 {
     // ========================================================================
     // ИЕРАРХИЯ ПОКОЛЕНИЙ И АДМИНИСТРИРОВАНИЕ
     // ========================================================================
-    uint64 public immutable deployedAt;
     address public immutable prevMain;
 
     address public nextMain;
@@ -144,7 +143,6 @@ contract InfinityVerse_Main_Ga_1 {
 
         admin = msg.sender;
         prevMain = _prevMain;
-        deployedAt = uint64(block.timestamp);
 
         // Предоставляем администратору прямые права в allowedContracts с рождения хранилища
         allowedContracts[admin] = true;
