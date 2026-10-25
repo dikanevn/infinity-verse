@@ -142,13 +142,6 @@ contract InfinityVerse_Main_Ga_1 {
      * @param _account Адрес администратора или модуля
      */
     function getAdminInfo(address _account) public view returns (AdminInfo memory info) {
-        if (_account == superAdmin) {
-            info.isActive = true;
-            info.permissions = PERM_ALL;
-            info.role = 255;
-            return info;
-        }
-
         uint256 packed = _readAdminSlot(_account);
         uint8 perms = uint8(packed);
         uint48 validFrom = uint48(packed >> 16);
@@ -159,9 +152,9 @@ contract InfinityVerse_Main_Ga_1 {
             && (block.timestamp >= validFrom)
             && (validUntil == 0 || block.timestamp <= validUntil);
 
-        info.isActive = active;
-        info.permissions = perms;
-        info.role = uint8(packed >> 8);
+        info.isActive = (_account == superAdmin) ? true : active;
+        info.permissions = (_account == superAdmin) ? PERM_ALL : perms;
+        info.role = (_account == superAdmin) ? 255 : uint8(packed >> 8);
         info.validFrom = validFrom;
         info.validUntil = validUntil;
         info.listIndex = idxPlusOne > 0 ? idxPlusOne - 1 : 0;
@@ -646,6 +639,7 @@ contract InfinityVerse_Main_Ga_1 {
     ) external onlySuperAdmin {
         require(adminAddress != address(0), "Main: zero address");
         require(perms != 0, "Main: empty permissions");
+        require(validUntil == 0 || validUntil >= validFrom, "Main: invalid time range");
 
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
         uint256 idxPlusOne;

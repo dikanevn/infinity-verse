@@ -1,8 +1,8 @@
 pragma solidity 0.8.20;
 interface IInfinityVerse_PrevMain {
-    function admin() external view returns (address);
+    function superAdmin() external view returns (address);
     function nextMain() external view returns (address);
-    function getAllowedContracts() external view returns (address[] memory);
+    function getAllowedAdmins() external view returns (address[] memory);
 }
 contract InfinityVerse_Main_Ga_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Ga-1";
@@ -69,12 +69,6 @@ contract InfinityVerse_Main_Ga_1 {
         _;
     }
     function getAdminInfo(address _account) public view returns (AdminInfo memory info) {
-        if (_account == superAdmin) {
-            info.isActive = true;
-            info.permissions = PERM_ALL;
-            info.role = 255;
-            return info;
-        }
         uint256 packed = _readAdminSlot(_account);
         uint8 perms = uint8(packed);
         uint48 validFrom = uint48(packed >> 16);
@@ -83,9 +77,9 @@ contract InfinityVerse_Main_Ga_1 {
         bool active = (perms != 0)
             && (block.timestamp >= validFrom)
             && (validUntil == 0 || block.timestamp <= validUntil);
-        info.isActive = active;
-        info.permissions = perms;
-        info.role = uint8(packed >> 8);
+        info.isActive = (_account == superAdmin) ? true : active;
+        info.permissions = (_account == superAdmin) ? PERM_ALL : perms;
+        info.role = (_account == superAdmin) ? 255 : uint8(packed >> 8);
         info.validFrom = validFrom;
         info.validUntil = validUntil;
         info.listIndex = idxPlusOne > 0 ? idxPlusOne - 1 : 0;
@@ -102,11 +96,11 @@ contract InfinityVerse_Main_Ga_1 {
     }
     constructor(address _prevMain) {
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
-            address prevAdmin = IInfinityVerse_PrevMain(_prevMain).admin();
+            address prevAdmin = IInfinityVerse_PrevMain(_prevMain).superAdmin();
             require(
                 prevAdmin == 0x000000000000000000000000000000000000dEaD, "error");
             require(
-                IInfinityVerse_PrevMain(_prevMain).getAllowedContracts().length == 0, "error");
+                IInfinityVerse_PrevMain(_prevMain).getAllowedAdmins().length == 0, "error");
             require(
                 IInfinityVerse_PrevMain(_prevMain).nextMain() == address(this), "error");
         }
@@ -341,6 +335,7 @@ contract InfinityVerse_Main_Ga_1 {
     ) external onlySuperAdmin {
         require(adminAddress != address(0), "error");
         require(perms != 0, "error");
+        require(validUntil == 0 || validUntil >= validFrom, "error");
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
         uint256 idxPlusOne;
         assembly {
@@ -402,9 +397,6 @@ contract InfinityVerse_Main_Ga_1 {
         }
         return list;
     }
-    function getAllowedContracts() external view returns (address[] memory) {
-        return getAllowedAdmins();
-    }
     function setNextMain(address _nextMain) external onlySuperAdmin {
         require(_nextMain != address(0), "error");
         nextMain = _nextMain;
@@ -453,8 +445,5 @@ contract InfinityVerse_Main_Ga_1 {
         }
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
         superAdmin = newSuperAdmin;
-    }
-    function admin() external view returns (address) {
-        return superAdmin;
     }
 }
