@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 interface IInfinityVerse_PrevMain {
     function admin() external view returns (address);
@@ -25,6 +25,7 @@ contract InfinityVerse_Main_Ga_1 {
     string public constant EPOCH = "Ga";
     uint256 public constant GENERATION = 1;
     string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
+    uint256 public constant RESERVED_SLOTS = 1000;
 
     // ========================================================================
     // ИЕРАРХИЯ ПОКОЛЕНИЙ И СИСТЕМА ДОСТУПА
@@ -48,10 +49,7 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     modifier onlyAdmins() {
-        require(
-            allowedAdmins[msg.sender] || msg.sender == superAdmin,
-            "Main: caller is not an allowed admin or superAdmin"
-        );
+        require(allowedAdmins[msg.sender], "Main: caller is not an allowed admin");
         _;
     }
 
@@ -454,10 +452,7 @@ contract InfinityVerse_Main_Ga_1 {
     // ========================================================================
     // ========================================================================
 
-    // 3.1. События прямых слотов
-    event SlotWritten(bytes32 indexed slot, bytes32 value);
-
-    // 3.2. Методы прямого чтения и записи в слоты EVM
+    // 3.1. Методы прямого чтения и записи в слоты EVM
     /**
      * @notice Прямое чтение физического слота памяти EVM
      * @param slot 32-байтный номер слота storage
@@ -475,12 +470,12 @@ contract InfinityVerse_Main_Ga_1 {
      * @param val Записываемое 32-байтное значение
      */
     function writeSlot(bytes32 slot, bytes32 val) external onlyAdmins {
+        require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
         assembly {
             sstore(slot, val)
         }
-        emit SlotWritten(slot, val);
     }
-    /**
+
     /**
      * @notice Пакетное чтение произвольных физических слотов EVM через Yul
      * @param slots Массив номеров слотов
@@ -502,7 +497,7 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Пакетная запись в произвольные физические слоты EVM через Yul
-     * @param slots Массив номеров слотов
+     * @param slots Массив номеров слотов (каждый должен быть >= RESERVED_SLOTS)
      * @param vals Массив 32-байтных значений
      */
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlyAdmins {
@@ -510,6 +505,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint256 len = slots.length;
         for (uint256 i = 0; i < len; i++) {
             bytes32 slot = slots[i];
+            require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
             bytes32 val = vals[i];
             assembly {
                 sstore(slot, val)
@@ -558,10 +554,11 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Последовательная потоковая запись в непрерывные физические слоты памяти EVM через Yul
-     * @param baseSlot Начальный физический слот
+     * @param baseSlot Начальный физический слот (должен быть >= RESERVED_SLOTS)
      * @param vals Массив значений для записи подряд
      */
     function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlyAdmins {
+        require(uint256(baseSlot) >= RESERVED_SLOTS, "Main: baseSlot is in reserved range");
         uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
         for (uint256 i = 0; i < len; i++) {
@@ -575,9 +572,10 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Очистка физического слота EVM (TRIM / sstore zero) с возвратом газа
-     * @param slot Физический слот памяти
+     * @param slot Физический слот памяти (должен быть >= RESERVED_SLOTS)
      */
     function trimSlot(bytes32 slot) external onlyAdmins {
+        require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
         assembly {
             sstore(slot, 0)
         }
@@ -585,12 +583,13 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Пакетная очистка массива физических слотов (TRIM Slot Batch) с возвратом газа
-     * @param slots Массив физических слотов памяти
+     * @param slots Массив физических слотов памяти (каждый должен быть >= RESERVED_SLOTS)
      */
     function trimSlotBatch(bytes32[] calldata slots) external onlyAdmins {
         uint256 len = slots.length;
         for (uint256 i = 0; i < len; i++) {
             bytes32 slot = slots[i];
+            require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
             assembly {
                 sstore(slot, 0)
             }
@@ -633,6 +632,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param adminAddress Адрес отзываемого администратора или контракта
      */
     function disallowAdmin(address adminAddress) external onlySuperAdmin {
+        require(adminAddress != superAdmin, "Main: cannot disallow current superAdmin directly");
         require(allowedAdmins[adminAddress], "Main: admin is not authorized");
         allowedAdmins[adminAddress] = false;
         _removeAllowedAdmin(adminAddress);
@@ -670,25 +670,41 @@ contract InfinityVerse_Main_Ga_1 {
         require(_nextMain != address(0), "Main: invalid nextMain address");
         require(nextMain == address(0), "Main: nextMain is already locked");
         nextMain = _nextMain;
-       
+        emit NextMainSet(_nextMain);
     }
 
     /**
      * @notice Передача прав главного администратора (SuperAdmin) на новый адрес
      * @dev При финализации миграции передается на 0x...dEaD.
      * Защита запрещает сжечь админа, если список администраторов не пуст или nextMain не задан!
+     * При смене текущий SuperAdmin автоматически удаляется из allowedAdmins, а новый добавляется.
      * @param newSuperAdmin Адрес нового главного администратора
      */
     function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
         require(newSuperAdmin != address(0), "Main: new superAdmin cannot be zero");
         require(newSuperAdmin != superAdmin, "Main: address is already superAdmin");
 
+        // 1. Автоматически отзываем права у предыдущего SuperAdmin
+        if (allowedAdmins[superAdmin]) {
+            allowedAdmins[superAdmin] = false;
+            _removeAllowedAdmin(superAdmin);
+            emit AdminDisallowed(superAdmin);
+        }
+
+        // 2. Если финализируем поколение и сжигаем на dEaD:
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
             require(nextMain != address(0), "Main: lock nextMain before burning admin");
             require(
                 allowedAdminsList.length == 0,
                 "Main: revoke all admins before burning superAdmin"
             );
+        } else {
+            // 3. Если передаем новому SuperAdmin — вносим его в общий реестр админов
+            if (!allowedAdmins[newSuperAdmin]) {
+                allowedAdmins[newSuperAdmin] = true;
+                allowedAdminsList.push(newSuperAdmin);
+                emit AdminAllowed(newSuperAdmin);
+            }
         }
 
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
