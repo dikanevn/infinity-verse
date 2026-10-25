@@ -88,8 +88,38 @@ contract InfinityVerse_Main_Ga_1 {
         _;
     }
 
+    /**
+     * @dev Единая внутренняя проверка прав доступа.
+     * superAdmin всегда обладает абсолютным доступом.
+     * Для остальных проверяются битовая маска прав и временные рамки действия.
+     */
+    function _checkAdmin(address _caller, uint8 requiredPerm) internal view {
+        if (_caller == superAdmin) return;
+        uint256 packed;
+        assembly {
+            packed := sload(or(ADMIN_SLOT_PREFIX, _caller))
+        }
+        require((uint8(packed) & requiredPerm) == requiredPerm, "Main: insufficient permissions");
+        require(block.timestamp >= uint48(packed >> 16), "Main: rights not active yet");
+        uint64 until = uint64(packed >> 64);
+        require(until == 0 || block.timestamp <= until, "Main: rights expired");
+    }
+
+    /**
+     * @notice Базовый модификатор для обычных администраторов и логических модулей.
+     * @dev Требует права PERM_STORAGE (Блок 1 Raw Disk и Блок 2 Eternal Storage).
+     */
     modifier onlyAdmins() {
-        require(_isAdmin(msg.sender), "Main: caller is not an allowed admin");
+        _checkAdmin(msg.sender, PERM_STORAGE);
+        _;
+    }
+
+    /**
+     * @notice Модификатор для администраторов с доступом к физическим слотам памяти EVM.
+     * @dev Требует права PERM_SLOTS (Блок 3 Low-Level Yul Slots).
+     */
+    modifier onlySlotAdmins() {
+        _checkAdmin(msg.sender, PERM_SLOTS);
         _;
     }
 
