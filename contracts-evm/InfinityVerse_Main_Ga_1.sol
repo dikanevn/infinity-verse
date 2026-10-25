@@ -2,9 +2,9 @@
 pragma solidity 0.8.20;
 
 interface IInfinityVerse_PrevMain {
-    function admin() external view returns (address);
+    function superAdmin() external view returns (address);
     function nextMain() external view returns (address);
-    function getAllowedContracts() external view returns (address[] memory);
+    function getAllowedAdmins() external view returns (address[] memory);
 }
 
 /**
@@ -190,7 +190,7 @@ contract InfinityVerse_Main_Ga_1 {
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
             // Проверка запечатывания предыдущего поколения:
             // 1. Главный админ старого контракта должен быть сожжен на Dead-адрес
-            address prevAdmin = IInfinityVerse_PrevMain(_prevMain).admin();
+            address prevAdmin = IInfinityVerse_PrevMain(_prevMain).superAdmin();
             require(
                 prevAdmin == 0x000000000000000000000000000000000000dEaD,
                 "Main: previous admin is not burned (not dead)"
@@ -198,7 +198,7 @@ contract InfinityVerse_Main_Ga_1 {
 
             // 2. Все модули и администраторы старого контракта должны быть отключены
             require(
-                IInfinityVerse_PrevMain(_prevMain).getAllowedContracts().length == 0,
+                IInfinityVerse_PrevMain(_prevMain).getAllowedAdmins().length == 0,
                 "Main: previous generation allowed admins list is not empty"
             );
 
@@ -731,11 +731,6 @@ contract InfinityVerse_Main_Ga_1 {
         return list;
     }
 
-    // Сохраняем для обратной совместимости с интерфейсом IInfinityVerse_PrevMain
-    function getAllowedContracts() external view returns (address[] memory) {
-        return getAllowedAdmins();
-    }
-
     /**
      * @notice Установка адреса следующего поколения Main (наследника)
      * @dev Может обновляться действующим superAdmin до момента сжигания superAdmin на 0x...dEaD.
@@ -805,10 +800,5 @@ contract InfinityVerse_Main_Ga_1 {
 
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
         superAdmin = newSuperAdmin;
-    }
-
-    // Обратная совместимость для считывания админа предыдущими поколениями
-    function admin() external view returns (address) {
-        return superAdmin;
     }
 }
