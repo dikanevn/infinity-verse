@@ -32,14 +32,11 @@ contract InfinityVerse_Main_Ga_1 {
     address public immutable prevMain;
 
     address public nextMain;
-    address public admin;
+    address public superAdmin;
 
-    // Для обратной совместимости с логическими модулями ранних версий
-    address public contractAAA;
-
-    // Реестр авторизованных исполнителей логики (AAA, BBB, CCC...)
-    mapping(address => bool) public allowedContracts;
-    address[] public allowedContractsList;
+    // Реестр авторизованных администраторов / модулей логики (AAA, BBB, CCC, суб-админы)
+    mapping(address => bool) public allowedAdmins;
+    address[] public allowedAdminsList;
 
     // ========================================================================
     // 1. RAW DISK (Основной режим: 32-байтные секторы bytes32 => bytes32)
@@ -90,24 +87,23 @@ contract InfinityVerse_Main_Ga_1 {
     event BlobSet(bytes32 indexed key, uint256 length);
     event SlotWritten(bytes32 indexed slot, bytes32 value);
 
-    event ContractAAASet(address indexed newContractAAA);
-    event ContractAllowed(address indexed contractAddress);
-    event ContractDisallowed(address indexed contractAddress);
-    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+    event AdminAllowed(address indexed adminAddress);
+    event AdminDisallowed(address indexed adminAddress);
+    event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
     event NextMainSet(address indexed nextMainAddress);
 
     // ========================================================================
     // МОДИФИКАТОРЫ
     // ========================================================================
-    modifier onlyAdmin() {
-        require(msg.sender == admin, unicode"Main: Вызов разрешен только администратору");
+    modifier onlySuperAdmin() {
+        require(msg.sender == superAdmin, unicode"Main: Вызов разрешен только главному администратору");
         _;
     }
 
     modifier onlyAllowed() {
         require(
-            allowedContracts[msg.sender] || msg.sender == contractAAA,
-            unicode"Main: Вызов разрешен только авторизованному контракту логики"
+            allowedAdmins[msg.sender] || msg.sender == superAdmin,
+            unicode"Main: Вызов разрешен только авторизованному администратору или модулю"
         );
         _;
     }
@@ -115,17 +111,18 @@ contract InfinityVerse_Main_Ga_1 {
     constructor(address _prevMain) {
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
             // Проверка запечатывания предыдущего поколения:
-            // 1. Админ старого контракта должен быть сожжен на Dead-адрес
+            // 1. Главный админ старого контракта должен быть сожжен на Dead-адрес
+            address prevAdmin = IInfinityVerse_PrevMain(_prevMain).admin();
             require(
-                IInfinityVerse_PrevMain(_prevMain).admin() == 0x000000000000000000000000000000000000dEaD,
+                prevAdmin == 0x000000000000000000000000000000000000dEaD,
                 unicode"Main: Админ предыдущего поколения еще не сожжен (не dead)"
             );
 
-            // 2. Все контракты логики старого контракта должны быть отключены
+            // 2. Все модули и администраторы старого контракта должны быть отключены
             try IInfinityVerse_PrevMain(_prevMain).getAllowedContracts() returns (address[] memory prevList) {
                 require(
                     prevList.length == 0,
-                    unicode"Main: Список логических контрактов предыдущего поколения не пуст"
+                    unicode"Main: Список администраторов предыдущего поколения не пуст"
                 );
             } catch {
                 require(
@@ -141,13 +138,13 @@ contract InfinityVerse_Main_Ga_1 {
             );
         }
 
-        admin = msg.sender;
+        superAdmin = msg.sender;
         prevMain = _prevMain;
 
-        // Предоставляем администратору прямые права в allowedContracts с рождения хранилища
-        allowedContracts[admin] = true;
-        allowedContractsList.push(admin);
-        emit ContractAllowed(admin);
+        // Предоставляем супер-администратору прямые права в allowedAdmins с рождения хранилища
+        allowedAdmins[superAdmin] = true;
+        allowedAdminsList.push(superAdmin);
+        emit AdminAllowed(superAdmin);
     }
 
     // ========================================================================
@@ -451,70 +448,46 @@ contract InfinityVerse_Main_Ga_1 {
     // ========================================================================
 
     /**
-     * @notice Установка адреса контракта логики AAA (или авто-регистрация вызовом из самого AAA)
-     * @param _contractAAA Адрес нового развернутого контракта логики AAA
+     * @notice Авторизация администратора или модуля логики (AAA, BBB, CCC и др.)
+     * @param adminAddress Адрес авторизуемого администратора или контракта
      */
-    function setContractAAA(address _contractAAA) external {
-        require(
-            msg.sender == admin || (tx.origin == admin && msg.sender == _contractAAA),
-            unicode"Main: Вызов разрешен только администратору"
-        );
-
-        if (contractAAA != address(0) && allowedContracts[contractAAA]) {
-            allowedContracts[contractAAA] = false;
-            _removeAllowedContract(contractAAA);
-            emit ContractDisallowed(contractAAA);
-        }
-
-        contractAAA = _contractAAA;
-        if (_contractAAA != address(0) && !allowedContracts[_contractAAA]) {
-            allowedContracts[_contractAAA] = true;
-            allowedContractsList.push(_contractAAA);
-            emit ContractAllowed(_contractAAA);
-        }
-
-        emit ContractAAASet(_contractAAA);
+    function allowAdmin(address adminAddress) external onlySuperAdmin {
+        require(adminAddress != address(0), unicode"Main: Адрес не может быть нулевым");
+        require(!allowedAdmins[adminAddress], unicode"Main: Адрес уже авторизован");
+        allowedAdmins[adminAddress] = true;
+        allowedAdminsList.push(adminAddress);
+        emit AdminAllowed(adminAddress);
     }
 
     /**
-     * @notice Авторизация дополнительного контракта логики (BBB, CCC и др.)
-     * @param logicContract Адрес контракта игровой логики
+     * @notice Отзыв авторизации у администратора или модуля логики
+     * @param adminAddress Адрес отзываемого администратора или контракта
      */
-    function allowContract(address logicContract) external onlyAdmin {
-        require(logicContract != address(0), unicode"Main: Адрес логики не может быть нулевым");
-        require(!allowedContracts[logicContract], unicode"Main: Контракт уже авторизован");
-        allowedContracts[logicContract] = true;
-        allowedContractsList.push(logicContract);
-        emit ContractAllowed(logicContract);
+    function disallowAdmin(address adminAddress) external onlySuperAdmin {
+        require(allowedAdmins[adminAddress], unicode"Main: Адрес не авторизован");
+        allowedAdmins[adminAddress] = false;
+        _removeAllowedAdmin(adminAddress);
+        emit AdminDisallowed(adminAddress);
     }
 
     /**
-     * @notice Отзыв авторизации у контракта логики
-     * @param logicContract Адрес отзываемого контракта
+     * @notice Получение полного списка всех авторизованных администраторов / модулей
      */
-    function disallowContract(address logicContract) external onlyAdmin {
-        require(allowedContracts[logicContract], unicode"Main: Контракт не авторизован");
-        allowedContracts[logicContract] = false;
-        _removeAllowedContract(logicContract);
-        if (contractAAA == logicContract) {
-            contractAAA = address(0);
-        }
-        emit ContractDisallowed(logicContract);
+    function getAllowedAdmins() external view returns (address[] memory) {
+        return allowedAdminsList;
     }
 
-    /**
-     * @notice Получение полного списка всех авторизованных контрактов логики
-     */
+    // Сохраняем для обратной совместимости с интерфейсом IInfinityVerse_PrevMain
     function getAllowedContracts() external view returns (address[] memory) {
-        return allowedContractsList;
+        return allowedAdminsList;
     }
 
-    function _removeAllowedContract(address logicContract) internal {
-        uint256 len = allowedContractsList.length;
+    function _removeAllowedAdmin(address adminAddress) internal {
+        uint256 len = allowedAdminsList.length;
         for (uint256 i = 0; i < len; i++) {
-            if (allowedContractsList[i] == logicContract) {
-                allowedContractsList[i] = allowedContractsList[len - 1];
-                allowedContractsList.pop();
+            if (allowedAdminsList[i] == adminAddress) {
+                allowedAdminsList[i] = allowedAdminsList[len - 1];
+                allowedAdminsList.pop();
                 break;
             }
         }
@@ -524,7 +497,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @notice Установка адреса следующего поколения Main (наследника)
      * @param _nextMain Адрес контракта-наследника Main
      */
-    function setNextMain(address _nextMain) external onlyAdmin {
+    function setNextMain(address _nextMain) external onlySuperAdmin {
         require(_nextMain != address(0), unicode"Main: Некорректный адрес следующего Main");
         require(nextMain == address(0), unicode"Main: Следующий Main уже зафиксирован");
         nextMain = _nextMain;
@@ -532,24 +505,29 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Передача прав администратора на новый адрес
+     * @notice Передача прав главного администратора (SuperAdmin) на новый адрес
      * @dev При финализации миграции передается на 0x...dEaD.
-     * Защита запрещает сжечь админа, если логика не отключена или nextMain не задан!
-     * @param newAdmin Адрес нового администратора
+     * Защита запрещает сжечь админа, если список администраторов не пуст или nextMain не задан!
+     * @param newSuperAdmin Адрес нового главного администратора
      */
-    function changeAdmin(address newAdmin) external onlyAdmin {
-        require(newAdmin != address(0), unicode"Main: Новый админ не может быть нулевым адресом");
-        require(newAdmin != admin, unicode"Main: Адрес уже является текущим админом");
+    function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
+        require(newSuperAdmin != address(0), unicode"Main: Новый супер-админ не может быть нулевым адресом");
+        require(newSuperAdmin != superAdmin, unicode"Main: Адрес уже является текущим супер-админом");
 
-        if (newAdmin == 0x000000000000000000000000000000000000dEaD) {
+        if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
             require(nextMain != address(0), unicode"Main: Сначала зафиксируйте nextMain перед сжиганием админа");
             require(
-                contractAAA == address(0) && allowedContractsList.length == 0,
-                unicode"Main: Отключите все контракты логики (список должен быть пуст) перед сжиганием админа"
+                allowedAdminsList.length == 0,
+                unicode"Main: Отключите всех администраторов (список должен быть пуст) перед сжиганием"
             );
         }
 
-        emit AdminChanged(admin, newAdmin);
-        admin = newAdmin;
+        emit SuperAdminChanged(superAdmin, newSuperAdmin);
+        superAdmin = newSuperAdmin;
+    }
+
+    // Обратная совместимость для считывания админа предыдущими поколениями
+    function admin() external view returns (address) {
+        return superAdmin;
     }
 }
