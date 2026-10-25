@@ -635,5 +635,25 @@ contract InfinityVerse_Main_Ga_1 {
     function admin() external view returns (address) {
         return superAdmin;
     }
+
+    // =========================================================================
+    // БЛОК 5: СТАНДАРТ ОБНАРУЖЕНИЯ ИНТЕРФЕЙСОВ (ERC-165)
+    // =========================================================================
+
+    /**
+     * @notice Проверка поддерживаемых стандартов и интерфейсов (ERC-165)
+     * @dev Позволяет внешним контрактам, индексаторам и dApp мгновенно проверять возможности Main:
+     *      - 0x01ffc9a7: ERC-165 (supportsInterface)
+     *      - 0x93309a63: Raw Disk SSD Interface (чтение/запись секторов и батчей)
+     *      - 0x72017201: Метка поддержки ERC-7201 (Namespaced Storage Layout)
+     * @param interfaceId 4-байтный идентификатор запрашиваемого интерфейса
+     * @return true если интерфейс поддерживается контрактом
+     */
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == 0x01ffc9a7 // ERC-165
+            || interfaceId == 0x93309a63 // Raw Disk SSD Interface
+            || interfaceId == 0x72017201; // ERC-7201 Namespaced Storage marker
+    }
 }
+
 
