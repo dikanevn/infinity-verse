@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 interface IInfinityVerse_PrevMain {
     function superAdmin() external view returns (address);
     function nextMain() external view returns (address);
-    function getAllowedAdmins() external view returns (address[] memory);
+    function allowedAdminsCount() external view returns (uint256);
 }
 
 /**
@@ -191,7 +191,7 @@ contract InfinityVerse_Main_Ga_1 {
 
             // 2. Все модули и администраторы старого контракта должны быть отключены
             require(
-                IInfinityVerse_PrevMain(_prevMain).getAllowedAdmins().length == 0,
+                IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() == 0,
                 "Main: previous generation allowed admins list is not empty"
             );
 

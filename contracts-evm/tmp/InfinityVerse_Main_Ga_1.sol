@@ -2,7 +2,7 @@ pragma solidity 0.8.20;
 interface IInfinityVerse_PrevMain {
     function superAdmin() external view returns (address);
     function nextMain() external view returns (address);
-    function getAllowedAdmins() external view returns (address[] memory);
+    function allowedAdminsCount() external view returns (uint256);
 }
 contract InfinityVerse_Main_Ga_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Ga-1";
@@ -100,7 +100,7 @@ contract InfinityVerse_Main_Ga_1 {
             require(
                 prevAdmin == 0x000000000000000000000000000000000000dEaD, "error");
             require(
-                IInfinityVerse_PrevMain(_prevMain).getAllowedAdmins().length == 0, "error");
+                IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() == 0, "error");
             require(
                 IInfinityVerse_PrevMain(_prevMain).nextMain() == address(this), "error");
         }
