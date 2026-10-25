@@ -42,9 +42,12 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Смещение поля
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  const isFirstMountRef = useRef<boolean>(true);
+
   // Автоматически удерживаем камеру на игроке при начальной загрузке и ходах
   useEffect(() => {
-    if (player?.exists) {
+    if (player?.exists && isFirstMountRef.current) {
+      isFirstMountRef.current = false;
       setPosition({
         x: -player.x * CELL_PITCH * scale,
         y: player.y * CELL_PITCH * scale
@@ -57,6 +60,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const posStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hasMovedRef = useRef<boolean>(false);
+  const lastTouchDistRef = useRef<number | null>(null);
 
   // Кнопка прицела центрирует камеру прямо на игроке и возвращает фокус на него
   const handleResetToPlayer = () => {
@@ -111,13 +115,21 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     isDraggingRef.current = false;
   };
 
-  // Drag пальцем
+  // Тач-жесты: Drag 1 пальцем + Pinch-to-zoom 2 пальцами
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
       hasMovedRef.current = false;
       dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       posStartRef.current = { ...position };
+      lastTouchDistRef.current = null;
+    } else if (e.touches.length === 2) {
+      isDraggingRef.current = false;
+      hasMovedRef.current = true;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      lastTouchDistRef.current = dist;
     }
   };
 
@@ -132,16 +144,31 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         x: posStartRef.current.x + dx,
         y: posStartRef.current.y + dy
       });
+    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const ratio = newDist / lastTouchDistRef.current;
+      setScale((prev) => Math.min(2.5, Math.max(0.08, prev * ratio)));
+      lastTouchDistRef.current = newDist;
     }
   };
 
   const handleTouchEnd = () => {
     isDraggingRef.current = false;
+    lastTouchDistRef.current = null;
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+    setScale((prev) => Math.min(2.5, Math.max(0.08, prev * zoomFactor)));
   };
 
   return (
     <div
       ref={containerRef}
+      onWheel={handleWheel}
       onClick={handleBackgroundClick}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
