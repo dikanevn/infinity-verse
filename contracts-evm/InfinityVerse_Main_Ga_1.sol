@@ -29,7 +29,6 @@ contract InfinityVerse_Main_Ga_1 {
     // ========================================================================
     // ИЕРАРХИЯ ПОКОЛЕНИЙ И АДМИНИСТРИРОВАНИЕ
     // ========================================================================
-    uint256 public immutable generation;
     uint64 public immutable deployedAt;
     address public immutable prevMain;
 
@@ -114,7 +113,7 @@ contract InfinityVerse_Main_Ga_1 {
         _;
     }
 
-    constructor(uint256 _generation, address _prevMain) {
+    constructor(address _prevMain) {
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
             // Проверка запечатывания предыдущего поколения:
             // 1. Админ старого контракта должен быть сожжен на Dead-адрес
@@ -144,7 +143,6 @@ contract InfinityVerse_Main_Ga_1 {
         }
 
         admin = msg.sender;
-        generation = _generation;
         prevMain = _prevMain;
         deployedAt = uint64(block.timestamp);
 
