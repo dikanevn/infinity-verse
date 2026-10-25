@@ -173,15 +173,7 @@ contract InfinityVerse_Main_Ga_1 {
     mapping(bytes32 => string)  private strings;
     mapping(bytes32 => bytes)   private blobs;
 
-    // 2.2. РЎРѕР±С‹С‚РёСЏ Eternal Storage
-    event UintSet(bytes32 indexed key, uint256 value);
-    event IntSet(bytes32 indexed key, int256 value);
-    event BoolSet(bytes32 indexed key, bool value);
-    event AddressSet(bytes32 indexed key, address value);
-    event BytesSet(bytes32 indexed key);
-    event StringSet(bytes32 indexed key);
-    event BlobSet(bytes32 indexed key, uint256 length);
-
+    
     // 2.3. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р‘РµР·Р·РЅР°РєРѕРІС‹Рµ С†РµР»С‹Рµ (uint8 ... uint256)
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 8-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -195,7 +187,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param key 32-Р±Р°Р№С‚РЅС‹Р№ С…РµС€-РєР»СЋС‡
      * @param val Р—РЅР°С‡РµРЅРёРµ uint8
      */
-    function setUint8(bytes32 key, uint8 val) external onlyAdmins { u8s[key] = val; emit UintSet(key, val); }
+    function setUint8(bytes32 key, uint8 val) external onlyAdmins { u8s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 16-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -205,7 +197,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 16-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setUint16(bytes32 key, uint16 val) external onlyAdmins { u16s[key] = val; emit UintSet(key, val); }
+    function setUint16(bytes32 key, uint16 val) external onlyAdmins { u16s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 32-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -215,7 +207,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 32-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setUint32(bytes32 key, uint32 val) external onlyAdmins { u32s[key] = val; emit UintSet(key, val); }
+    function setUint32(bytes32 key, uint32 val) external onlyAdmins { u32s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 64-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ (С‚Р°Р№РјСЃС‚Р°РјРїС‹, Р±Р»РѕРєРё)
@@ -225,7 +217,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 64-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setUint64(bytes32 key, uint64 val) external onlyAdmins { u64s[key] = val; emit UintSet(key, val); }
+    function setUint64(bytes32 key, uint64 val) external onlyAdmins { u64s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 128-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -235,7 +227,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 128-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setUint128(bytes32 key, uint128 val) external onlyAdmins { u128s[key] = val; emit UintSet(key, val); }
+    function setUint128(bytes32 key, uint128 val) external onlyAdmins { u128s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ 256-Р±РёС‚РЅРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ (Р±Р°Р»Р°РЅСЃС‹, СЃС‡РµС‚С‡РёРєРё)
@@ -245,7 +237,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 256-Р±РёС‚РЅРѕРіРѕ Р±РµР·Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setUint256(bytes32 key, uint256 val) external onlyAdmins { u256s[key] = val; emit UintSet(key, val); }
+    function setUint256(bytes32 key, uint256 val) external onlyAdmins { u256s[key] = val; }
 
     // 2.4. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р—РЅР°РєРѕРІС‹Рµ С†РµР»С‹Рµ (int8 ... int256)
     /**
@@ -256,7 +248,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 8-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setInt8(bytes32 key, int8 val) external onlyAdmins { i8s[key] = val; emit IntSet(key, val); }
+    function setInt8(bytes32 key, int8 val) external onlyAdmins { i8s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 16-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -266,7 +258,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 16-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setInt16(bytes32 key, int16 val) external onlyAdmins { i16s[key] = val; emit IntSet(key, val); }
+    function setInt16(bytes32 key, int16 val) external onlyAdmins { i16s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 32-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ (РєРѕРѕСЂРґРёРЅР°С‚С‹ X, Y)
@@ -276,7 +268,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 32-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setInt32(bytes32 key, int32 val) external onlyAdmins { i32s[key] = val; emit IntSet(key, val); }
+    function setInt32(bytes32 key, int32 val) external onlyAdmins { i32s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 64-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -286,7 +278,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 64-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setInt64(bytes32 key, int64 val) external onlyAdmins { i64s[key] = val; emit IntSet(key, val); }
+    function setInt64(bytes32 key, int64 val) external onlyAdmins { i64s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 128-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -296,7 +288,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 128-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setInt128(bytes32 key, int128 val) external onlyAdmins { i128s[key] = val; emit IntSet(key, val); }
+    function setInt128(bytes32 key, int128 val) external onlyAdmins { i128s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 256-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р° РїРѕ РєР»СЋС‡Сѓ
@@ -306,7 +298,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 256-Р±РёС‚РЅРѕРіРѕ Р·РЅР°РєРѕРІРѕРіРѕ С‡РёСЃР»Р°
      */
-    function setInt256(bytes32 key, int256 val) external onlyAdmins { i256s[key] = val; emit IntSet(key, val); }
+    function setInt256(bytes32 key, int256 val) external onlyAdmins { i256s[key] = val; }
 
     // 2.5. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р‘СѓР»РµРІС‹ Р·РЅР°С‡РµРЅРёСЏ Рё Р°РґСЂРµСЃР°
     /**
@@ -317,7 +309,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ Р»РѕРіРёС‡РµСЃРєРѕРіРѕ С„Р»Р°РіР° (bool)
      */
-    function setBool(bytes32 key, bool val) external onlyAdmins { bools[key] = val; emit BoolSet(key, val); }
+    function setBool(bytes32 key, bool val) external onlyAdmins { bools[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ Р°РґСЂРµСЃР° РєРѕС€РµР»СЊРєР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р° РїРѕ РєР»СЋС‡Сѓ
@@ -327,7 +319,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ Р°РґСЂРµСЃР° РєРѕС€РµР»СЊРєР° РёР»Рё РєРѕРЅС‚СЂР°РєС‚Р°
      */
-    function setAddress(bytes32 key, address val) external onlyAdmins { addrs[key] = val; emit AddressSet(key, val); }
+    function setAddress(bytes32 key, address val) external onlyAdmins { addrs[key] = val; }
 
     // 2.6. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р¤РёРєСЃРёСЂРѕРІР°РЅРЅС‹Рµ Р±Р°Р№С‚С‹
     /**
@@ -338,7 +330,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 1-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
      */
-    function setBytes1(bytes32 key, bytes1 val) external onlyAdmins { b1s[key] = val; emit BytesSet(key); }
+    function setBytes1(bytes32 key, bytes1 val) external onlyAdmins { b1s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 4-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РєР»СЋС‡Сѓ (С…РµС€ СЃРµР»РµРєС‚РѕСЂР° С„СѓРЅРєС†РёРё)
@@ -348,7 +340,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 4-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
      */
-    function setBytes4(bytes32 key, bytes4 val) external onlyAdmins { b4s[key] = val; emit BytesSet(key); }
+    function setBytes4(bytes32 key, bytes4 val) external onlyAdmins { b4s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 8-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РєР»СЋС‡Сѓ
@@ -358,7 +350,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 8-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
      */
-    function setBytes8(bytes32 key, bytes8 val) external onlyAdmins { b8s[key] = val; emit BytesSet(key); }
+    function setBytes8(bytes32 key, bytes8 val) external onlyAdmins { b8s[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ 16-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РєР»СЋС‡Сѓ (UUID)
@@ -368,7 +360,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ 16-Р±Р°Р№С‚РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
      */
-    function setBytes16(bytes32 key, bytes16 val) external onlyAdmins { b16s[key] = val; emit BytesSet(key); }
+    function setBytes16(bytes32 key, bytes16 val) external onlyAdmins { b16s[key] = val; }
 
     // 2.7. РњРµС‚РѕРґС‹ С‡С‚РµРЅРёСЏ Рё Р·Р°РїРёСЃРё: Р”РёРЅР°РјРёС‡РµСЃРєРёРµ СЃС‚СЂРѕРєРё Рё РїСЂРѕРёР·РІРѕР»СЊРЅС‹Рµ Р±Р°Р№С‚С‹ (BLOBs)
     /**
@@ -379,7 +371,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ С‚РµРєСЃС‚РѕРІРѕР№ СЃС‚СЂРѕРєРё
      */
-    function setString(bytes32 key, string calldata val) external onlyAdmins { strings[key] = val; emit StringSet(key); }
+    function setString(bytes32 key, string calldata val) external onlyAdmins { strings[key] = val; }
 
     /**
      * @notice РџРѕР»СѓС‡РµРЅРёРµ РґРёРЅР°РјРёС‡РµСЃРєРѕРіРѕ РјР°СЃСЃРёРІР° Р±Р°Р№С‚ (BLOB) РїСЂРѕРёР·РІРѕР»СЊРЅРѕРіРѕ СЂР°Р·РјРµСЂР°
@@ -389,7 +381,7 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Р—Р°РїРёСЃСЊ РґРёРЅР°РјРёС‡РµСЃРєРѕРіРѕ РјР°СЃСЃРёРІР° Р±Р°Р№С‚ (BLOB) РїСЂРѕРёР·РІРѕР»СЊРЅРѕРіРѕ СЂР°Р·РјРµСЂР°
      */
-    function setBlob(bytes32 key, bytes calldata val) external onlyAdmins { blobs[key] = val; emit BlobSet(key, val.length); }
+    function setBlob(bytes32 key, bytes calldata val) external onlyAdmins { blobs[key] = val; }
 
     // ========================================================================
     // ========================================================================
@@ -484,7 +476,7 @@ contract InfinityVerse_Main_Ga_1 {
         require(_nextMain != address(0), unicode"Main: РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ Р°РґСЂРµСЃ СЃР»РµРґСѓСЋС‰РµРіРѕ Main");
         require(nextMain == address(0), unicode"Main: РЎР»РµРґСѓСЋС‰РёР№ Main СѓР¶Рµ Р·Р°С„РёРєСЃРёСЂРѕРІР°РЅ");
         nextMain = _nextMain;
-        emit NextMainSet(_nextMain);
+       
     }
 
     /**
