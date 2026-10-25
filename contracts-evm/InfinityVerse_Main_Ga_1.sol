@@ -96,10 +96,7 @@ contract InfinityVerse_Main_Ga_1 {
     // 1.1. Хранилище секторов (Сектор => 32 байта данных)
     mapping(bytes32 => bytes32) private disk;
 
-    // 1.2. События диска
-    event SectorWritten(bytes32 indexed sector, bytes32 data);
-
-    // 1.3. Методы чтения и записи диска
+    // 1.2. Методы чтения и записи диска
     /**
      * @notice Чтение одного 32-байтного сектора по ключу
      * @param sector 32-байтный хеш-адрес сектора
@@ -130,7 +127,6 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function writeSector(bytes32 sector, bytes32 data) external onlyAllowed {
         disk[sector] = data;
-        emit SectorWritten(sector, data);
     }
 
     /**
@@ -143,7 +139,6 @@ contract InfinityVerse_Main_Ga_1 {
         uint256 len = sectors.length;
         for (uint256 i = 0; i < len; i++) {
             disk[sectors[i]] = data[i];
-            emit SectorWritten(sectors[i], data[i]);
         }
     }
 
