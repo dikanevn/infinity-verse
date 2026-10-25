@@ -59,8 +59,23 @@ contract InfinityVerse_Main_Ga_1 {
     uint8 public constant PERM_SLOTS   = 2; // Бит 1: запись в Low-Level Yul Slots (Блок 3)
     uint8 public constant PERM_ALL     = 3; // Все права (1 | 2)
 
-    // Реестр авторизованных администраторов / модулей логики (AAA, BBB, CCC, суб-админы)
-    mapping(address => bool) public allowedAdmins;
+    /**
+     * @notice Структура распакованных данных администратора для вывода (View, RPC, UI)
+     */
+    struct AdminInfo {
+        bool isActive;       // Активен ли прямо сейчас с учетом времени и прав
+        uint8 permissions;   // Битовая маска прав (PERM_STORAGE, PERM_SLOTS)
+        uint8 role;          // Роль / ранг (0..255)
+        uint48 validFrom;    // Таймстамп старта действия прав
+        uint64 validUntil;   // Таймстамп истечения прав (0 = бессрочно)
+        uint64 listIndex;    // Индекс в массиве allowedAdminsList
+        uint8 paramA;        // Пользовательский модульный параметр A
+        uint8 paramB;        // Пользовательский модульный параметр B
+        uint16 paramC;       // Пользовательский модульный параметр C
+        uint32 paramD;       // Пользовательский модульный параметр D
+    }
+
+    // Реестр адресов администраторов для перечисления
     address[] public allowedAdminsList;
 
     event AdminAllowed(address indexed adminAddress);
@@ -74,8 +89,24 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     modifier onlyAdmins() {
-        require(allowedAdmins[msg.sender], "Main: caller is not an allowed admin");
+        require(_isAdmin(msg.sender), "Main: caller is not an allowed admin");
         _;
+    }
+
+    /**
+     * @dev Внутренняя быстрая проверка активности администратора
+     */
+    function _isAdmin(address _account) internal view returns (bool) {
+        if (_account == superAdmin) return true;
+        uint256 packed;
+        assembly {
+            packed := sload(or(ADMIN_SLOT_PREFIX, _account))
+        }
+        if (uint8(packed) == 0) return false;
+        if (block.timestamp < uint48(packed >> 16)) return false;
+        uint64 until = uint64(packed >> 64);
+        if (until != 0 && block.timestamp > until) return false;
+        return true;
     }
 
     constructor(address _prevMain) {
@@ -104,9 +135,14 @@ contract InfinityVerse_Main_Ga_1 {
         superAdmin = msg.sender;
         prevMain = _prevMain;
 
-        // Предоставляем супер-администратору прямые права в allowedAdmins с рождения хранилища
-        allowedAdmins[superAdmin] = true;
+        // Предоставляем супер-администратору прямые права в персональный слот с рождения хранилища
+        uint256 slot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
         allowedAdminsList.push(superAdmin);
+        // Упаковываем: PERM_ALL (3), role: 255, indexPlusOne: 1
+        uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(1) << 128);
+        assembly {
+            sstore(slot, packed)
+        }
         emit AdminAllowed(superAdmin);
     }
 
@@ -536,9 +572,19 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function allowAdmin(address adminAddress) external onlySuperAdmin {
         require(adminAddress != address(0), "Main: admin address cannot be zero");
-        require(!allowedAdmins[adminAddress], "Main: admin already authorized");
-        allowedAdmins[adminAddress] = true;
+        uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
+        uint256 currentPacked;
+        assembly {
+            currentPacked := sload(slot)
+        }
+        require(uint8(currentPacked) == 0, "Main: admin already authorized");
+        
         allowedAdminsList.push(adminAddress);
+        uint64 idxPlusOne = uint64(allowedAdminsList.length);
+        uint256 packed = uint256(PERM_STORAGE) | (uint256(idxPlusOne) << 128);
+        assembly {
+            sstore(slot, packed)
+        }
         emit AdminAllowed(adminAddress);
     }
 
@@ -548,8 +594,15 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function disallowAdmin(address adminAddress) external onlySuperAdmin {
         require(adminAddress != superAdmin, "Main: cannot disallow current superAdmin directly");
-        require(allowedAdmins[adminAddress], "Main: admin is not authorized");
-        allowedAdmins[adminAddress] = false;
+        uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
+        uint256 packed;
+        assembly {
+            packed := sload(slot)
+        }
+        require(uint8(packed) != 0, "Main: admin is not authorized");
+        assembly {
+            sstore(slot, 0)
+        }
         _removeAllowedAdmin(adminAddress);
         emit AdminDisallowed(adminAddress);
     }
@@ -601,8 +654,11 @@ contract InfinityVerse_Main_Ga_1 {
         require(newSuperAdmin != superAdmin, "Main: address is already superAdmin");
 
         // 1. Автоматически отзываем права у предыдущего SuperAdmin
-        if (allowedAdmins[superAdmin]) {
-            allowedAdmins[superAdmin] = false;
+        if (_isAdmin(superAdmin)) {
+            uint256 prevSlot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
+            assembly {
+                sstore(prevSlot, 0)
+            }
             _removeAllowedAdmin(superAdmin);
             emit AdminDisallowed(superAdmin);
         }
@@ -616,9 +672,14 @@ contract InfinityVerse_Main_Ga_1 {
             );
         } else {
             // 3. Если передаем новому SuperAdmin — вносим его в общий реестр админов
-            if (!allowedAdmins[newSuperAdmin]) {
-                allowedAdmins[newSuperAdmin] = true;
+            if (!_isAdmin(newSuperAdmin)) {
+                uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
                 allowedAdminsList.push(newSuperAdmin);
+                uint64 idxPlusOne = uint64(allowedAdminsList.length);
+                uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
+                assembly {
+                    sstore(newSlot, packed)
+                }
                 emit AdminAllowed(newSuperAdmin);
             }
         }
