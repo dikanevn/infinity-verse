@@ -493,10 +493,10 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Прямая запись в физический слот памяти EVM через Yul
-     * @param slot 32-байтный номер слота storage
+     * @param slot 32-байтный номер слота storage (должен быть >= RESERVED_SLOTS)
      * @param val Записываемое 32-байтное значение
      */
-    function writeSlot(bytes32 slot, bytes32 val) external onlyAdmins {
+    function writeSlot(bytes32 slot, bytes32 val) external onlySlotAdmins {
         require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
         assembly {
             sstore(slot, val)
@@ -527,7 +527,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param slots Массив номеров слотов (каждый должен быть >= RESERVED_SLOTS)
      * @param vals Массив 32-байтных значений
      */
-    function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlyAdmins {
+    function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlySlotAdmins {
         require(slots.length == vals.length, "Main: slots and vals length mismatch");
         uint256 len = slots.length;
         for (uint256 i = 0; i < len; i++) {
@@ -584,7 +584,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param baseSlot Начальный физический слот (должен быть >= RESERVED_SLOTS)
      * @param vals Массив значений для записи подряд
      */
-    function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlyAdmins {
+    function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlySlotAdmins {
         require(uint256(baseSlot) >= RESERVED_SLOTS, "Main: baseSlot is in reserved range");
         uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
@@ -601,7 +601,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @notice Очистка физического слота EVM (TRIM / sstore zero) с возвратом газа
      * @param slot Физический слот памяти (должен быть >= RESERVED_SLOTS)
      */
-    function trimSlot(bytes32 slot) external onlyAdmins {
+    function trimSlot(bytes32 slot) external onlySlotAdmins {
         require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
         assembly {
             sstore(slot, 0)
@@ -612,7 +612,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @notice Пакетная очистка массива физических слотов (TRIM Slot Batch) с возвратом газа
      * @param slots Массив физических слотов памяти (каждый должен быть >= RESERVED_SLOTS)
      */
-    function trimSlotBatch(bytes32[] calldata slots) external onlyAdmins {
+    function trimSlotBatch(bytes32[] calldata slots) external onlySlotAdmins {
         uint256 len = slots.length;
         for (uint256 i = 0; i < len; i++) {
             bytes32 slot = slots[i];
