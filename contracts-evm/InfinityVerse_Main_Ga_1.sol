@@ -36,7 +36,6 @@ contract InfinityVerse_Main_Ga_1 {
     string public constant EPOCH = "Ga";
     uint256 public constant GENERATION = 1;
     string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
-    uint256 public constant RESERVED_SLOTS = 1000;
 
     // ========================================================================
     // ИЕРАРХИЯ ПОКОЛЕНИЙ И СИСТЕМА ДОСТУПА
@@ -45,6 +44,20 @@ contract InfinityVerse_Main_Ga_1 {
     address public nextMain;
     // Верховный администратор (в перспективе передается в смарт-контракт под управлением DAO)
     address public superAdmin;
+
+    // ========================================================================
+    // === СИСТЕМА ПРЯМОЙ АДРЕСАЦИИ СЛОТОВ И ГРАНИЦЫ БЕЗОПАСНОСТИ 2^180     ===
+    // ========================================================================
+
+    // Защищаем первые 2^180 слотов с запасом в 1 048 576 раз выше 160-битных адресов
+    uint256 public constant RESERVED_SLOTS = 1 << 180;
+    uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
+
+    // Битовые маски прав доступа (младшие биты)
+    uint8 public constant PERM_NONE    = 0;
+    uint8 public constant PERM_STORAGE = 1; // Бит 0: запись в Raw Disk (Блок 1) и Eternal Storage (Блок 2)
+    uint8 public constant PERM_SLOTS   = 2; // Бит 1: запись в Low-Level Yul Slots (Блок 3)
+    uint8 public constant PERM_ALL     = 3; // Все права (1 | 2)
 
     // Реестр авторизованных администраторов / модулей логики (AAA, BBB, CCC, суб-админы)
     mapping(address => bool) public allowedAdmins;

@@ -25,7 +25,7 @@ function compile(contractFileName, contractName) {
       },
       outputSelection: {
         '*': {
-          '*': ['abi', 'evm.bytecode']
+          '*': ['abi', 'evm.bytecode', 'evm.deployedBytecode']
         }
       }
     }
@@ -56,7 +56,8 @@ function compile(contractFileName, contractName) {
   const artifact = {
     contractName,
     abi: contract.abi,
-    bytecode: '0x' + contract.evm.bytecode.object
+    bytecode: '0x' + contract.evm.bytecode.object,
+    deployedBytecode: '0x' + (contract.evm.deployedBytecode ? contract.evm.deployedBytecode.object : '')
   };
 
   const artifactDir = path.resolve(__dirname, '..', 'artifacts');
