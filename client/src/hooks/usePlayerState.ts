@@ -197,7 +197,6 @@ export function usePlayerState(
       setActiveMetaMaskProvider(prov);
 
       await fetchPlayer();
-      setStatusText('🦊 MetaMask Direct: каждое действие подтверждается вручную за собственный MON.');
       if (onSuccess) onSuccess();
       await onStateRefresh();
     } catch (err: any) {
@@ -229,7 +228,6 @@ export function usePlayerState(
       setAuthMode('private_key');
 
       await fetchPlayer();
-      setStatusText('⚡ Автономный режим активен: прямые клики в Monad RPC за личный газ.');
       if (onSuccess) onSuccess();
       await onStateRefresh();
     } catch (err: any) {
