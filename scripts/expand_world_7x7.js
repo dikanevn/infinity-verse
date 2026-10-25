@@ -6,7 +6,7 @@ const { monadTestnet } = require('viem/chains');
 const client = createPublicClient({ chain: monadTestnet, transport: http('https://testnet-rpc.monad.xyz') });
 
 async function expandWorld() {
-  const f = fs.readFileSync('.private/wallet.env', 'utf8');
+  const f = fs.readFileSync('.private/wallets.env', 'utf8');
   let deployerPk;
   for (const l of f.split('\n')) {
     const m = l.match(/DEPLOYER_PRIVATE_KEY=(0x[a-fA-F0-9]{64})/);
@@ -37,7 +37,7 @@ async function expandWorld() {
     outputs: []
   }];
 
-  // 1. Очищаем старые стены на радиусе 2 (превращаем в чистый песок)
+  // 1. РћС‡РёС‰Р°РµРј СЃС‚Р°СЂС‹Рµ СЃС‚РµРЅС‹ РЅР° СЂР°РґРёСѓСЃРµ 2 (РїСЂРµРІСЂР°С‰Р°РµРј РІ С‡РёСЃС‚С‹Р№ РїРµСЃРѕРє)
   const oldWalls = [];
   for (let x = -2; x <= 2; x++) {
     for (let y = -2; y <= 2; y++) {
@@ -47,7 +47,7 @@ async function expandWorld() {
     }
   }
 
-  // 2. Строим новые стены на радиусе 3 (квадрат 7x7)
+  // 2. РЎС‚СЂРѕРёРј РЅРѕРІС‹Рµ СЃС‚РµРЅС‹ РЅР° СЂР°РґРёСѓСЃРµ 3 (РєРІР°РґСЂР°С‚ 7x7)
   const newWalls = [];
   for (let x = -3; x <= 3; x++) {
     for (let y = -3; y <= 3; y++) {

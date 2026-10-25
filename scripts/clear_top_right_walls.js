@@ -6,7 +6,7 @@ const { monadTestnet } = require('viem/chains');
 const client = createPublicClient({ chain: monadTestnet, transport: http('https://testnet-rpc.monad.xyz') });
 
 async function removeTopAndRightWalls() {
-  const f = fs.readFileSync('.private/wallet.env', 'utf8');
+  const f = fs.readFileSync('.private/wallets.env', 'utf8');
   let deployerPk;
   for (const l of f.split('\n')) {
     const m = l.match(/DEPLOYER_PRIVATE_KEY=(0x[a-fA-F0-9]{64})/);
@@ -37,15 +37,15 @@ async function removeTopAndRightWalls() {
     outputs: []
   }];
 
-  // Стены на радиусе 3:
-  // Сверху: y === 3 (все x от -3 до 3)
-  // Справа: x === 3 (все y от -3 до 3)
+  // РЎС‚РµРЅС‹ РЅР° СЂР°РґРёСѓСЃРµ 3:
+  // РЎРІРµСЂС…Сѓ: y === 3 (РІСЃРµ x РѕС‚ -3 РґРѕ 3)
+  // РЎРїСЂР°РІР°: x === 3 (РІСЃРµ y РѕС‚ -3 РґРѕ 3)
   const coordsToRemove = new Map();
   for (let x = -3; x <= 3; x++) {
-    coordsToRemove.set(`${x},3`, { x, y: 3 }); // верх
+    coordsToRemove.set(`${x},3`, { x, y: 3 }); // РІРµСЂС…
   }
   for (let y = -3; y <= 3; y++) {
-    coordsToRemove.set(`3,${y}`, { x: 3, y }); // право
+    coordsToRemove.set(`3,${y}`, { x: 3, y }); // РїСЂР°РІРѕ
   }
 
   const list = Array.from(coordsToRemove.values());

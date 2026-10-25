@@ -9,7 +9,7 @@ export default defineConfig(() => {
 
   let devPlayer3Key = ''
   try {
-    const envPath = path.resolve(__dirname, '../.private/wallet.env')
+    const envPath = path.resolve(__dirname, '../.private/wallets.env')
     if (fs.existsSync(envPath)) {
       const content = fs.readFileSync(envPath, 'utf8')
       const match = content.match(/PLAYER3_PRIVATE_KEY=(0x[a-fA-F0-9]{64})/)

@@ -5,9 +5,9 @@ const { createWalletClient, createPublicClient, http, defineChain } = require('v
 const { privateKeyToAccount } = require('viem/accounts');
 
 async function main() {
-  const envFile = fs.readFileSync(path.resolve(__dirname, '..', '.private', 'wallet.env'), 'utf8');
+  const envFile = fs.readFileSync(path.resolve(__dirname, '..', '.private', 'wallets.env'), 'utf8');
   const pkMatch = envFile.match(/DEPLOYER_PRIVATE_KEY=(0x[a-fA-F0-9]{64})/);
-  if (!pkMatch) throw new Error('Private key not found in wallet.env');
+  if (!pkMatch) throw new Error('Private key not found in wallets.env');
   const privateKey = pkMatch[1];
 
   const netConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'network.config.json'), 'utf8'));

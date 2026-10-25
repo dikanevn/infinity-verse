@@ -7,7 +7,7 @@ const { monadTestnet } = require('viem/chains');
 const client = createPublicClient({ chain: monadTestnet, transport: http('https://testnet-rpc.monad.xyz') });
 
 async function deployNewAaa() {
-  const f = fs.readFileSync('.private/wallet.env', 'utf8');
+  const f = fs.readFileSync('.private/wallets.env', 'utf8');
   let deployerPk;
   for (const l of f.split('\n')) {
     const m = l.match(/DEPLOYER_PRIVATE_KEY=(0x[a-fA-F0-9]{64})/);
