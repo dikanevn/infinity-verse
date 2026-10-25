@@ -27,7 +27,7 @@ interface IInfinityVerse_PrevMain {
  * - Compiler: solc 0.8.20
  * - Optimizer: enabled = true, runs = 4294967295 (максимум uint32)
  * - Обоснование: максимальное число runs обеспечивает предельно дешевый газ для вызовов функций
- *   в течение всей жизни контракта. Текущий размер байткода составляет 23 428 байт (в пределах лимита в 24 576 байт).
+ *   в течение всей жизни контракта.
  *   Если в будущем при добавлении нового кода контракт перестанет влезать в лимит 24 576 байт,
  *   значение runs необходимо ступенчато снижать (например: 50000 -> 10000 -> 200).
  */
@@ -214,7 +214,7 @@ contract InfinityVerse_Main_Ga_1 {
         // Предоставляем супер-администратору прямые права в персональный слот с рождения хранилища
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
         allowedAdminsList.push(superAdmin);
-        // Упаковываем: PERM_ALL (3), role: 255, indexPlusOne: 1
+        // Упаковываем: PERM_ALL (255), role: 255, indexPlusOne: 1
         uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(1) << 128);
         assembly {
             sstore(slot, packed)
@@ -753,11 +753,7 @@ contract InfinityVerse_Main_Ga_1 {
 
         // 1. Автоматически отзываем права у предыдущего SuperAdmin за O(1)
         if (_isAdmin(superAdmin)) {
-            uint256 prevSlot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
-            uint256 prevPacked;
-            assembly {
-                prevPacked := sload(prevSlot)
-            }
+            uint256 prevPacked = _readAdminSlot(superAdmin);
             uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
             if (prevIdxPlusOne != 0) {
                 uint256 prevIdx = prevIdxPlusOne - 1;
@@ -765,21 +761,13 @@ contract InfinityVerse_Main_Ga_1 {
                 if (prevIdx != lastIdx) {
                     address lastAdmin = allowedAdminsList[lastIdx];
                     allowedAdminsList[prevIdx] = lastAdmin;
-                    uint256 lastSlot = ADMIN_SLOT_PREFIX | uint160(lastAdmin);
-                    uint256 lastPacked;
-                    assembly {
-                        lastPacked := sload(lastSlot)
-                    }
+                    uint256 lastPacked = _readAdminSlot(lastAdmin);
                     lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(prevIdxPlusOne) << 128);
-                    assembly {
-                        sstore(lastSlot, lastPacked)
-                    }
+                    _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)), bytes32(lastPacked));
                 }
                 allowedAdminsList.pop();
             }
-            assembly {
-                sstore(prevSlot, 0)
-            }
+            _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(superAdmin)), 0);
             emit AdminDisallowed(superAdmin);
         }
 
