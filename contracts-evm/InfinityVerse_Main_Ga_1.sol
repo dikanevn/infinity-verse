@@ -141,6 +141,34 @@ contract InfinityVerse_Main_Ga_1 {
             disk[sectors[i]] = data[i];
         }
     }
+    /**
+     * @notice Последовательное непрерывное чтение дорожки секторов (Chunk Read)
+     * @param baseSector Начальный сектор
+     * @param count Количество непрерывных секторов для чтения подряд
+     * @return result Массив считанных 32-байтных секторов
+     */
+    function readSequential(bytes32 baseSector, uint256 count) external view returns (bytes32[] memory) {
+        bytes32[] memory result = new bytes32[](count);
+        uint256 base = uint256(baseSector);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = disk[bytes32(base + i)];
+        }
+        return result;
+    }
+
+    /**
+     * @notice Последовательная непрерывная запись дорожки секторов (Chunk Stream Write, экономия 50% calldata)
+     * @param baseSector Начальный сектор
+     * @param data Массив 32-байтных данных, записываемых подряд в baseSector + i
+     */
+    function writeSequential(bytes32 baseSector, bytes32[] calldata data) external onlyAdmins {
+        uint256 len = data.length;
+        uint256 base = uint256(baseSector);
+        for (uint256 i = 0; i < len; i++) {
+            disk[bytes32(base + i)] = data[i];
+        }
+    }
+
 
     // ========================================================================
     // ========================================================================
@@ -415,6 +443,78 @@ contract InfinityVerse_Main_Ga_1 {
         }
         emit SlotWritten(slot, val);
     }
+    /**
+     * @notice Пакетное чтение произвольных физических слотов EVM через Yul
+     * @param slots Массив номеров слотов
+     * @return result Массив считанных 32-байтных значений
+     */
+    function readSlotBatch(bytes32[] calldata slots) external view returns (bytes32[] memory) {
+        uint256 len = slots.length;
+        bytes32[] memory result = new bytes32[](len);
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 slot = slots[i];
+            bytes32 val;
+            assembly {
+                val := sload(slot)
+            }
+            result[i] = val;
+        }
+        return result;
+    }
+
+    /**
+     * @notice Пакетная запись в произвольные физические слоты EVM через Yul
+     * @param slots Массив номеров слотов
+     * @param vals Массив 32-байтных значений
+     */
+    function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlyAdmins {
+        require(slots.length == vals.length, unicode"Main: Несовпадение длины массивов слотов и значений");
+        uint256 len = slots.length;
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 slot = slots[i];
+            bytes32 val = vals[i];
+            assembly {
+                sstore(slot, val)
+            }
+        }
+    }
+
+    /**
+     * @notice Последовательное чтение непрерывных физических слотов EVM через Yul
+     * @param baseSlot Начальный физический слот памяти
+     * @param count Количество слотов подряд
+     */
+    function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {
+        bytes32[] memory result = new bytes32[](count);
+        uint256 base = uint256(baseSlot);
+        for (uint256 i = 0; i < count; i++) {
+            bytes32 slot = bytes32(base + i);
+            bytes32 val;
+            assembly {
+                val := sload(slot)
+            }
+            result[i] = val;
+        }
+        return result;
+    }
+
+    /**
+     * @notice Последовательная потоковая запись в непрерывные физические слоты памяти EVM через Yul
+     * @param baseSlot Начальный физический слот
+     * @param vals Массив значений для записи подряд
+     */
+    function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlyAdmins {
+        uint256 len = vals.length;
+        uint256 base = uint256(baseSlot);
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 slot = bytes32(base + i);
+            bytes32 val = vals[i];
+            assembly {
+                sstore(slot, val)
+            }
+        }
+    }
+
 
     // ========================================================================
     // ========================================================================
