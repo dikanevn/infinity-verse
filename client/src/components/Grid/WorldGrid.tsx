@@ -63,7 +63,26 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const lastTouchDistRef = useRef<number | null>(null);
   const touch2StartCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Кнопка прицела центрирует камеру прямо на игроке, сбрасывает масштаб к базовому (0.85) и возвращает фокус на него
+  // Масштабирование по кнопкам относительно центра экрана
+  const handleZoomIn = () => {
+    const newScale = Math.min(2.5, scale + 0.15);
+    const scaleMultiplier = newScale / scale;
+    setScale(newScale);
+    setPosition(prev => ({
+      x: prev.x * scaleMultiplier,
+      y: prev.y * scaleMultiplier
+    }));
+  };
+
+  const handleZoomOut = () => {
+    const newScale = Math.max(0.08, scale - 0.15);
+    const scaleMultiplier = newScale / scale;
+    setScale(newScale);
+    setPosition(prev => ({
+      x: prev.x * scaleMultiplier,
+      y: prev.y * scaleMultiplier
+    }));
+  };
   const handleResetToPlayer = () => {
     const defaultScale = 0.85;
     setScale(defaultScale);
@@ -254,7 +273,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         gap: '6px'
       }}>
         <button
-          onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(2.0, s + 0.15)); }}
+          onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
           title="Приблизить"
           style={{
             width: '32px',
@@ -273,7 +292,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           +
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(0.08, s - 0.1)); }}
+          onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
           title="Отдалить"
           style={{
             width: '32px',
