@@ -516,6 +516,26 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
+     * @notice Чтение среза байт из физического слота EVM (Offset / Length Sub-slice через Yul sload)
+     * @dev Позволяет извлечь упакованное поле из физического слота памяти без передачи всех 32 байт
+     * @param slot Физический слот памяти EVM
+     * @param offset Смещение от 0 до 31 байта внутри слота
+     * @param length Длина среза в байтах (offset + length <= 32)
+     * @return slice Срез данных заданной длины
+     */
+    function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
+        require(offset + length <= 32, "Main: slice out of slot bounds");
+        bytes32 val;
+        assembly {
+            val := sload(slot)
+        }
+        slice = new bytes(length);
+        for (uint256 i = 0; i < length; i++) {
+            slice[i] = val[offset + i];
+        }
+    }
+
+    /**
      * @notice Последовательное чтение непрерывных физических слотов EVM через Yul
      * @param baseSlot Начальный физический слот памяти
      * @param count Количество слотов подряд
