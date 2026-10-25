@@ -8,9 +8,16 @@ export const MAIN_CONTRACT_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B
 // Исполнительная логика (AAA Module):
 export const AAA_CONTRACT_ADDRESS = '0x035da1a59b049f9022984743f4c43fbc311d44d6';
 
-export const RPC_URL = 'https://testnet-rpc.monad.xyz';
+export const DEFAULT_RPC_URL = 'https://testnet-rpc.monad.xyz';
+export const getActiveRpcUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('infinity_active_rpc') || DEFAULT_RPC_URL;
+  }
+  return DEFAULT_RPC_URL;
+};
+export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2510260217';
+export const CLIENT_VERSION = '2510260300';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -22,8 +29,8 @@ export const monadTestnet = defineChain({
     symbol: 'MON',
   },
   rpcUrls: {
-    default: { http: [RPC_URL] },
-    public: { http: [RPC_URL] },
+    default: { http: [getActiveRpcUrl()] },
+    public: { http: [getActiveRpcUrl()] },
   },
   blockExplorers: {
     default: { name: 'MonadVision', url: 'https://testnet.monadvision.com' },
@@ -70,7 +77,18 @@ export const AAA_ABI = parseAbi([
 ]);
 
 
-export const publicClient = createPublicClient({
-  chain: monadTestnet,
-  transport: http(RPC_URL)
-});
+export const getPublicClient = (customRpc?: string) => {
+  const url = customRpc || getActiveRpcUrl();
+  return createPublicClient({
+    chain: defineChain({
+      ...monadTestnet,
+      rpcUrls: {
+        default: { http: [url] },
+        public: { http: [url] }
+      }
+    }),
+    transport: http(url)
+  });
+};
+
+export const publicClient = getPublicClient();

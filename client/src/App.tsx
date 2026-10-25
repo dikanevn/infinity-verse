@@ -10,6 +10,7 @@ import { PlayerControls } from './components/Controls/PlayerControls';
 import { CellInspector } from './components/Inspector/CellInspector';
 import { WalletModal } from './components/Modals/WalletModal';
 import { PkModal } from './components/Modals/PkModal';
+import { NetworkModal } from './components/Modals/NetworkModal';
 
 function App() {
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -17,6 +18,7 @@ function App() {
   const [walletProviders, setWalletProviders] = useState<EIP6963ProviderDetail[]>([]);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState<boolean>(false);
   const [showPkInputModal, setShowPkInputModal] = useState<boolean>(false);
+  const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
   const [pkInput, setPkInput] = useState<string>('');
 
   // 1. Поиск установленных кошельков (EIP-6963)
@@ -186,8 +188,12 @@ function App() {
         overflowY: 'auto'
       }}>
 
-        {/* Заголовок и статус блокчейна */}
-        <TopBar statusText={statusText} statusState={statusState} />
+        {/* Заголовок и статус блокчейна с кнопкой выбора сети */}
+        <TopBar
+          statusText={statusText}
+          statusState={statusState}
+          onOpenNetworkModal={() => setIsNetworkModalOpen(true)}
+        />
 
         {/* Игровая сетка мира на бесконечном фоне тумана */}
         <WorldGrid
@@ -270,6 +276,14 @@ function App() {
             setShowPkInputModal(false);
             setPkInput('');
           });
+        }}
+      />
+      {/* Модальное окно выбора RPC узла / сети */}
+      <NetworkModal
+        isOpen={isNetworkModalOpen}
+        onClose={() => setIsNetworkModalOpen(false)}
+        onSelectRpc={() => {
+          window.location.reload();
         }}
       />
     </div>
