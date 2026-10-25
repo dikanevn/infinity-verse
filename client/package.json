@@ -1,7 +1,7 @@
 {
   "name": "client",
   "private": true,
-  "version": "2510260331",
+  "version": "2510260332",
   "type": "module",
   "scripts": {
     "dev": "vite",

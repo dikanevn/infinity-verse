@@ -36,9 +36,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
       gap: '8px',
       fontSize: '0.72rem',
       margin: '0 auto 8px auto',
-      boxSizing: 'border-box',
-      overflowX: 'auto',
-      WebkitOverflowScrolling: 'touch'
+      boxSizing: 'border-box'
     }}>
       <div style={{
         minWidth: '320px',
@@ -197,8 +195,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
                   style={{
                     position: 'absolute',
                     bottom: '100%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
+                    left: '0',
                     marginBottom: '6px',
                     backgroundColor: '#1e1b4b',
                     color: '#e0e7ff',
@@ -208,8 +205,9 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
                     fontSize: '0.65rem',
                     lineHeight: '1.2',
                     zIndex: 100,
-                    width: '180px',
-                    textAlign: 'center',
+                    width: '200px',
+                    maxWidth: '85vw',
+                    textAlign: 'left',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
                     cursor: 'pointer',
                     whiteSpace: 'normal'
