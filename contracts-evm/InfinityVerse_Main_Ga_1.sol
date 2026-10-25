@@ -53,18 +53,24 @@ contract InfinityVerse_Main_Ga_1 {
     uint256 public constant RESERVED_SLOTS = 1 << 180;
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
 
-    // Битовые маски прав доступа (младшие биты)
-    uint8 public constant PERM_NONE    = 0;
-    uint8 public constant PERM_STORAGE = 1; // Бит 0: запись в Raw Disk (Блок 1) и Eternal Storage (Блок 2)
-    uint8 public constant PERM_SLOTS   = 2; // Бит 1: запись в Low-Level Yul Slots (Блок 3)
-    uint8 public constant PERM_ALL     = 3; // Все права (1 | 2)
+    // Битовые маски прав доступа (младшие 8 бит слота администратора)
+    uint8 public constant PERM_NONE          = 0;        // 00000000: Нет прав
+    uint8 public constant PERM_ADMIN_STORAGE = 1 << 0;   // 00000001 (1): Запись в Raw Disk (Блок 1) и Eternal Storage (Блок 2)
+    uint8 public constant PERM_ADMIN_SLOTS   = 1 << 1;   // 00000010 (2): Запись в Low-Level Yul Slots (Блок 3)
+    uint8 public constant PERM_MOD           = 1 << 2;   // 00000100 (4): Роль модератора / оператора
+    uint8 public constant PERM_A             = 1 << 3;   // 00001000 (8): Модульное право A (резерв под внешние модули)
+    uint8 public constant PERM_B             = 1 << 4;   // 00010000 (16): Модульное право B (резерв под внешние модули)
+    uint8 public constant PERM_C             = 1 << 5;   // 00100000 (32): Модульное право C (резерв под внешние модули)
+    uint8 public constant PERM_D             = 1 << 6;   // 01000000 (64): Модульное право D (резерв под внешние модули)
+    uint8 public constant PERM_EXT           = 1 << 7;   // 10000000 (128): Расширенное право (резерв под будущие стандарты)
+    uint8 public constant PERM_ALL           = 255;      // 11111111: Полный доступ ко всем битам (включая будущие)
 
     /**
      * @notice Структура распакованных данных администратора для вывода (View, RPC, UI)
      */
     struct AdminInfo {
         bool isActive;       // Активен ли прямо сейчас с учетом времени и прав
-        uint8 permissions;   // Битовая маска прав (PERM_STORAGE, PERM_SLOTS)
+        uint8 permissions;   // Битовая маска прав (PERM_ADMIN_STORAGE, PERM_ADMIN_SLOTS, PERM_MOD и др.)
         uint8 role;          // Роль / ранг (0..255)
         uint48 validFrom;    // Таймстамп старта действия прав
         uint64 validUntil;   // Таймстамп истечения прав (0 = бессрочно)
@@ -107,19 +113,19 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Базовый модификатор для обычных администраторов и логических модулей.
-     * @dev Требует права PERM_STORAGE (Блок 1 Raw Disk и Блок 2 Eternal Storage).
+     * @dev Требует права PERM_ADMIN_STORAGE (Блок 1 Raw Disk и Блок 2 Eternal Storage).
      */
     modifier onlyAdmins() {
-        _checkAdmin(msg.sender, PERM_STORAGE);
+        _checkAdmin(msg.sender, PERM_ADMIN_STORAGE);
         _;
     }
 
     /**
      * @notice Модификатор для администраторов с доступом к физическим слотам памяти EVM.
-     * @dev Требует права PERM_SLOTS (Блок 3 Low-Level Yul Slots).
+     * @dev Требует права PERM_ADMIN_SLOTS (Блок 3 Low-Level Yul Slots).
      */
     modifier onlySlotAdmins() {
-        _checkAdmin(msg.sender, PERM_SLOTS);
+        _checkAdmin(msg.sender, PERM_ADMIN_SLOTS);
         _;
     }
 
