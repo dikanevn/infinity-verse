@@ -122,8 +122,9 @@ contract InfinityVerse_Main_Ga_1 {
     function readSectorBatch(bytes32[] calldata sectors) external view returns (bytes32[] memory) {
         uint256 len = sectors.length;
         bytes32[] memory result = new bytes32[](len);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             result[i] = disk[sectors[i]];
+            unchecked { ++i; }
         }
         return result;
     }
@@ -133,31 +134,35 @@ contract InfinityVerse_Main_Ga_1 {
     function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external onlyAdmins {
         require(sectors.length == data.length, "error");
         uint256 len = sectors.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             disk[sectors[i]] = data[i];
+            unchecked { ++i; }
         }
     }
     function readSectorSlice(bytes32 sector, uint256 offset, uint256 length) external view returns (bytes memory slice) {
         require(offset + length <= 32, "error");
         bytes32 val = disk[sector];
         slice = new bytes(length);
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length;) {
             slice[i] = val[offset + i];
+            unchecked { ++i; }
         }
     }
     function readSequential(bytes32 baseSector, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSector);
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < count;) {
             result[i] = disk[bytes32(base + i)];
+            unchecked { ++i; }
         }
         return result;
     }
     function writeSequential(bytes32 baseSector, bytes32[] calldata data) external onlyAdmins {
         uint256 len = data.length;
         uint256 base = uint256(baseSector);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             disk[bytes32(base + i)] = data[i];
+            unchecked { ++i; }
         }
     }
     function trimSector(bytes32 sector) external onlyAdmins {
@@ -165,8 +170,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
     function trimSectorBatch(bytes32[] calldata sectors) external onlyAdmins {
         uint256 len = sectors.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             delete disk[sectors[i]];
+            unchecked { ++i; }
         }
     }
     mapping(bytes32 => uint8)   private u8s;
@@ -269,33 +275,37 @@ contract InfinityVerse_Main_Ga_1 {
     function readSlotBatch(bytes32[] calldata slots) external view returns (bytes32[] memory) {
         uint256 len = slots.length;
         bytes32[] memory result = new bytes32[](len);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             result[i] = _getSlot(slots[i]);
+            unchecked { ++i; }
         }
         return result;
     }
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlySlotAdmins {
         require(slots.length == vals.length, "error");
         uint256 len = slots.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
             require(uint256(slot) >= RESERVED_SLOTS, "error");
             _setSlot(slot, vals[i]);
+            unchecked { ++i; }
         }
     }
     function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
         require(offset + length <= 32, "error");
         bytes32 val = _getSlot(slot);
         slice = new bytes(length);
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length;) {
             slice[i] = val[offset + i];
+            unchecked { ++i; }
         }
     }
     function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSlot);
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < count;) {
             result[i] = _getSlot(bytes32(base + i));
+            unchecked { ++i; }
         }
         return result;
     }
@@ -303,8 +313,9 @@ contract InfinityVerse_Main_Ga_1 {
         require(uint256(baseSlot) >= RESERVED_SLOTS, "error");
         uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             _setSlot(bytes32(base + i), vals[i]);
+            unchecked { ++i; }
         }
     }
     function trimSlot(bytes32 slot) external onlySlotAdmins {
@@ -313,10 +324,11 @@ contract InfinityVerse_Main_Ga_1 {
     }
     function trimSlotBatch(bytes32[] calldata slots) external onlySlotAdmins {
         uint256 len = slots.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
             require(uint256(slot) >= RESERVED_SLOTS, "error");
             _setSlot(slot, 0);
+            unchecked { ++i; }
         }
     }
     function getNamespaceSlot(string calldata namespaceId) external pure returns (bytes32 rootSlot) {
@@ -393,10 +405,27 @@ contract InfinityVerse_Main_Ga_1 {
     function getAllowedAdmins() public view returns (address[] memory) {
         uint256 count = allowedAdminsCount;
         address[] memory list = new address[](count);
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < count;) {
             list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + i)))));
+            unchecked { ++i; }
         }
         return list;
+    }
+    function getAllowedAdminsPaginated(uint256 offset, uint256 limit) external view returns (address[] memory list) {
+        uint256 count = allowedAdminsCount;
+        if (offset >= count || limit == 0) {
+            return new address[](0);
+        }
+        uint256 end = offset + limit;
+        if (end > count) {
+            end = count;
+        }
+        uint256 resultLen = end - offset;
+        list = new address[](resultLen);
+        for (uint256 i = 0; i < resultLen;) {
+            list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + offset + i)))));
+            unchecked { ++i; }
+        }
     }
     function setNextMain(address _nextMain) external onlySuperAdmin {
         require(_nextMain != address(0), "error");

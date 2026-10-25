@@ -250,8 +250,9 @@ contract InfinityVerse_Main_Ga_1 {
     function readSectorBatch(bytes32[] calldata sectors) external view returns (bytes32[] memory) {
         uint256 len = sectors.length;
         bytes32[] memory result = new bytes32[](len);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             result[i] = disk[sectors[i]];
+            unchecked { ++i; }
         }
         return result;
     }
@@ -273,8 +274,9 @@ contract InfinityVerse_Main_Ga_1 {
     function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external onlyAdmins {
         require(sectors.length == data.length, "Main: sectors and data length mismatch");
         uint256 len = sectors.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             disk[sectors[i]] = data[i];
+            unchecked { ++i; }
         }
     }
     /**
@@ -289,8 +291,9 @@ contract InfinityVerse_Main_Ga_1 {
         require(offset + length <= 32, "Main: slice out of sector bounds");
         bytes32 val = disk[sector];
         slice = new bytes(length);
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length;) {
             slice[i] = val[offset + i];
+            unchecked { ++i; }
         }
     }
 
@@ -303,8 +306,9 @@ contract InfinityVerse_Main_Ga_1 {
     function readSequential(bytes32 baseSector, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSector);
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < count;) {
             result[i] = disk[bytes32(base + i)];
+            unchecked { ++i; }
         }
         return result;
     }
@@ -317,8 +321,9 @@ contract InfinityVerse_Main_Ga_1 {
     function writeSequential(bytes32 baseSector, bytes32[] calldata data) external onlyAdmins {
         uint256 len = data.length;
         uint256 base = uint256(baseSector);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             disk[bytes32(base + i)] = data[i];
+            unchecked { ++i; }
         }
     }
 
@@ -336,8 +341,9 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function trimSectorBatch(bytes32[] calldata sectors) external onlyAdmins {
         uint256 len = sectors.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             delete disk[sectors[i]];
+            unchecked { ++i; }
         }
     }
 
@@ -515,8 +521,9 @@ contract InfinityVerse_Main_Ga_1 {
     function readSlotBatch(bytes32[] calldata slots) external view returns (bytes32[] memory) {
         uint256 len = slots.length;
         bytes32[] memory result = new bytes32[](len);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             result[i] = _getSlot(slots[i]);
+            unchecked { ++i; }
         }
         return result;
     }
@@ -529,10 +536,11 @@ contract InfinityVerse_Main_Ga_1 {
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlySlotAdmins {
         require(slots.length == vals.length, "Main: slots and vals length mismatch");
         uint256 len = slots.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
             require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
             _setSlot(slot, vals[i]);
+            unchecked { ++i; }
         }
     }
 
@@ -548,8 +556,9 @@ contract InfinityVerse_Main_Ga_1 {
         require(offset + length <= 32, "Main: slice out of slot bounds");
         bytes32 val = _getSlot(slot);
         slice = new bytes(length);
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length;) {
             slice[i] = val[offset + i];
+            unchecked { ++i; }
         }
     }
 
@@ -561,8 +570,9 @@ contract InfinityVerse_Main_Ga_1 {
     function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSlot);
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < count;) {
             result[i] = _getSlot(bytes32(base + i));
+            unchecked { ++i; }
         }
         return result;
     }
@@ -576,8 +586,9 @@ contract InfinityVerse_Main_Ga_1 {
         require(uint256(baseSlot) >= RESERVED_SLOTS, "Main: baseSlot is in reserved range");
         uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             _setSlot(bytes32(base + i), vals[i]);
+            unchecked { ++i; }
         }
     }
 
@@ -596,10 +607,11 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function trimSlotBatch(bytes32[] calldata slots) external onlySlotAdmins {
         uint256 len = slots.length;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
             require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
             _setSlot(slot, 0);
+            unchecked { ++i; }
         }
     }
 
@@ -720,8 +732,9 @@ contract InfinityVerse_Main_Ga_1 {
     function getAllowedAdmins() public view returns (address[] memory) {
         uint256 count = allowedAdminsCount;
         address[] memory list = new address[](count);
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < count;) {
             list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + i)))));
+            unchecked { ++i; }
         }
         return list;
     }
@@ -745,8 +758,9 @@ contract InfinityVerse_Main_Ga_1 {
 
         uint256 resultLen = end - offset;
         list = new address[](resultLen);
-        for (uint256 i = 0; i < resultLen; i++) {
+        for (uint256 i = 0; i < resultLen;) {
             list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + offset + i)))));
+            unchecked { ++i; }
         }
     }
 
