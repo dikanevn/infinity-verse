@@ -469,13 +469,24 @@ contract InfinityVerse_Main_Ga_1 {
     // ========================================================================
     // ========================================================================
     // Архитектурное примечание по безопасности:
-    // Диапазон RESERVED_SLOTS (первые 1000 слотов) гарантированно защищает критические
-    // скалярные переменные: слот 0 (nextMain) и слот 1 (superAdmin).
-    // Осознанный архитектурный компромисс: скомпрометированный или вредоносный админ-модуль
-    // за счет прямого доступа к физической памяти (Yul sstore) потенциально может вычислить
-    // хеш маппинга и дописать адрес в allowedAdmins. Однако он ни при каких условиях не способен
-    // изменить или перехватить superAdmin (слот 1). Это не критично: верховная власть
-    // и управление сменой поколений хранилища остаются монопольно за SuperAdmin.
+    // Диапазон RESERVED_SLOTS (первые 2^180 слотов) гарантированно защищает:
+    // 1. Системные переменные: слот 0 (nextMain) и слот 1 (superAdmin).
+    // 2. Персональные сейфы прав доступа администраторов: диапазон [2^160, 2^161 - 1].
+    // Прямой доступ к физической памяти (sload/sstore) за пределами 2^180 доступен только
+    // superAdmin и доверенным модулям с флагом PERM_ADMIN_SLOTS.
+
+    // 3.0. Низкоуровневые микро-хелперы для физической памяти EVM
+    function _getSlot(bytes32 slot) internal view returns (bytes32 val) {
+        assembly {
+            val := sload(slot)
+        }
+    }
+
+    function _setSlot(bytes32 slot, bytes32 val) internal {
+        assembly {
+            sstore(slot, val)
+        }
+    }
 
     // 3.1. Методы прямого чтения и записи в слоты EVM
     // Примечание: размеры массивов в пакетных операциях со слотами также намеренно не лимитируются
@@ -486,9 +497,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @return val Значение, хранящееся в слоте
      */
     function readSlot(bytes32 slot) external view returns (bytes32 val) {
-        assembly {
-            val := sload(slot)
-        }
+        return _getSlot(slot);
     }
 
     /**
@@ -498,9 +507,7 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function writeSlot(bytes32 slot, bytes32 val) external onlySlotAdmins {
         require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
-        assembly {
-            sstore(slot, val)
-        }
+        _setSlot(slot, val);
     }
 
     /**
@@ -512,12 +519,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint256 len = slots.length;
         bytes32[] memory result = new bytes32[](len);
         for (uint256 i = 0; i < len; i++) {
-            bytes32 slot = slots[i];
-            bytes32 val;
-            assembly {
-                val := sload(slot)
-            }
-            result[i] = val;
+            result[i] = _getSlot(slots[i]);
         }
         return result;
     }
@@ -533,10 +535,7 @@ contract InfinityVerse_Main_Ga_1 {
         for (uint256 i = 0; i < len; i++) {
             bytes32 slot = slots[i];
             require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
-            bytes32 val = vals[i];
-            assembly {
-                sstore(slot, val)
-            }
+            _setSlot(slot, vals[i]);
         }
     }
 
@@ -550,10 +549,7 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
         require(offset + length <= 32, "Main: slice out of slot bounds");
-        bytes32 val;
-        assembly {
-            val := sload(slot)
-        }
+        bytes32 val = _getSlot(slot);
         slice = new bytes(length);
         for (uint256 i = 0; i < length; i++) {
             slice[i] = val[offset + i];
@@ -569,12 +565,7 @@ contract InfinityVerse_Main_Ga_1 {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSlot);
         for (uint256 i = 0; i < count; i++) {
-            bytes32 slot = bytes32(base + i);
-            bytes32 val;
-            assembly {
-                val := sload(slot)
-            }
-            result[i] = val;
+            result[i] = _getSlot(bytes32(base + i));
         }
         return result;
     }
@@ -589,11 +580,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
         for (uint256 i = 0; i < len; i++) {
-            bytes32 slot = bytes32(base + i);
-            bytes32 val = vals[i];
-            assembly {
-                sstore(slot, val)
-            }
+            _setSlot(bytes32(base + i), vals[i]);
         }
     }
 
@@ -603,9 +590,7 @@ contract InfinityVerse_Main_Ga_1 {
      */
     function trimSlot(bytes32 slot) external onlySlotAdmins {
         require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
-        assembly {
-            sstore(slot, 0)
-        }
+        _setSlot(slot, 0);
     }
 
     /**
@@ -617,9 +602,7 @@ contract InfinityVerse_Main_Ga_1 {
         for (uint256 i = 0; i < len; i++) {
             bytes32 slot = slots[i];
             require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
-            assembly {
-                sstore(slot, 0)
-            }
+            _setSlot(slot, 0);
         }
     }
 
