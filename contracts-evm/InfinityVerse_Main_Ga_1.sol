@@ -142,18 +142,12 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     /**
-     * @notice ���������������� ����������� ������ ������� �������� (Chunk Read)
-     * @param baseSector ��������� ������
-     * @param count ���������� ����������� �������� ��� ������ ������
-     * @return result ������ ��������� 32-������� ��������
-     */
-    /**
-     * @notice ������ ����� ���� �� 32-�������� ������� (Offset / Length Sub-slice � ����� MUD Store)
-     * @dev ��������� ������� ���������� ���� (��������, 2 ����� hp ��� 4 ����� ����������) ��� �������� ����� ������� � ������
-     * @param sector 32-������� ����� �������
-     * @param offset �������� �� 0 �� 31 ����� ������ �������
-     * @param length ����� ����� � ������ (offset + length <= 32)
-     * @return slice ���� ������ �������� �����
+     * @notice Чтение среза байт из 32-байтного сектора (Offset / Length Sub-slice в стиле MUD Store)
+     * @dev Позволяет извлечь компактное поле (например, 2 байта hp или 4 байта таймстампа) без загрузки всего сектора в память
+     * @param sector 32-байтный адрес сектора
+     * @param offset Смещение от 0 до 31 байта внутри сектора
+     * @param length Длина среза в байтах (offset + length <= 32)
+     * @return slice Срез данных заданной длины
      */
     function readSectorSlice(bytes32 sector, uint256 offset, uint256 length) external view returns (bytes memory slice) {
         require(offset + length <= 32, "Main: slice out of sector bounds");
@@ -164,6 +158,12 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
 
+    /**
+     * @notice Последовательное непрерывное чтение дорожки секторов (Chunk Read)
+     * @param baseSector Начальный сектор
+     * @param count Количество непрерывных секторов для чтения подряд
+     * @return result Массив считанных 32-байтных секторов
+     */
     function readSequential(bytes32 baseSector, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSector);
@@ -174,9 +174,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice ���������������� ����������� ������ ������� �������� (Chunk Stream Write, �������� 50% calldata)
-     * @param baseSector ��������� ������
-     * @param data ������ 32-������� ������, ������������ ������ � baseSector + i
+     * @notice Последовательная непрерывная запись дорожки секторов (Chunk Stream Write, экономия 50% calldata)
+     * @param baseSector Начальный сектор
+     * @param data Массив 32-байтных данных, записываемых подряд в baseSector + i
      */
     function writeSequential(bytes32 baseSector, bytes32[] calldata data) external onlyAdmins {
         uint256 len = data.length;
@@ -185,17 +185,18 @@ contract InfinityVerse_Main_Ga_1 {
             disk[bytes32(base + i)] = data[i];
         }
     }
+
     /**
-     * @notice ������� ������� (TRIM / delete) � ��������� ���� EVM (Gas Refund)
-     * @param sector 32-������� ����� ���������� �������
+     * @notice Очистка сектора (TRIM / delete) с возвратом газа EVM (Gas Refund)
+     * @param sector 32-байтный адрес очищаемого сектора
      */
     function trimSector(bytes32 sector) external onlyAdmins {
         delete disk[sector];
     }
 
     /**
-     * @notice �������� ������� ������� �������� (TRIM Batch) � ��������� ����
-     * @param sectors ������ ������� ��������� ��������
+     * @notice Пакетная очистка массива секторов (TRIM Batch) с возвратом газа
+     * @param sectors Массив адресов очищаемых секторов
      */
     function trimSectorBatch(bytes32[] calldata sectors) external onlyAdmins {
         uint256 len = sectors.length;
@@ -480,9 +481,10 @@ contract InfinityVerse_Main_Ga_1 {
         emit SlotWritten(slot, val);
     }
     /**
-     * @notice �������� ������ ������������ ���������� ������ EVM ����� Yul
-     * @param slots ������ ������� ������
-     * @return result ������ ��������� 32-������� ��������
+    /**
+     * @notice Пакетное чтение произвольных физических слотов EVM через Yul
+     * @param slots Массив номеров слотов
+     * @return result Массив считанных 32-байтных значений
      */
     function readSlotBatch(bytes32[] calldata slots) external view returns (bytes32[] memory) {
         uint256 len = slots.length;
@@ -499,9 +501,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice �������� ������ � ������������ ���������� ����� EVM ����� Yul
-     * @param slots ������ ������� ������
-     * @param vals ������ 32-������� ��������
+     * @notice Пакетная запись в произвольные физические слоты EVM через Yul
+     * @param slots Массив номеров слотов
+     * @param vals Массив 32-байтных значений
      */
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlyAdmins {
         require(slots.length == vals.length, "Main: slots and vals length mismatch");
@@ -516,12 +518,12 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice ������ ����� ���� �� ����������� ����� EVM (Offset / Length Sub-slice ����� Yul sload)
-     * @dev ��������� ������� ����������� ���� �� ����������� ����� ������ ��� �������� ���� 32 ����
-     * @param slot ���������� ���� ������ EVM
-     * @param offset �������� �� 0 �� 31 ����� ������ �����
-     * @param length ����� ����� � ������ (offset + length <= 32)
-     * @return slice ���� ������ �������� �����
+     * @notice Чтение среза байт из физического слота EVM (Offset / Length Sub-slice через Yul sload)
+     * @dev Позволяет извлечь упакованное поле из физического слота памяти без передачи всех 32 байт
+     * @param slot Физический слот памяти EVM
+     * @param offset Смещение от 0 до 31 байта внутри слота
+     * @param length Длина среза в байтах (offset + length <= 32)
+     * @return slice Срез данных заданной длины
      */
     function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
         require(offset + length <= 32, "Main: slice out of slot bounds");
@@ -536,9 +538,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice ���������������� ������ ����������� ���������� ������ EVM ����� Yul
-     * @param baseSlot ��������� ���������� ���� ������
-     * @param count ���������� ������ ������
+     * @notice Последовательное чтение непрерывных физических слотов EVM через Yul
+     * @param baseSlot Начальный физический слот памяти
+     * @param count Количество слотов подряд
      */
     function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
@@ -555,9 +557,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice ���������������� ��������� ������ � ����������� ���������� ����� ������ EVM ����� Yul
-     * @param baseSlot ��������� ���������� ����
-     * @param vals ������ �������� ��� ������ ������
+     * @notice Последовательная потоковая запись в непрерывные физические слоты памяти EVM через Yul
+     * @param baseSlot Начальный физический слот
+     * @param vals Массив значений для записи подряд
      */
     function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlyAdmins {
         uint256 len = vals.length;
@@ -570,16 +572,10 @@ contract InfinityVerse_Main_Ga_1 {
             }
         }
     }
+
     /**
-     * @notice ����������� ������ ��������� ERC-7201: ���������� ����� �������������� ������������ ����
-     * @dev �������: keccak256(uint256(keccak256(namespaceId)) - 1) & ~0xff
-     * ��������� ���������� ���������� ������ ���� �� ������� ���������� ������� ���������� (AAA, BBB, CCC)!
-     * @param namespaceId ��������� ������������� ������/������������ (��������, "infinity.module.movement")
-     * @return rootSlot ���������� ������� ���� ���������� ������ EVM, �������������� ��������� �� ��������
-     */
-    /**
-     * @notice ������� ����������� ����� EVM (TRIM / sstore zero) � ��������� ����
-     * @param slot ���������� ���� ������
+     * @notice Очистка физического слота EVM (TRIM / sstore zero) с возвратом газа
+     * @param slot Физический слот памяти
      */
     function trimSlot(bytes32 slot) external onlyAdmins {
         assembly {
@@ -588,8 +584,8 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice �������� ������� ������� ���������� ������ (TRIM Slot Batch) � ��������� ����
-     * @param slots ������ ���������� ������ ������
+     * @notice Пакетная очистка массива физических слотов (TRIM Slot Batch) с возвратом газа
+     * @param slots Массив физических слотов памяти
      */
     function trimSlotBatch(bytes32[] calldata slots) external onlyAdmins {
         uint256 len = slots.length;
@@ -601,7 +597,14 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
 
-        function getNamespaceSlot(string calldata namespaceId) external pure returns (bytes32 rootSlot) {
+    /**
+     * @notice Калькулятор слотов стандарта ERC-7201: вычисляет базовый слот изолированного пространства имен
+     * @dev Формула: keccak256(uint256(keccak256(namespaceId)) - 1) & ~0xff
+     * Гарантирует выделение безопасного диапазона слотов для внешних исполняемых контрактов (AAA, BBB, CCC)!
+     * @param namespaceId Текстовый идентификатор модуля/пространства (например, "infinity.module.movement")
+     * @return rootSlot Уникальный базовый слот физической памяти EVM, гарантированно свободный от коллизий
+     */
+    function getNamespaceSlot(string calldata namespaceId) external pure returns (bytes32 rootSlot) {
         return keccak256(abi.encode(uint256(keccak256(bytes(namespaceId))) - 1)) & ~bytes32(uint256(0xff));
     }
 
