@@ -14,6 +14,7 @@ contract InfinityVerse_Main_Ga_1 {
     address public superAdmin;
     uint256 public constant RESERVED_SLOTS = 1 << 180;
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
+    uint256 private constant ADMIN_LIST_PREFIX = 2 << 160;
     uint8 public constant PERM_NONE          = 0;
     uint8 public constant PERM_ADMIN_STORAGE = 1 << 0;
     uint8 public constant PERM_ADMIN_SLOTS   = 1 << 1;
@@ -36,7 +37,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint16 paramC;
         uint32 paramD;
     }
-    address[] public allowedAdminsList;
+    uint256 public allowedAdminsCount;
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
@@ -112,7 +113,8 @@ contract InfinityVerse_Main_Ga_1 {
         superAdmin = msg.sender;
         prevMain = _prevMain;
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
-        allowedAdminsList.push(superAdmin);
+        _setSlot(bytes32(ADMIN_LIST_PREFIX), bytes32(uint256(uint160(superAdmin))));
+        allowedAdminsCount = 1;
         uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(1) << 128);
         assembly {
             sstore(slot, packed)
@@ -345,8 +347,10 @@ contract InfinityVerse_Main_Ga_1 {
             idxPlusOne := shr(128, sload(slot))
         }
         if (idxPlusOne == 0) {
-            allowedAdminsList.push(adminAddress);
-            idxPlusOne = allowedAdminsList.length;
+            uint256 count = allowedAdminsCount;
+            _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(adminAddress))));
+            allowedAdminsCount = count + 1;
+            idxPlusOne = count + 1;
         }
         uint256 packed;
         assembly {
@@ -374,31 +378,32 @@ contract InfinityVerse_Main_Ga_1 {
         uint64 idxPlusOne = uint64(packed >> 128);
         require(idxPlusOne != 0, "error");
         uint256 index = idxPlusOne - 1;
-        uint256 lastIndex = allowedAdminsList.length - 1;
+        uint256 lastIndex = allowedAdminsCount - 1;
         if (index != lastIndex) {
-            address lastAdmin = allowedAdminsList[lastIndex];
-            allowedAdminsList[index] = lastAdmin;
-            uint256 lastSlot = ADMIN_SLOT_PREFIX | uint160(lastAdmin);
-            uint256 lastPacked;
-            assembly {
-                lastPacked := sload(lastSlot)
-            }
+            bytes32 lastAdminVal = _getSlot(bytes32(ADMIN_LIST_PREFIX + lastIndex));
+            address lastAdmin = address(uint160(uint256(lastAdminVal)));
+            _setSlot(bytes32(ADMIN_LIST_PREFIX + index), lastAdminVal);
+            uint256 lastPacked = _readAdminSlot(lastAdmin);
             lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(idxPlusOne) << 128);
-            assembly {
-                sstore(lastSlot, lastPacked)
-            }
+            _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)), bytes32(lastPacked));
         }
-        allowedAdminsList.pop();
+        _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIndex), 0);
+        allowedAdminsCount = lastIndex;
         assembly {
             sstore(slot, 0)
         }
         emit AdminDisallowed(adminAddress);
     }
-    function getAllowedAdmins() external view returns (address[] memory) {
-        return allowedAdminsList;
+    function getAllowedAdmins() public view returns (address[] memory) {
+        uint256 count = allowedAdminsCount;
+        address[] memory list = new address[](count);
+        for (uint256 i = 0; i < count; i++) {
+            list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + i)))));
+        }
+        return list;
     }
     function getAllowedContracts() external view returns (address[] memory) {
-        return allowedAdminsList;
+        return getAllowedAdmins();
     }
     function setNextMain(address _nextMain) external onlySuperAdmin {
         require(_nextMain != address(0), "error");
@@ -413,15 +418,17 @@ contract InfinityVerse_Main_Ga_1 {
             uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
             if (prevIdxPlusOne != 0) {
                 uint256 prevIdx = prevIdxPlusOne - 1;
-                uint256 lastIdx = allowedAdminsList.length - 1;
+                uint256 lastIdx = allowedAdminsCount - 1;
                 if (prevIdx != lastIdx) {
-                    address lastAdmin = allowedAdminsList[lastIdx];
-                    allowedAdminsList[prevIdx] = lastAdmin;
+                    bytes32 lastAdminVal = _getSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx));
+                    address lastAdmin = address(uint160(uint256(lastAdminVal)));
+                    _setSlot(bytes32(ADMIN_LIST_PREFIX + prevIdx), lastAdminVal);
                     uint256 lastPacked = _readAdminSlot(lastAdmin);
                     lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(prevIdxPlusOne) << 128);
                     _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)), bytes32(lastPacked));
                 }
-                allowedAdminsList.pop();
+                _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx), 0);
+                allowedAdminsCount = lastIdx;
             }
             _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(superAdmin)), 0);
             emit AdminDisallowed(superAdmin);
@@ -429,12 +436,14 @@ contract InfinityVerse_Main_Ga_1 {
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
             require(nextMain != address(0), "error");
             require(
-                allowedAdminsList.length == 0, "error");
+                allowedAdminsCount == 0, "error");
         } else {
             if (!_isAdmin(newSuperAdmin)) {
                 uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
-                allowedAdminsList.push(newSuperAdmin);
-                uint64 idxPlusOne = uint64(allowedAdminsList.length);
+                uint256 count = allowedAdminsCount;
+                _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(newSuperAdmin))));
+                allowedAdminsCount = count + 1;
+                uint64 idxPlusOne = uint64(count + 1);
                 uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
                 assembly {
                     sstore(newSlot, packed)

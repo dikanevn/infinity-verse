@@ -52,6 +52,7 @@ contract InfinityVerse_Main_Ga_1 {
     // Защищаем первые 2^180 слотов с запасом в 1 048 576 раз выше 160-битных адресов
     uint256 public constant RESERVED_SLOTS = 1 << 180;
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
+    uint256 private constant ADMIN_LIST_PREFIX = 2 << 160;
 
     // Битовые маски прав доступа (младшие 8 бит слота администратора)
     uint8 public constant PERM_NONE          = 0;        // 00000000: Нет прав
@@ -81,8 +82,8 @@ contract InfinityVerse_Main_Ga_1 {
         uint32 paramD;       // Пользовательский модульный параметр D
     }
 
-    // Реестр адресов администраторов для перечисления
-    address[] public allowedAdminsList;
+    // Количество администраторов в реестре (сами адреса лежат в защищенной зоне ADMIN_LIST_PREFIX + i)
+    uint256 public allowedAdminsCount;
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
@@ -213,7 +214,10 @@ contract InfinityVerse_Main_Ga_1 {
 
         // Предоставляем супер-администратору прямые права в персональный слот с рождения хранилища
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
-        allowedAdminsList.push(superAdmin);
+        // Добавляем superAdmin как первого элемента списка по прямому адресу ADMIN_LIST_PREFIX + 0
+        _setSlot(bytes32(ADMIN_LIST_PREFIX), bytes32(uint256(uint160(superAdmin))));
+        allowedAdminsCount = 1;
+
         // Упаковываем: PERM_ALL (255), role: 255, indexPlusOne: 1
         uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(1) << 128);
         assembly {
@@ -650,8 +654,10 @@ contract InfinityVerse_Main_Ga_1 {
         }
 
         if (idxPlusOne == 0) {
-            allowedAdminsList.push(adminAddress);
-            idxPlusOne = allowedAdminsList.length;
+            uint256 count = allowedAdminsCount;
+            _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(adminAddress))));
+            allowedAdminsCount = count + 1;
+            idxPlusOne = count + 1;
         }
 
         uint256 packed;
@@ -688,26 +694,22 @@ contract InfinityVerse_Main_Ga_1 {
         require(idxPlusOne != 0, "Main: admin not found");
 
         uint256 index = idxPlusOne - 1;
-        uint256 lastIndex = allowedAdminsList.length - 1;
+        uint256 lastIndex = allowedAdminsCount - 1;
 
-        // Мгновенное удаление методом Swap & Pop за O(1)
+        // Мгновенное удаление методом Swap & Pop за O(1) внутри защищенной зоны ADMIN_LIST_PREFIX
         if (index != lastIndex) {
-            address lastAdmin = allowedAdminsList[lastIndex];
-            allowedAdminsList[index] = lastAdmin;
+            bytes32 lastAdminVal = _getSlot(bytes32(ADMIN_LIST_PREFIX + lastIndex));
+            address lastAdmin = address(uint160(uint256(lastAdminVal)));
+            _setSlot(bytes32(ADMIN_LIST_PREFIX + index), lastAdminVal);
 
             // Обновляем indexPlusOne у перенесённого админа в его личном слоте
-            uint256 lastSlot = ADMIN_SLOT_PREFIX | uint160(lastAdmin);
-            uint256 lastPacked;
-            assembly {
-                lastPacked := sload(lastSlot)
-            }
+            uint256 lastPacked = _readAdminSlot(lastAdmin);
             lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(idxPlusOne) << 128);
-            assembly {
-                sstore(lastSlot, lastPacked)
-            }
+            _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)), bytes32(lastPacked));
         }
 
-        allowedAdminsList.pop();
+        _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIndex), 0);
+        allowedAdminsCount = lastIndex;
 
         // Полная очистка ячейки памяти с возвратом газа (Gas Refund)
         assembly {
@@ -720,13 +722,18 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Получение полного списка всех авторизованных администраторов / модулей
      */
-    function getAllowedAdmins() external view returns (address[] memory) {
-        return allowedAdminsList;
+    function getAllowedAdmins() public view returns (address[] memory) {
+        uint256 count = allowedAdminsCount;
+        address[] memory list = new address[](count);
+        for (uint256 i = 0; i < count; i++) {
+            list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + i)))));
+        }
+        return list;
     }
 
     // Сохраняем для обратной совместимости с интерфейсом IInfinityVerse_PrevMain
     function getAllowedContracts() external view returns (address[] memory) {
-        return allowedAdminsList;
+        return getAllowedAdmins();
     }
 
     /**
@@ -757,15 +764,17 @@ contract InfinityVerse_Main_Ga_1 {
             uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
             if (prevIdxPlusOne != 0) {
                 uint256 prevIdx = prevIdxPlusOne - 1;
-                uint256 lastIdx = allowedAdminsList.length - 1;
+                uint256 lastIdx = allowedAdminsCount - 1;
                 if (prevIdx != lastIdx) {
-                    address lastAdmin = allowedAdminsList[lastIdx];
-                    allowedAdminsList[prevIdx] = lastAdmin;
+                    bytes32 lastAdminVal = _getSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx));
+                    address lastAdmin = address(uint160(uint256(lastAdminVal)));
+                    _setSlot(bytes32(ADMIN_LIST_PREFIX + prevIdx), lastAdminVal);
                     uint256 lastPacked = _readAdminSlot(lastAdmin);
                     lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(prevIdxPlusOne) << 128);
                     _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)), bytes32(lastPacked));
                 }
-                allowedAdminsList.pop();
+                _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx), 0);
+                allowedAdminsCount = lastIdx;
             }
             _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(superAdmin)), 0);
             emit AdminDisallowed(superAdmin);
@@ -775,15 +784,17 @@ contract InfinityVerse_Main_Ga_1 {
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
             require(nextMain != address(0), "Main: lock nextMain before burning admin");
             require(
-                allowedAdminsList.length == 0,
+                allowedAdminsCount == 0,
                 "Main: revoke all admins before burning superAdmin"
             );
         } else {
             // 3. Если передаем новому SuperAdmin — вносим его в общий реестр админов
             if (!_isAdmin(newSuperAdmin)) {
                 uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
-                allowedAdminsList.push(newSuperAdmin);
-                uint64 idxPlusOne = uint64(allowedAdminsList.length);
+                uint256 count = allowedAdminsCount;
+                _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(newSuperAdmin))));
+                allowedAdminsCount = count + 1;
+                uint64 idxPlusOne = uint64(count + 1);
                 uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
                 assembly {
                     sstore(newSlot, packed)
