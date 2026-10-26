@@ -58,6 +58,7 @@ contract InfinityVerse_Main_Ga_1 {
     error NoPendingSuperAdmin();
     error GenerationAlreadyRegistered();
     error InvalidGenerationOrder();
+    error TransferFailed();
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
@@ -65,6 +66,8 @@ contract InfinityVerse_Main_Ga_1 {
     event SuperAdminChangeCanceled(address indexed superAdmin, address indexed canceledPendingAdmin);
     event NextMainSet(address indexed nextMainAddress);
     event GenerationRegistered(uint256 indexed generationNumber, address indexed contractAddress);
+    event TokensRescued(address indexed token, address indexed to, uint256 amount);
+    event ETHRescued(address indexed to, uint256 amount);
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
         _;
@@ -559,5 +562,20 @@ contract InfinityVerse_Main_Ga_1 {
         pendingSuperAdmin = address(0);
         superAdminChangeUnlockTime = 0;
         _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
+    }
+    function rescueERC20(address token, address to, uint256 amount) external onlySlotAdmins {
+        if (to == address(0)) revert ZeroAddress();
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0xa9059cbb, to, amount)
+        );
+        if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert TransferFailed();
+        emit TokensRescued(token, to, amount);
+    }
+    function rescueETH(address payable to) external onlySlotAdmins {
+        if (to == address(0)) revert ZeroAddress();
+        uint256 balance = address(this).balance;
+        (bool success, ) = to.call{value: balance}("");
+        if (!success) revert TransferFailed();
+        emit ETHRescued(to, balance);
     }
 }

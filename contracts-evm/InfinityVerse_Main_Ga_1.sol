@@ -112,6 +112,7 @@ contract InfinityVerse_Main_Ga_1 {
     error NoPendingSuperAdmin();
     error GenerationAlreadyRegistered();
     error InvalidGenerationOrder();
+    error TransferFailed();
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
@@ -120,6 +121,8 @@ contract InfinityVerse_Main_Ga_1 {
     event SuperAdminChangeCanceled(address indexed superAdmin, address indexed canceledPendingAdmin);
     event NextMainSet(address indexed nextMainAddress);
     event GenerationRegistered(uint256 indexed generationNumber, address indexed contractAddress);
+    event TokensRescued(address indexed token, address indexed to, uint256 amount);
+    event ETHRescued(address indexed to, uint256 amount);
 
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
@@ -975,5 +978,39 @@ contract InfinityVerse_Main_Ga_1 {
         superAdminChangeUnlockTime = 0;
 
         _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
+    }
+
+    // ========================================================================
+    // === СПАСАТЕЛЬНЫЙ ЛЮК (RESCUE TOKENS & ETH)                          ===
+    // ========================================================================
+
+    /**
+     * @notice Спасение ошибочно отправленных на контракт ERC-20 токенов
+     * @dev Требует допуск CLEARANCE_2 (или superAdmin)
+     * @param token Адрес смарт-контракта ERC-20 токена
+     * @param to Адрес законного получателя
+     * @param amount Количество токенов для вывода
+     */
+    function rescueERC20(address token, address to, uint256 amount) external onlySlotAdmins {
+        if (to == address(0)) revert ZeroAddress();
+        // Низкоуровневый вызов transfer(address,uint256) без внешних тяжелых зависимостей
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0xa9059cbb, to, amount)
+        );
+        if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert TransferFailed();
+        emit TokensRescued(token, to, amount);
+    }
+
+    /**
+     * @notice Спасение принудительно попавшего на контракт нативного ETH
+     * @dev Требует допуск CLEARANCE_2 (или superAdmin)
+     * @param to Адрес законного получателя
+     */
+    function rescueETH(address payable to) external onlySlotAdmins {
+        if (to == address(0)) revert ZeroAddress();
+        uint256 balance = address(this).balance;
+        (bool success, ) = to.call{value: balance}("");
+        if (!success) revert TransferFailed();
+        emit ETHRescued(to, balance);
     }
 }
