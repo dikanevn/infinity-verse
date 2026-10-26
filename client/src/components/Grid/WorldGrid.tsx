@@ -9,6 +9,7 @@ interface WorldGridProps {
   focusCoord: { x: number; y: number };
   onSelectCoord: (coord: { x: number; y: number }) => void;
   onCenterPlayer: () => void;
+  onQuickMove?: (coord: { x: number; y: number }) => void;
 }
 
 export const WorldGrid: React.FC<WorldGridProps> = ({
@@ -17,7 +18,8 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   player,
   focusCoord,
   onSelectCoord,
-  onCenterPlayer
+  onCenterPlayer,
+  onQuickMove
 }) => {
   const [scale, setScale] = useState<number>(0.85);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -423,6 +425,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
                 isSelected={isSelected}
                 player={player}
                 onSelect={onSelectCoord}
+                onQuickMove={onQuickMove}
               />
             </div>
           );

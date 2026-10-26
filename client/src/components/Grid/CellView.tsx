@@ -4,12 +4,12 @@ import { TERRAIN_CONFIG, OBJECT_CONFIG } from '../../config/constants';
 import { getSandTextureForCoord } from '../../config/sandTextures';
 
 interface CellViewProps {
-
   coord: { x: number; y: number };
   cell?: CellData;
   isSelected: boolean;
   player: PlayerData | null;
   onSelect: (coord: { x: number; y: number }) => void;
+  onQuickMove?: (coord: { x: number; y: number }) => void;
 }
 
 export const CellView: React.FC<CellViewProps> = ({
@@ -17,7 +17,8 @@ export const CellView: React.FC<CellViewProps> = ({
   cell,
   isSelected,
   player,
-  onSelect
+  onSelect,
+  onQuickMove
 }) => {
   // Туман войны — только если клетка вообще не прочитана из блокчейна (!cell)
   const isFog = !cell;
@@ -32,9 +33,35 @@ export const CellView: React.FC<CellViewProps> = ({
   // Если прочитано из блокчейна и terrain === 0 — это Квантовый Хаос
   const isChaos = !isFog && cell.terrain === 0;
 
+  // Проверка: является ли клетка соседней для игрока (1 клетка по горизонтали, вертикали или диагонали)
+  const isAdjacent = !!player?.exists && (() => {
+    const dx = Math.abs(coord.x - player.x);
+    const dy = Math.abs(coord.y - player.y);
+    return (dx <= 1 && dy <= 1) && (dx + dy > 0);
+  })();
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isAdjacent && onQuickMove) {
+      onQuickMove(coord);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isAdjacent && onQuickMove) {
+      onQuickMove(coord);
+    } else {
+      onSelect(coord);
+    }
+  };
+
   return (
     <button
       onClick={() => onSelect(coord)}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
       style={{
         boxSizing: 'border-box',
         width: '62px',

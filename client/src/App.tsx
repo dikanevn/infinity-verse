@@ -97,6 +97,21 @@ function App() {
     }
   };
 
+  // Быстрый ход по двойному клику или ПКМ по соседней клетке
+  const handleQuickMove = (coord: { x: number; y: number }) => {
+    if (!player?.exists || actionPending) return;
+    const dx = Math.abs(coord.x - player.x);
+    const dy = Math.abs(coord.y - player.y);
+    const isAdjacent = (dx <= 1 && dy <= 1) && (dx + dy > 0);
+    const isObelisk = coord.x === 0 && coord.y === 0;
+
+    if (isAdjacent && !isObelisk) {
+      setSelectedCoord(coord);
+      setAntennaFocus(coord);
+      handleMove(coord.x, coord.y);
+    }
+  };
+
   // Возврат фокуса к игроку
   const handleCenterPlayer = () => {
     if (player?.exists) {
@@ -215,6 +230,7 @@ function App() {
           focusCoord={antennaFocus}
           onSelectCoord={handleSelectCoord}
           onCenterPlayer={handleCenterPlayer}
+          onQuickMove={handleQuickMove}
         />
 
         {/* Панель управления игроком */}
