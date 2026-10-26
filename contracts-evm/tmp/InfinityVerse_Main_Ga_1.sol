@@ -12,6 +12,9 @@ contract InfinityVerse_Main_Ga_1 {
     address public immutable prevMain;
     address public nextMain;
     address public superAdmin;
+    uint256 public constant TIMELOCK_DURATION = 48 hours;
+    address public pendingSuperAdmin;
+    uint64 public superAdminChangeUnlockTime;
     uint256 public constant RESERVED_SLOTS = 1 << 180;
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
     uint256 private constant ADMIN_LIST_PREFIX = 2 << 160;
@@ -49,9 +52,13 @@ contract InfinityVerse_Main_Ga_1 {
     error InvalidTimeRange();
     error AdminNotFound();
     error MigrationLocked();
+    error TimelockActive();
+    error NoPendingSuperAdmin();
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
+    event SuperAdminChangeRequested(address indexed currentSuperAdmin, address indexed pendingSuperAdmin, uint64 unlockTime);
+    event SuperAdminChangeCanceled(address indexed superAdmin, address indexed canceledPendingAdmin);
     event NextMainSet(address indexed nextMainAddress);
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
@@ -440,9 +447,7 @@ contract InfinityVerse_Main_Ga_1 {
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
     }
-    function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
-        if (newSuperAdmin == address(0)) revert ZeroAddress();
-        if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
+    function _applySuperAdminTransfer(address newSuperAdmin) internal {
         if (_isAdmin(superAdmin)) {
             uint256 prevPacked = _readAdminSlot(superAdmin);
             uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
@@ -484,5 +489,34 @@ contract InfinityVerse_Main_Ga_1 {
         }
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
         superAdmin = newSuperAdmin;
+    }
+    function requestSuperAdminChange(address newSuperAdmin) external onlySuperAdmin {
+        if (newSuperAdmin == address(0)) revert ZeroAddress();
+        if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
+        if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
+        uint64 unlockTime = uint64(block.timestamp + TIMELOCK_DURATION);
+        pendingSuperAdmin = newSuperAdmin;
+        superAdminChangeUnlockTime = unlockTime;
+        emit SuperAdminChangeRequested(superAdmin, newSuperAdmin, unlockTime);
+    }
+    function cancelSuperAdminChange() external onlySuperAdmin {
+        if (pendingSuperAdmin == address(0)) revert NoPendingSuperAdmin();
+        address canceledAdmin = pendingSuperAdmin;
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+        emit SuperAdminChangeCanceled(superAdmin, canceledAdmin);
+    }
+    function executeSuperAdminChange() external onlySuperAdmin {
+        address newAdmin = pendingSuperAdmin;
+        if (newAdmin == address(0)) revert NoPendingSuperAdmin();
+        if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+        _applySuperAdminTransfer(newAdmin);
+    }
+    function changeSuperAdminToDead() external onlySuperAdmin {
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+        _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
     }
 }

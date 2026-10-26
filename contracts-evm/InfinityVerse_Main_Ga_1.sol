@@ -45,6 +45,11 @@ contract InfinityVerse_Main_Ga_1 {
     // Верховный администратор (в перспективе передается в смарт-контракт под управлением DAO)
     address public superAdmin;
 
+    // Временной замок (48-Hour Timelock) для защиты передачи полномочий SuperAdmin
+    uint256 public constant TIMELOCK_DURATION = 48 hours;
+    address public pendingSuperAdmin;
+    uint64 public superAdminChangeUnlockTime;
+
     // ========================================================================
     // === СИСТЕМА ПРЯМОЙ АДРЕСАЦИИ СЛОТОВ И ГРАНИЦЫ БЕЗОПАСНОСТИ 2^180     ===
     // ========================================================================
@@ -97,10 +102,14 @@ contract InfinityVerse_Main_Ga_1 {
     error InvalidTimeRange();
     error AdminNotFound();
     error MigrationLocked();
+    error TimelockActive();
+    error NoPendingSuperAdmin();
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
+    event SuperAdminChangeRequested(address indexed currentSuperAdmin, address indexed pendingSuperAdmin, uint64 unlockTime);
+    event SuperAdminChangeCanceled(address indexed superAdmin, address indexed canceledPendingAdmin);
     event NextMainSet(address indexed nextMainAddress);
 
     modifier onlySuperAdmin() {
@@ -781,15 +790,9 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Передача прав главного администратора (SuperAdmin) на новый адрес
-     * @dev При финализации миграции передается на 0x...dEaD.
-     * Защита запрещает сжечь админа, если список администраторов не пуст или nextMain не задан!
-     * @param newSuperAdmin Адрес нового главного администратора
+     * @dev Внутренняя низкоуровневая передача полномочий SuperAdmin (общая логика).
      */
-    function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
-        if (newSuperAdmin == address(0)) revert ZeroAddress();
-        if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
-
+    function _applySuperAdminTransfer(address newSuperAdmin) internal {
         // 1. Автоматически отзываем права у предыдущего SuperAdmin за O(1)
         if (_isAdmin(superAdmin)) {
             uint256 prevPacked = _readAdminSlot(superAdmin);
@@ -840,5 +843,61 @@ contract InfinityVerse_Main_Ga_1 {
 
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
         superAdmin = newSuperAdmin;
+    }
+
+    /**
+     * @notice Запрос на смену SuperAdmin с 48-часовой задержкой (Timelock).
+     * @dev Защищает контракт от мгновенного перехвата управления при краже ключа.
+     * При сжигании на 0x...dEaD вызов не требуется — используется прямой changeSuperAdminToDead().
+     * @param newSuperAdmin Адрес кандидата в новые SuperAdmin
+     */
+    function requestSuperAdminChange(address newSuperAdmin) external onlySuperAdmin {
+        if (newSuperAdmin == address(0)) revert ZeroAddress();
+        if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
+        if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
+
+        uint64 unlockTime = uint64(block.timestamp + TIMELOCK_DURATION);
+        pendingSuperAdmin = newSuperAdmin;
+        superAdminChangeUnlockTime = unlockTime;
+
+        emit SuperAdminChangeRequested(superAdmin, newSuperAdmin, unlockTime);
+    }
+
+    /**
+     * @notice Отмена текущего запроса на смену SuperAdmin
+     */
+    function cancelSuperAdminChange() external onlySuperAdmin {
+        if (pendingSuperAdmin == address(0)) revert NoPendingSuperAdmin();
+        address canceledAdmin = pendingSuperAdmin;
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+
+        emit SuperAdminChangeCanceled(superAdmin, canceledAdmin);
+    }
+
+    /**
+     * @notice Финализация смены SuperAdmin по истечении 48-часового временного замка.
+     */
+    function executeSuperAdminChange() external onlySuperAdmin {
+        address newAdmin = pendingSuperAdmin;
+        if (newAdmin == address(0)) revert NoPendingSuperAdmin();
+        if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
+
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+
+        _applySuperAdminTransfer(newAdmin);
+    }
+
+    /**
+     * @notice Мгновенное сжигание прав SuperAdmin на 0x...dEaD для финализации миграции поколений.
+     * @dev Выполняется БЕЗ задержки Timelock, но строго требует: nextMain != address(0) и allowedAdminsCount == 0.
+     */
+    function changeSuperAdminToDead() external onlySuperAdmin {
+        // Очищаем отложенные запросы на смену, если они были
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+
+        _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
     }
 }
