@@ -247,11 +247,23 @@ contract InfinityVerse_Ga_TTT {
     }
 
     // ========================================================================
-    // === БЕЗОПАСНАЯ ПЕРЕДАЧА SUPERADMIN (TIMELOCK) ===
+    // === ПЕРЕДАЧА SUPERADMIN (ПРЯМАЯ ДЛЯ КОНТРАКТОВ ИЛИ TIMELOCK) ===
     // ========================================================================
 
     /**
-     * @notice Инициация передачи верховной власти
+     * @notice Прямая передача роли SuperAdmin (позволяет контракту AAA мгновенно передать власть наследнику AAA_3)
+     */
+    function transferSuperAdminDirect(address newAdmin) external onlySuperAdmin {
+        if (newAdmin == address(0)) revert ZeroAddress();
+        address oldAdmin = superAdmin;
+        superAdmin = newAdmin;
+        pendingSuperAdmin = address(0);
+        superAdminTransferUnlockTime = 0;
+        emit SuperAdminTransferAccepted(oldAdmin, newAdmin);
+    }
+
+    /**
+     * @notice Инициация передачи верховной власти через Timelock
      */
     function initiateSuperAdminTransfer(address newAdmin) external onlySuperAdmin {
         if (newAdmin == address(0)) revert ZeroAddress();

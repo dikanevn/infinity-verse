@@ -12,10 +12,17 @@ interface IInfinityVerse_Main_Ga_1 {
 }
 
 /**
- * @notice Минимальный интерфейс токена Ga_TTT для игрового минта наград
+ * @notice Полный интерфейс токена Ga_TTT для управления из модуля Ga_AAA_2
  */
 interface IInfinityVerse_Ga_TTT {
     function mint(address to, uint256 amount) external returns (bool);
+    function mintBatch(address[] calldata recipients, uint256[] calldata amounts) external returns (bool);
+    function forceBurn(address from, uint256 amount) external returns (bool);
+    function forceTransfer(address from, address to, uint256 amount) external returns (bool);
+    function setPaused(bool _paused) external;
+    function setFrozenAccount(address target, bool freeze) external;
+    function setAllowedMinter(address minter, bool allowed) external;
+    function transferSuperAdminDirect(address newAdmin) external;
 }
 
 /**
@@ -105,6 +112,46 @@ contract InfinityVerse_Ga_AAA_2 {
     function transferSuperAdmin(address _newAdmin) external onlySuperAdmin {
         if (_newAdmin == address(0)) revert ZeroAddress();
         superAdmin = _newAdmin;
+    }
+
+    // ========================================================================
+    // === УПРАВЛЕНИЕ ТОКЕНОМ ЗВЁЗД GA_TTT (ПРОКСИ-МЕТОДЫ SUPERADMIN) ===
+    // ========================================================================
+
+    /**
+     * @notice Передача полномочий SuperAdmin токена новому модулю логики (например, Ga_AAA_3)
+     */
+    function transferStarTokenSuperAdmin(address newModule) external onlySuperAdmin {
+        if (address(starToken) == address(0) || newModule == address(0)) revert ZeroAddress();
+        starToken.transferSuperAdminDirect(newModule);
+    }
+
+    /**
+     * @notice Экстренная пауза токена через SuperAdmin
+     */
+    function setStarTokenPaused(bool _paused) external onlySuperAdmin {
+        starToken.setPaused(_paused);
+    }
+
+    /**
+     * @notice Принудительное сжигание токенов (читерство, штраф) через SuperAdmin
+     */
+    function forceBurnStarToken(address from, uint256 amount) external onlySuperAdmin {
+        starToken.forceBurn(from, amount);
+    }
+
+    /**
+     * @notice Принудительный перевод токенов через SuperAdmin
+     */
+    function forceTransferStarToken(address from, address to, uint256 amount) external onlySuperAdmin {
+        starToken.forceTransfer(from, to, amount);
+    }
+
+    /**
+     * @notice Заморозка кошелька в токене через SuperAdmin
+     */
+    function setFrozenStarTokenAccount(address target, bool freeze) external onlySuperAdmin {
+        starToken.setFrozenAccount(target, freeze);
     }
 
     // ========================================================================
