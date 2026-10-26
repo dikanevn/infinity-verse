@@ -2,10 +2,10 @@ import { createWalletClient, createPublicClient, http, defineChain, parseAbi, ke
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 
 // ============================================================================
-// === АКТУАЛЬНЫЕ АДРЕСА ПОКОЛЕНИЯ 2 (MAIN_G_2 + СИММЕТРИЧНЫЙ AAA) ===
+// === АКТУАЛЬНЫЕ АДРЕСА ЭПОХИ GA (MAIN_GA_1 + СИММЕТРИЧНЫЙ GA_AAA) ===
 // ============================================================================
-const MAIN_G2_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
-const AAA_ADDRESS = '0x035da1a59b049f9022984743f4c43fbc311d44d6';
+const MAIN_GA1_ADDRESS = '0xf32bd8705ee1c7682d9a5f2d00b18815929d4482';
+const AAA_ADDRESS = '0x39dc34a83303c6074ea37c7a28733187149840f0';
 
 // ABI для чтения нонсов и состояния из хранилища Main_G_2
 const MAIN_ABI = parseAbi([
@@ -152,7 +152,7 @@ export default {
 
     const url = new URL(request.url);
 
-    const mainContractAddress = env.MAIN_CONTRACT_ADDRESS || MAIN_G2_ADDRESS;
+    const mainContractAddress = env.MAIN_CONTRACT_ADDRESS || MAIN_GA1_ADDRESS;
     const aaaContractAddress = env.AAA_CONTRACT_ADDRESS || AAA_ADDRESS;
     const rpcUrl = env.RPC_URL || 'https://testnet-rpc.monad.xyz';
     const chainId = Number(env.CHAIN_ID || 10143);
@@ -248,8 +248,8 @@ export default {
         const playerAccount = privateKeyToAccount(playerPrivateKey);
 
         const playerNonce = await publicClient.readContract({
-          address: mainContractAddress,
-          abi: MAIN_ABI,
+          address: aaaContractAddress,
+          abi: AAA_ABI,
           functionName: 'nonces',
           args: [playerAccount.address]
         });

@@ -1,12 +1,12 @@
 import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 
 // ============================================================================
-// === АКТУАЛЬНЫЕ КОНТРАКТЫ ПОКОЛЕНИЯ 2 (MONAD TESTNET) ===
+// === АКТУАЛЬНЫЕ КОНТРАКТЫ ЭПОХИ GA (MONAD TESTNET) ===
 // ============================================================================
-// Хранилище мира (State Storage Generation 2):
-export const MAIN_CONTRACT_ADDRESS = '0x022d01b6e057e62e6B7Be9a2bE2b76e0Af26109B';
-// Исполнительная логика (AAA Module):
-export const AAA_CONTRACT_ADDRESS = '0x035da1a59b049f9022984743f4c43fbc311d44d6';
+// Постоянное универсальное хранилище мира (Main Ga-1):
+export const MAIN_CONTRACT_ADDRESS = '0xf32bd8705ee1c7682d9a5f2d00b18815929d4482';
+// Исполнительная логика и игровой интерфейс (Ga_AAA Module):
+export const AAA_CONTRACT_ADDRESS = '0x39dc34a83303c6074ea37c7a28733187149840f0';
 
 export const DEFAULT_RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const getActiveRpcUrl = (): string => {
@@ -39,26 +39,29 @@ export const monadTestnet = defineChain({
 });
 
 // ============================================================================
-// === ABI MAIN (ХРАНИЛИЩЕ МИРА И СОСТОЯНИЯ ИГРОКОВ) ===
+// === ABI MAIN (УНИВЕРСАЛЬНЫЙ ДИСК МУЛЬТИВСЕЛЕННОЙ MAIN_GA_1) ===
 // ============================================================================
 export const MAIN_ABI = parseAbi([
   'function VERSION() view returns (string)',
   'function GENERATION() view returns (uint256)',
-  'function contractAAA() view returns (address)',
-  'function getCellKey(int32 x, int32 y) pure returns (bytes32)',
-  'function getCell(int32 x, int32 y) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved))',
-  'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved)[])',
-  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry, uint256 registeredAtBlock, uint256 registeredAtTimestamp)',
-  'function nonces(address player) view returns (uint256)'
+  'function totalGenerations() view returns (uint256)',
+  'function getAllGenerations() view returns (address[])',
+  'function readSector(bytes32 sector) view returns (bytes32)',
+  'function readSectorBatch(bytes32[] sectors) view returns (bytes32[])'
 ]);
 
 // ============================================================================
-// === ABI AAA (СИММЕТРИЧНЫЙ МОДУЛЬ ЛОГИКИ: DIRECT <-> GASLESS) ===
+// === ABI AAA (ВЫСОКОПРОИЗВОДИТЕЛЬНЫЙ ИГРОВОЙ МОДУЛЬ GA_AAA) ===
 // ============================================================================
 export const AAA_ABI = parseAbi([
   'function VERSION() view returns (string)',
   'function mainContract() view returns (address)',
   'function relayer() view returns (address)',
+  'function getCellKey(int32 x, int32 y) pure returns (bytes32)',
+  'function getCell(int32 x, int32 y) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved))',
+  'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved)[])',
+  'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry, uint64 registeredAtBlock, uint64 registeredAtTimestamp)',
+  'function nonces(address player) view returns (uint256)',
   'function isSessionValid(address player, address key) view returns (bool)',
   // Прямые действия игрока за личный газ (Direct: MetaMask / Приватник)
   'function spawnDirect()',

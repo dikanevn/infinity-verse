@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { createWalletClient, custom, keccak256, encodePacked } from 'viem';
 import type { PlayerData, EIP6963ProviderDetail, AuthMode } from '../types';
 import {
-  MAIN_CONTRACT_ADDRESS,
   AAA_CONTRACT_ADDRESS,
-  MAIN_ABI,
   AAA_ABI,
   RELAYER_URL,
   monadTestnet,
@@ -43,8 +41,8 @@ export function usePlayerState(
     if (!connectedAddress) return;
     try {
       const pData: any = await publicClient.readContract({
-        address: MAIN_CONTRACT_ADDRESS,
-        abi: MAIN_ABI,
+        address: AAA_CONTRACT_ADDRESS,
+        abi: AAA_ABI,
         functionName: 'getPlayer',
         args: [connectedAddress as `0x${string}`]
       });
@@ -102,8 +100,8 @@ export function usePlayerState(
 
       // Проверяем статус в контракте
       const pData: any = await publicClient.readContract({
-        address: MAIN_CONTRACT_ADDRESS,
-        abi: MAIN_ABI,
+        address: AAA_CONTRACT_ADDRESS,
+        abi: AAA_ABI,
         functionName: 'getPlayer',
         args: [userAddress as `0x${string}`]
       });
@@ -117,8 +115,8 @@ export function usePlayerState(
         setStatusText('✍️ Подпишите сессию в MetaMask (1 раз на 20 часов, без комиссии)...');
         const expiry = nowSec + 72000;
         const nonce = await publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
           functionName: 'nonces',
           args: [userAddress as `0x${string}`]
         });
@@ -268,8 +266,8 @@ export function usePlayerState(
       const nowSec = Math.floor(Date.now() / 1000);
 
       const pData: any = await publicClient.readContract({
-        address: MAIN_CONTRACT_ADDRESS,
-        abi: MAIN_ABI,
+        address: AAA_CONTRACT_ADDRESS,
+        abi: AAA_ABI,
         functionName: 'getPlayer',
         args: [playerAddr as `0x${string}`]
       });
@@ -360,8 +358,8 @@ export function usePlayerState(
         setStatusText('⏳ Рождение игрока через спонсора (spawnGasless)...');
         const sessionAccount = getOrCreateSessionAccount();
         const nonce = await publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
           functionName: 'nonces',
           args: [connectedAddress as `0x${string}`]
         });
@@ -444,8 +442,8 @@ export function usePlayerState(
       else {
         const sessionAccount = getOrCreateSessionAccount();
         const nonce = await publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
           functionName: 'nonces',
           args: [connectedAddress as `0x${string}`]
         });
@@ -530,8 +528,8 @@ export function usePlayerState(
       else {
         const sessionAccount = getOrCreateSessionAccount();
         const nonce = await publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
           functionName: 'nonces',
           args: [connectedAddress as `0x${string}`]
         });
@@ -609,8 +607,8 @@ export function usePlayerState(
         await publicClient.waitForTransactionReceipt({ hash });
       } else {
         const nonce = await publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
           functionName: 'nonces',
           args: [connectedAddress as `0x${string}`]
         });

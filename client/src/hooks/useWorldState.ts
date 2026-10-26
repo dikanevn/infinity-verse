@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { keccak256, encodePacked } from 'viem';
 import type { CellData } from '../types';
-import { MAIN_CONTRACT_ADDRESS, MAIN_ABI, publicClient } from '../config/contracts';
+import { AAA_CONTRACT_ADDRESS, AAA_ABI, publicClient } from '../config/contracts';
 import { CONNECTION_CONFIG } from '../config/constants';
 
 export function useWorldState(
@@ -39,8 +39,8 @@ export function useWorldState(
       // Запрашиваем из ноды только активные клетки и latestBlock
       const [onchainCells, latestBlock] = await Promise.all([
         publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
           functionName: 'getCellsBatch',
           args: [xs, ys]
         }),
@@ -77,8 +77,8 @@ export function useWorldState(
   // Однократно считываем версию контракта при старте, чтобы не спамить ноду
   useEffect(() => {
     publicClient.readContract({
-      address: MAIN_CONTRACT_ADDRESS,
-      abi: MAIN_ABI,
+      address: AAA_CONTRACT_ADDRESS,
+      abi: AAA_ABI,
       functionName: 'VERSION',
     }).then(ver => setContractVersion(ver)).catch(console.error);
   }, []);
