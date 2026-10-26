@@ -199,6 +199,16 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
+     * @notice Прямое ультра-дешевое чтение упакованного 256-битного слота администратора без распаковки.
+     * @dev Идеально для внешних смарт-контрактов, считывающих paramA, paramB, paramC, paramD с минимальным газом.
+     * @param _account Адрес администратора или модуля
+     * @return packed Сырое упакованное 256-битное значение слота
+     */
+    function getRawAdminSlot(address _account) external view returns (uint256 packed) {
+        return _readAdminSlot(_account);
+    }
+
+    /**
      * @notice Быстрая проверка активности администратора прямо сейчас
      * @param _account Адрес для проверки
      */

@@ -114,6 +114,9 @@ contract InfinityVerse_Main_Ga_1 {
         info.paramC = uint16(packed >> 208);
         info.paramD = uint32(packed >> 224);
     }
+    function getRawAdminSlot(address _account) external view returns (uint256 packed) {
+        return _readAdminSlot(_account);
+    }
     function isAdmin(address _account) public view returns (bool) {
         return getAdminInfo(_account).isActive;
     }
