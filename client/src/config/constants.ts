@@ -9,6 +9,7 @@ export const OBJECT_CONFIG: Record<number, { name: string; icon: string }> = {
   0: { name: 'Пусто', icon: '' },
   1: { name: 'Обелиск', icon: '🗿' },
   2: { name: 'Стена', icon: '🧱' },
+  3: { name: 'Звезда', icon: '⭐' },
   9: { name: 'Обелиск', icon: '🗿' },
 };
 

@@ -159,28 +159,15 @@ contract InfinityVerse_Ga_AAA_2 {
     // ========================================================================
 
     function getCellKey(int32 x, int32 y) public pure returns (bytes32 key) {
-        assembly {
-            mstore(0x00, PREFIX_CELL)
-            mstore(0x04, x)
-            mstore(0x24, y)
-            key := keccak256(0x00, 0x44)
-        }
+        return keccak256(abi.encodePacked(PREFIX_CELL, x, y));
     }
 
     function getPlayerPosKey(address player) public pure returns (bytes32 key) {
-        assembly {
-            mstore(0x00, PREFIX_POS)
-            mstore(0x04, player)
-            key := keccak256(0x00, 0x24)
-        }
+        return keccak256(abi.encodePacked(PREFIX_POS, player));
     }
 
     function getPlayerAuthKey(address player) public pure returns (bytes32 key) {
-        assembly {
-            mstore(0x00, PREFIX_AUTH)
-            mstore(0x04, player)
-            key := keccak256(0x00, 0x24)
-        }
+        return keccak256(abi.encodePacked(PREFIX_AUTH, player));
     }
 
     // ========================================================================
