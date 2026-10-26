@@ -223,6 +223,27 @@ contract InfinityVerse_Main_Ga_1 {
         return isAdmin(_account);
     }
 
+    /**
+     * @notice Конструктор нового поколения InfinityVerse.
+     * @dev АРХИТЕКТУРНОЕ РЕШЕНИЕ «КУРИЦЫ И ЯЙЦА» (CHICKEN-AND-EGG RESOLUTION BY DESIGN):
+     * Аудиторы часто спрашивают: как деплоить новое поколение (Gen N+1), если в constructor
+     * проверяется, что старое поколение (Gen N) уже установило nextMain == newContract?
+     * В Ethereum адрес контракта детерминирован и вычисляется ДО отправки транзакции:
+     *   predictedAddress = address(keccak256(rlp([deployerAddress, nonce])))
+     *   (либо через CREATE2: keccak256(0xff ++ deployer ++ salt ++ keccak256(bytecode)))
+     * 
+     * Идеальный порядок миграции поколений спроектирован намеренно:
+     * 1. Владелец заранее рассчитывает адрес будущего контракта (predictedAddress) по своему nonce.
+     * 2. В старом поколении (Gen N) вызывает setNextMain(predictedAddress) и registerNextGeneration(predictedAddress).
+     * 3. В старом поколении отзывает всех внешних админов/модулей (disallowAdmin).
+     * 4. Запускает 48-часовой таймлок на сжигание: requestSuperAdminChange(0xdEaD).
+     * 5. По истечении 48 часов сжигает старое поколение: executeSuperAdminBurn().
+     *    Теперь в Gen N: superAdmin == 0xdEaD, allowedAdminsCount == 0, nextMain == predictedAddress.
+     * 6. Отправляет транзакцию создания Gen N+1 со своего адреса с тем самым nonce:
+     *    адрес контракта совпадает с predictedAddress, проверки в constructor идеально сходятся,
+     *    а история поколений (totalGenerations) неразрывно продолжается.
+     * Никакого тупика нет: детерминизм EVM гарантирует математически точную и строгую смену эпох!
+     */
     constructor(address _prevMain) {
         uint256 currentGen = 1;
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
