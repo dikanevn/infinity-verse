@@ -19,8 +19,15 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   onSelectCoord,
   onCenterPlayer
 }) => {
-  // Масштаб регулируется строго через кнопки + и -
   const [scale, setScale] = useState<number>(0.85);
+  const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isInteracting, setIsInteracting] = useState<boolean>(false);
+
+  // Рефы для актуальных значений без задержек стейта React
+  const scaleRef = useRef<number>(0.85);
+  scaleRef.current = scale;
+  const positionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  positionRef.current = position;
 
   // Собираем все координаты для отрисовки из загруженных cells
   // Если клеток еще нет — дефолтно рисуем 5х5 вокруг фокуса
@@ -39,61 +46,79 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Размер одной клетки 62px + 1px разделитель = 63px
   const CELL_PITCH = 63;
 
-  // Смещение поля
-  const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-
   const isFirstMountRef = useRef<boolean>(true);
 
   // Автоматически удерживаем камеру на игроке при начальной загрузке
   useEffect(() => {
     if (player?.exists && isFirstMountRef.current) {
       isFirstMountRef.current = false;
-      setPosition({
-        x: -player.x * CELL_PITCH * scale,
-        y: player.y * CELL_PITCH * scale
-      });
+      const initialPos = {
+        x: -player.x * CELL_PITCH * scaleRef.current,
+        y: player.y * CELL_PITCH * scaleRef.current
+      };
+      setPosition(initialPos);
+      positionRef.current = initialPos;
     }
   }, [player?.x, player?.y, player?.exists]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<boolean>(false);
+  const isPinchingRef = useRef<boolean>(false);
+  const hasMovedRef = useRef<boolean>(false);
+
+  // Для 1 пальца (панорамирование)
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const posStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const hasMovedRef = useRef<boolean>(false);
-  const lastTouchDistRef = useRef<number | null>(null);
-  const touch2StartCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Для 2 пальцев (зум + панорамирование)
+  const pinchStartDistRef = useRef<number>(0);
+  const pinchStartScaleRef = useRef<number>(0.85);
+  const pinchStartCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pinchStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Масштабирование по кнопкам относительно центра экрана
   const handleZoomIn = () => {
-    const newScale = Math.min(2.5, scale + 0.15);
-    const scaleMultiplier = newScale / scale;
+    const curScale = scaleRef.current;
+    const newScale = Math.min(2.5, curScale + 0.15);
+    const scaleMultiplier = newScale / curScale;
     setScale(newScale);
-    setPosition(prev => ({
-      x: prev.x * scaleMultiplier,
-      y: prev.y * scaleMultiplier
-    }));
+    setPosition(prev => {
+      const nextPos = {
+        x: prev.x * scaleMultiplier,
+        y: prev.y * scaleMultiplier
+      };
+      positionRef.current = nextPos;
+      return nextPos;
+    });
   };
 
   const handleZoomOut = () => {
-    const newScale = Math.max(0.08, scale - 0.15);
-    const scaleMultiplier = newScale / scale;
+    const curScale = scaleRef.current;
+    const newScale = Math.max(0.08, curScale - 0.15);
+    const scaleMultiplier = newScale / curScale;
     setScale(newScale);
-    setPosition(prev => ({
-      x: prev.x * scaleMultiplier,
-      y: prev.y * scaleMultiplier
-    }));
+    setPosition(prev => {
+      const nextPos = {
+        x: prev.x * scaleMultiplier,
+        y: prev.y * scaleMultiplier
+      };
+      positionRef.current = nextPos;
+      return nextPos;
+    });
   };
+
   const handleResetToPlayer = () => {
     const defaultScale = 0.85;
     setScale(defaultScale);
+    let nextPos = { x: 0, y: 0 };
     if (player?.exists) {
-      setPosition({
+      nextPos = {
         x: -player.x * CELL_PITCH * defaultScale,
         y: player.y * CELL_PITCH * defaultScale
-      });
-    } else {
-      setPosition({ x: 0, y: 0 });
+      };
     }
+    setPosition(nextPos);
+    positionRef.current = nextPos;
     onCenterPlayer();
   };
 
@@ -101,12 +126,12 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if (hasMovedRef.current || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left - rect.width / 2 - position.x;
-    const clickY = e.clientY - rect.top - rect.height / 2 - position.y;
+    const clickX = e.clientX - rect.left - rect.width / 2 - positionRef.current.x;
+    const clickY = e.clientY - rect.top - rect.height / 2 - positionRef.current.y;
 
     // В абсолютных координатах мира: X вправо (+), Y вверх (+)
-    const clickedGridX = Math.round(clickX / (CELL_PITCH * scale));
-    const clickedGridY = -Math.round(clickY / (CELL_PITCH * scale));
+    const clickedGridX = Math.round(clickX / (CELL_PITCH * scaleRef.current));
+    const clickedGridY = -Math.round(clickY / (CELL_PITCH * scaleRef.current));
 
     onSelectCoord({ x: clickedGridX, y: clickedGridY });
   };
@@ -115,9 +140,10 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     isDraggingRef.current = true;
+    setIsInteracting(true);
     hasMovedRef.current = false;
     dragStartRef.current = { x: e.clientX, y: e.clientY };
-    posStartRef.current = { ...position };
+    posStartRef.current = { ...positionRef.current };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -127,102 +153,135 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
       hasMovedRef.current = true;
     }
-    setPosition({
+    const nextPos = {
       x: posStartRef.current.x + dx,
       y: posStartRef.current.y + dy
-    });
+    };
+    positionRef.current = nextPos;
+    setPosition(nextPos);
   };
 
   const handleMouseUp = () => {
     isDraggingRef.current = false;
+    setIsInteracting(false);
   };
 
-  // Тач-жесты: Drag 1 пальцем + перемещение & зум 2 пальцами относительно центра экрана
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      isDraggingRef.current = true;
-      hasMovedRef.current = false;
-      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      posStartRef.current = { ...position };
-      lastTouchDistRef.current = null;
-    } else if (e.touches.length === 2) {
-      isDraggingRef.current = false;
-      hasMovedRef.current = true;
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      lastTouchDistRef.current = dist;
-      touch2StartCenterRef.current = {
-        x: (t1.clientX + t2.clientX) / 2,
-        y: (t1.clientY + t2.clientY) / 2
-      };
-      posStartRef.current = { ...position };
-    }
-  };
+  // Нативные touch-листенери с { passive: false } для стабильного pinch-to-zoom на мобильных
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && isDraggingRef.current) {
-      const dx = e.touches[0].clientX - dragStartRef.current.x;
-      const dy = e.touches[0].clientY - dragStartRef.current.y;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        isDraggingRef.current = true;
+        isPinchingRef.current = false;
+        setIsInteracting(true);
+        hasMovedRef.current = false;
+        dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        posStartRef.current = { ...positionRef.current };
+      } else if (e.touches.length === 2) {
+        e.preventDefault();
+        isDraggingRef.current = false;
+        isPinchingRef.current = true;
+        setIsInteracting(true);
         hasMovedRef.current = true;
+
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        pinchStartDistRef.current = Math.max(10, dist);
+        pinchStartScaleRef.current = scaleRef.current;
+        pinchStartCenterRef.current = {
+          x: (t1.clientX + t2.clientX) / 2,
+          y: (t1.clientY + t2.clientY) / 2
+        };
+        pinchStartPosRef.current = { ...positionRef.current };
       }
-      setPosition({
-        x: posStartRef.current.x + dx,
-        y: posStartRef.current.y + dy
-      });
-    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const ratio = newDist / lastTouchDistRef.current;
-      const newScale = Math.min(2.5, Math.max(0.08, scale * ratio));
+    };
 
-      // Движение двумя пальцами: сдвиг центра между пальцами
-      const curMidX = (t1.clientX + t2.clientX) / 2;
-      const curMidY = (t1.clientY + t2.clientY) / 2;
-      const panDx = curMidX - touch2StartCenterRef.current.x;
-      const panDy = curMidY - touch2StartCenterRef.current.y;
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1 && isDraggingRef.current) {
+        const dx = e.touches[0].clientX - dragStartRef.current.x;
+        const dy = e.touches[0].clientY - dragStartRef.current.y;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          hasMovedRef.current = true;
+        }
+        const nextPos = {
+          x: posStartRef.current.x + dx,
+          y: posStartRef.current.y + dy
+        };
+        positionRef.current = nextPos;
+        setPosition(nextPos);
+      } else if (e.touches.length === 2 && isPinchingRef.current) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const curDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const distRatio = curDist / pinchStartDistRef.current;
+        const newScale = Math.min(2.5, Math.max(0.08, pinchStartScaleRef.current * distRatio));
 
-      // Зум строго относительно текущего центра экрана (0,0 экрана):
-      // Масштабируем position относительно центра экрана (cx=0, cy=0)
-      const scaleMultiplier = newScale / scale;
-      const newPosX = (position.x + panDx) * scaleMultiplier;
-      const newPosY = (position.y + panDy) * scaleMultiplier;
+        const curMidX = (t1.clientX + t2.clientX) / 2;
+        const curMidY = (t1.clientY + t2.clientY) / 2;
+        const panDx = curMidX - pinchStartCenterRef.current.x;
+        const panDy = curMidY - pinchStartCenterRef.current.y;
 
-      setScale(newScale);
-      setPosition({ x: newPosX, y: newPosY });
-      touch2StartCenterRef.current = { x: curMidX, y: curMidY };
-      posStartRef.current = { x: newPosX, y: newPosY };
-      lastTouchDistRef.current = newDist;
-    }
-  };
+        // Масштабирование относительно центра контейнера с учетом начальной точки
+        const scaleFactor = newScale / pinchStartScaleRef.current;
+        const nextPos = {
+          x: pinchStartPosRef.current.x * scaleFactor + panDx,
+          y: pinchStartPosRef.current.y * scaleFactor + panDy
+        };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      // Переход с 2 пальцев на 1 палец без рывка
-      isDraggingRef.current = true;
-      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      posStartRef.current = { ...position };
-      lastTouchDistRef.current = null;
-    } else if (e.touches.length === 0) {
-      isDraggingRef.current = false;
-      lastTouchDistRef.current = null;
-    }
-  };
+        scaleRef.current = newScale;
+        positionRef.current = nextPos;
+        setScale(newScale);
+        setPosition(nextPos);
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        // Плавный переход с двух пальцев на один без рывка
+        isDraggingRef.current = true;
+        isPinchingRef.current = false;
+        dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        posStartRef.current = { ...positionRef.current };
+      } else if (e.touches.length === 0) {
+        isDraggingRef.current = false;
+        isPinchingRef.current = false;
+        setIsInteracting(false);
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: false });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: false });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, []);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-    const newScale = Math.min(2.5, Math.max(0.08, scale * zoomFactor));
+    const curScale = scaleRef.current;
+    const newScale = Math.min(2.5, Math.max(0.08, curScale * zoomFactor));
 
-    // Масштаб относительно текущего центра экрана
-    const scaleMultiplier = newScale / scale;
+    const scaleMultiplier = newScale / curScale;
     setScale(newScale);
-    setPosition(prev => ({
-      x: prev.x * scaleMultiplier,
-      y: prev.y * scaleMultiplier
-    }));
+    setPosition(prev => {
+      const nextPos = {
+        x: prev.x * scaleMultiplier,
+        y: prev.y * scaleMultiplier
+      };
+      positionRef.current = nextPos;
+      return nextPos;
+    });
   };
 
   return (
@@ -234,9 +293,6 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
       style={{
         width: '100%',
         flex: 1,
@@ -337,7 +393,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: 'center center',
-          transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          transition: isInteracting ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           position: 'relative',
           width: '0px',
           height: '0px'
