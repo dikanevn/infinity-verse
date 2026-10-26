@@ -24,7 +24,6 @@ contract InfinityVerse_Main_Ga_1 {
     uint8 public constant PERM_C         = 1 << 5;
     uint8 public constant PERM_D         = 1 << 6;
     uint8 public constant PERM_E         = 1 << 7;
-    uint8 public constant PERM_ALL       = 255;
     struct AdminInfo {
         bool isActive;
         uint8 permissions;
@@ -90,8 +89,8 @@ contract InfinityVerse_Main_Ga_1 {
             && (block.timestamp >= validFrom)
             && (validUntil == 0 || block.timestamp <= validUntil);
         info.isActive = (_account == superAdmin) ? true : active;
-        info.permissions = (_account == superAdmin) ? PERM_ALL : perms;
-        info.role = (_account == superAdmin) ? 255 : uint8(packed >> 8);
+        info.permissions = (_account == superAdmin) ? (CLEARANCE_1 | CLEARANCE_2) : perms;
+        info.role = (_account == superAdmin) ? 0 : uint8(packed >> 8);
         info.validFrom = validFrom;
         info.validUntil = validUntil;
         info.listIndex = idxPlusOne > 0 ? idxPlusOne - 1 : 0;
@@ -118,11 +117,11 @@ contract InfinityVerse_Main_Ga_1 {
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
         _setSlot(bytes32(ADMIN_LIST_PREFIX), bytes32(uint256(uint160(superAdmin))));
         allowedAdminsCount = 1;
-        uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(1) << 128);
+        uint256 packed = uint256(CLEARANCE_1 | CLEARANCE_2) | (uint256(1) << 128);
         assembly {
             sstore(slot, packed)
         }
-        emit AdminAllowed(superAdmin, PERM_ALL, 255);
+        emit AdminAllowed(superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
     }
     mapping(bytes32 => bytes32) private disk;
     function readSector(bytes32 sector) external view returns (bytes32) {
@@ -477,11 +476,11 @@ contract InfinityVerse_Main_Ga_1 {
                 allowedAdminsCount = count + 1;
                 idxPlusOne = uint64(count + 1);
             }
-            uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
+            uint256 packed = uint256(CLEARANCE_1 | CLEARANCE_2) | (uint256(idxPlusOne) << 128);
             assembly {
                 sstore(newSlot, packed)
             }
-            emit AdminAllowed(newSuperAdmin, PERM_ALL, 255);
+            emit AdminAllowed(newSuperAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
         }
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
         superAdmin = newSuperAdmin;
