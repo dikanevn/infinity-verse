@@ -174,9 +174,8 @@ contract InfinityVerse_Main_Ga_1 {
         if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = disk[sector];
         slice = new bytes(length);
-        for (uint256 i = 0; i < length;) {
-            slice[i] = val[offset + i];
-            unchecked { ++i; }
+        assembly {
+            mstore(add(slice, 32), shl(mul(offset, 8), val))
         }
     }
     function readSequential(bytes32 baseSector, uint256 count) external view returns (bytes32[] memory) {
@@ -326,9 +325,8 @@ contract InfinityVerse_Main_Ga_1 {
         if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = _getSlot(slot);
         slice = new bytes(length);
-        for (uint256 i = 0; i < length;) {
-            slice[i] = val[offset + i];
-            unchecked { ++i; }
+        assembly {
+            mstore(add(slice, 32), shl(mul(offset, 8), val))
         }
     }
     function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {

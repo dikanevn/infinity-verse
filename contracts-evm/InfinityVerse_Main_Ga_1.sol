@@ -335,9 +335,8 @@ contract InfinityVerse_Main_Ga_1 {
         if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = disk[sector];
         slice = new bytes(length);
-        for (uint256 i = 0; i < length;) {
-            slice[i] = val[offset + i];
-            unchecked { ++i; }
+        assembly {
+            mstore(add(slice, 32), shl(mul(offset, 8), val))
         }
     }
 
@@ -600,9 +599,8 @@ contract InfinityVerse_Main_Ga_1 {
         if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = _getSlot(slot);
         slice = new bytes(length);
-        for (uint256 i = 0; i < length;) {
-            slice[i] = val[offset + i];
-            unchecked { ++i; }
+        assembly {
+            mstore(add(slice, 32), shl(mul(offset, 8), val))
         }
     }
 
