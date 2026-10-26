@@ -578,4 +578,18 @@ contract InfinityVerse_Main_Ga_1 {
         if (!success) revert TransferFailed();
         emit ETHRescued(to, balance);
     }
+    function multicall(bytes[] calldata data) external returns (bytes[] memory results) {
+        uint256 len = data.length;
+        results = new bytes[](len);
+        for (uint256 i = 0; i < len;) {
+            (bool success, bytes memory result) = address(this).delegatecall(data[i]);
+            if (!success) {
+                assembly {
+                    revert(add(result, 32), mload(result))
+                }
+            }
+            results[i] = result;
+            unchecked { ++i; }
+        }
+    }
 }

@@ -1013,4 +1013,30 @@ contract InfinityVerse_Main_Ga_1 {
         if (!success) revert TransferFailed();
         emit ETHRescued(to, balance);
     }
+
+    // ========================================================================
+    // === МУЛЬТИВЫЗОВ (ATOMIC BATCH MULTICALL)                            ===
+    // ========================================================================
+
+    /**
+     * @notice Универсальный пакетный вызов любых функций контракта в рамках одной транзакции (Multicall).
+     * @dev Позволяет атомарно выполнять пачки разнородных операций (диск + типизированные хранилища)
+     * с однократными накладными расходами на транзакцию. При delegatecall к address(this) msg.sender сохраняется.
+     * @param data Массив закодированных calldata вызовов функций этого контракта
+     * @return results Массив результатов выполнения каждого вызова
+     */
+    function multicall(bytes[] calldata data) external returns (bytes[] memory results) {
+        uint256 len = data.length;
+        results = new bytes[](len);
+        for (uint256 i = 0; i < len;) {
+            (bool success, bytes memory result) = address(this).delegatecall(data[i]);
+            if (!success) {
+                assembly {
+                    revert(add(result, 32), mload(result))
+                }
+            }
+            results[i] = result;
+            unchecked { ++i; }
+        }
+    }
 }
