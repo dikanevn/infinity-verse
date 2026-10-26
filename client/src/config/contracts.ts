@@ -6,7 +6,7 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 // Постоянное универсальное хранилище мира (Main Ga-1):
 export const MAIN_CONTRACT_ADDRESS = '0xf32bd8705ee1c7682d9a5f2d00b18815929d4482';
 // Исполнительная логика и игровой интерфейс (Ga_AAA Module):
-export const AAA_CONTRACT_ADDRESS = '0x39dc34a83303c6074ea37c7a28733187149840f0';
+export const AAA_CONTRACT_ADDRESS = '0x90fb2752cd408d727029243cf5f913e1c331053e';
 
 export const DEFAULT_RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const getActiveRpcUrl = (): string => {
@@ -17,7 +17,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2610260521';
+export const CLIENT_VERSION = '2610260524';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({

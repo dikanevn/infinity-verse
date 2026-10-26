@@ -88,35 +88,21 @@ contract InfinityVerse_Ga_AAA {
      * @notice Вычисление детерминированного ключа сектора клетки
      */
     function getCellKey(int32 x, int32 y) public pure returns (bytes32 key) {
-        assembly {
-            // Memory layout: [PREFIX_CELL (4B)][x (4B)][y (4B)] = 12B
-            mstore(0x00, PREFIX_CELL)
-            mstore(0x04, x)
-            mstore(0x08, y)
-            key := keccak256(0x00, 12)
-        }
+        return keccak256(abi.encodePacked(PREFIX_CELL, x, y));
     }
 
     /**
      * @notice Вычисление ключа сектора позиции и статуса игрока
      */
     function getPlayerPosKey(address player) public pure returns (bytes32 key) {
-        assembly {
-            mstore(0x00, PREFIX_POS)
-            mstore(0x04, player)
-            key := keccak256(0x00, 24)
-        }
+        return keccak256(abi.encodePacked(PREFIX_POS, player));
     }
 
     /**
      * @notice Вычисление ключа сектора авторизации и сессии игрока
      */
     function getPlayerAuthKey(address player) public pure returns (bytes32 key) {
-        assembly {
-            mstore(0x00, PREFIX_AUTH)
-            mstore(0x04, player)
-            key := keccak256(0x00, 24)
-        }
+        return keccak256(abi.encodePacked(PREFIX_AUTH, player));
     }
 
     // ========================================================================
