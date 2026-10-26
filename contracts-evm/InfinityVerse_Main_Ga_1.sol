@@ -5,6 +5,7 @@ interface IInfinityVerse_PrevMain {
     function superAdmin() external view returns (address);
     function nextMain() external view returns (address);
     function allowedAdminsCount() external view returns (uint256);
+    function totalGenerations() external view returns (uint256);
 }
 
 /**
@@ -210,6 +211,7 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     constructor(address _prevMain) {
+        uint256 currentGen = 1;
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
             // Проверка запечатывания предыдущего поколения:
             // 1. Главный админ старого контракта должен быть сожжен на Dead-адрес
@@ -221,6 +223,9 @@ contract InfinityVerse_Main_Ga_1 {
 
             // 3. Старый контракт обязан явно указать этот новый контракт своим наследником
             if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this)) revert MigrationLocked();
+
+            // Бесшовное продолжение священной Хроники Поколений (Lineage)
+            currentGen = IInfinityVerse_PrevMain(_prevMain).totalGenerations() + 1;
         }
 
         superAdmin = msg.sender;
@@ -239,10 +244,10 @@ contract InfinityVerse_Main_Ga_1 {
         }
         emit AdminAllowed(superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
 
-        // Навечно запечатываем текущий контракт как Поколение 1 в Хронике Мультивселенной
-        _setSlot(bytes32(GENERATIONS_PREFIX + 1), bytes32(uint256(uint160(address(this)))));
-        totalGenerations = 1;
-        emit GenerationRegistered(1, address(this));
+        // Навечно запечатываем текущий контракт в священной Хронике Мультивселенной
+        _setSlot(bytes32(GENERATIONS_PREFIX + currentGen), bytes32(uint256(uint160(address(this)))));
+        totalGenerations = currentGen;
+        emit GenerationRegistered(currentGen, address(this));
     }
 
     // ========================================================================

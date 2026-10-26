@@ -3,6 +3,7 @@ interface IInfinityVerse_PrevMain {
     function superAdmin() external view returns (address);
     function nextMain() external view returns (address);
     function allowedAdminsCount() external view returns (uint256);
+    function totalGenerations() external view returns (uint256);
 }
 contract InfinityVerse_Main_Ga_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Ga-1";
@@ -117,11 +118,13 @@ contract InfinityVerse_Main_Ga_1 {
         return isAdmin(_account);
     }
     constructor(address _prevMain) {
+        uint256 currentGen = 1;
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
             address prevAdmin = IInfinityVerse_PrevMain(_prevMain).superAdmin();
             if (prevAdmin != 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
             if (IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() != 0) revert MigrationLocked();
             if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this)) revert MigrationLocked();
+            currentGen = IInfinityVerse_PrevMain(_prevMain).totalGenerations() + 1;
         }
         superAdmin = msg.sender;
         prevMain = _prevMain;
@@ -133,9 +136,9 @@ contract InfinityVerse_Main_Ga_1 {
             sstore(slot, packed)
         }
         emit AdminAllowed(superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
-        _setSlot(bytes32(GENERATIONS_PREFIX + 1), bytes32(uint256(uint160(address(this)))));
-        totalGenerations = 1;
-        emit GenerationRegistered(1, address(this));
+        _setSlot(bytes32(GENERATIONS_PREFIX + currentGen), bytes32(uint256(uint160(address(this)))));
+        totalGenerations = currentGen;
+        emit GenerationRegistered(currentGen, address(this));
     }
     mapping(bytes32 => bytes32) private disk;
     function readSector(bytes32 sector) external view returns (bytes32) {
