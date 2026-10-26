@@ -51,7 +51,7 @@ async function main() {
   const tttDeployHash = await walletClient.deployContract({
     abi: tttArtifact.abi,
     bytecode: tttArtifact.bytecode,
-    args: ['Infinity Infer', 'INFER', aaa2Address]
+    args: ['Infinity Infer Test 1', 'INFERTEST1', aaa2Address]
   });
   console.log('Ga_TTT Deploy Tx Hash:', tttDeployHash);
   const tttReceipt = await publicClient.waitForTransactionReceipt({ hash: tttDeployHash, timeout: 120_000, retryCount: 60 });
