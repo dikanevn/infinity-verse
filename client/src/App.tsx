@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { EIP6963ProviderDetail } from './types';
-import { CLIENT_VERSION } from './config/contracts';
+import { CLIENT_VERSION, STAR_TOKEN_ADDRESS, STAR_TOKEN_ABI, publicClient } from './config/contracts';
 
 import { useWorldState } from './hooks/useWorldState';
 import { usePlayerState } from './hooks/usePlayerState';
@@ -20,6 +20,33 @@ function App() {
   const [showPkInputModal, setShowPkInputModal] = useState<boolean>(false);
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
   const [pkInput, setPkInput] = useState<string>('');
+  const [inferBalance, setInferBalance] = useState<number | null>(null);
+
+  // Опрос баланса токенов $INFER
+  useEffect(() => {
+    if (!connectedAddress) {
+      setInferBalance(null);
+      return;
+    }
+
+    const fetchInferBalance = async () => {
+      try {
+        const bal = await publicClient.readContract({
+          address: STAR_TOKEN_ADDRESS,
+          abi: STAR_TOKEN_ABI,
+          functionName: 'balanceOf',
+          args: [connectedAddress as `0x${string}`]
+        });
+        setInferBalance(Number(bal) / 1e18);
+      } catch (e) {
+        console.error('Ошибка получения баланса $INFER:', e);
+      }
+    };
+
+    fetchInferBalance();
+    const interval = setInterval(fetchInferBalance, 4000);
+    return () => clearInterval(interval);
+  }, [connectedAddress]);
 
   // 1. Поиск установленных кошельков (EIP-6963)
   useEffect(() => {
@@ -228,6 +255,7 @@ function App() {
           selectedCoord={selectedCoord}
           player={player}
           focusCoord={antennaFocus}
+          inferBalance={inferBalance}
           onSelectCoord={handleSelectCoord}
           onCenterPlayer={handleCenterPlayer}
           onQuickMove={handleQuickMove}

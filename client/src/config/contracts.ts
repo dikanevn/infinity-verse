@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2610260908';
+export const CLIENT_VERSION = '2610260913';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -81,6 +81,14 @@ export const AAA_ABI = parseAbi([
   'function revokeSessionGasless(address player, bytes sig)'
 ]);
 
+
+export const STAR_TOKEN_ABI = parseAbi([
+  'function name() view returns (string)',
+  'function symbol() view returns (string)',
+  'function decimals() view returns (uint8)',
+  'function totalSupply() view returns (uint256)',
+  'function balanceOf(address account) view returns (uint256)'
+]);
 
 export const getPublicClient = (customRpc?: string) => {
   const url = customRpc || getActiveRpcUrl();

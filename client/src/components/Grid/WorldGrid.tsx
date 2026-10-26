@@ -7,6 +7,7 @@ interface WorldGridProps {
   selectedCoord: { x: number; y: number };
   player: PlayerData | null;
   focusCoord: { x: number; y: number };
+  inferBalance?: number | null;
   onSelectCoord: (coord: { x: number; y: number }) => void;
   onCenterPlayer: () => void;
   onQuickMove?: (coord: { x: number; y: number }) => void;
@@ -17,6 +18,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   selectedCoord,
   player,
   focusCoord,
+  inferBalance,
   onSelectCoord,
   onCenterPlayer,
   onQuickMove
@@ -320,6 +322,35 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         boxSizing: 'border-box'
       }}
     >
+      {/* Виджет баланса токенов $INFER в левом верхнем углу карты */}
+      <div style={{
+        position: 'absolute',
+        top: '8px',
+        left: '8px',
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(6px)',
+        border: '1px solid #eab308',
+        boxShadow: '0 0 10px rgba(234, 179, 8, 0.2)',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        pointerEvents: 'auto',
+        userSelect: 'none'
+      }}>
+        <span style={{ fontSize: '1rem', lineHeight: 1 }}>⭐</span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1 }}>
+            $INFER
+          </span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a', fontFamily: 'monospace', lineHeight: 1.1 }}>
+            {inferBalance !== undefined && inferBalance !== null ? inferBalance.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '...'}
+          </span>
+        </div>
+      </div>
+
       {/* Кнопки зума (+, -) и центрирования (🎯) */}
       <div style={{
         position: 'absolute',
