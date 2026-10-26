@@ -54,24 +54,24 @@ contract InfinityVerse_Main_Ga_1 {
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
     uint256 private constant ADMIN_LIST_PREFIX = 2 << 160;
 
-    // Битовые маски прав доступа (младшие 8 бит слота администратора)
-    uint8 public constant PERM_NONE          = 0;        // 00000000: Нет прав
-    uint8 public constant PERM_ADMIN_STORAGE = 1 << 0;   // 00000001 (1): Запись в Raw Disk (Блок 1) и Eternal Storage (Блок 2)
-    uint8 public constant PERM_ADMIN_SLOTS   = 1 << 1;   // 00000010 (2): Запись в Low-Level Yul Slots (Блок 3)
-    uint8 public constant PERM_MOD           = 1 << 2;   // 00000100 (4): Роль модератора / оператора
-    uint8 public constant PERM_A             = 1 << 3;   // 00001000 (8): Модульное право A (резерв под внешние модули)
-    uint8 public constant PERM_B             = 1 << 4;   // 00010000 (16): Модульное право B (резерв под внешние модули)
-    uint8 public constant PERM_C             = 1 << 5;   // 00100000 (32): Модульное право C (резерв под внешние модули)
-    uint8 public constant PERM_D             = 1 << 6;   // 01000000 (64): Модульное право D (резерв под внешние модули)
-    uint8 public constant PERM_EXT           = 1 << 7;   // 10000000 (128): Расширенное право (резерв под будущие стандарты)
-    uint8 public constant PERM_ALL           = 255;      // 11111111: Полный доступ ко всем битам (включая будущие)
+    // Уровни допуска безопасности (Security Clearance Levels)
+    uint8 public constant CLEARANCE_NONE = 0;        // 00000000: Нет допуска
+    uint8 public constant CLEARANCE_1    = 1 << 0;   // 00000001 (1): Допуск Уровня 1: Raw Disk (Блок 1) и Eternal Storage (Блок 2)
+    uint8 public constant CLEARANCE_2    = 1 << 1;   // 00000010 (2): Допуск Уровня 2: Low-Level Yul Slots (Блок 3)
+    uint8 public constant CLEARANCE_MOD  = 1 << 2;   // 00000100 (4): Роль модератора / оператора
+    uint8 public constant CLEARANCE_A    = 1 << 3;   // 00001000 (8): Модульный допуск A (резерв под внешние модули)
+    uint8 public constant CLEARANCE_B    = 1 << 4;   // 00010000 (16): Модульный допуск B (резерв под внешние модули)
+    uint8 public constant CLEARANCE_C    = 1 << 5;   // 00100000 (32): Модульный допуск C (резерв под внешние модули)
+    uint8 public constant CLEARANCE_D    = 1 << 6;   // 01000000 (64): Модульный допуск D (резерв под внешние модули)
+    uint8 public constant CLEARANCE_EXT  = 1 << 7;   // 10000000 (128): Расширенный допуск (резерв под будущие стандарты)
+    uint8 public constant CLEARANCE_ALL  = 255;      // 11111111: Полный допуск ко всем битам (включая будущие)
 
     /**
      * @notice Структура распакованных данных администратора для вывода (View, RPC, UI)
      */
     struct AdminInfo {
         bool isActive;       // Активен ли прямо сейчас с учетом времени и прав
-        uint8 permissions;   // Битовая маска прав (PERM_ADMIN_STORAGE, PERM_ADMIN_SLOTS, PERM_MOD и др.)
+        uint8 permissions;   // Битовая маска допуска (CLEARANCE_1, CLEARANCE_2, CLEARANCE_MOD и др.)
         uint8 role;          // Роль / ранг (0..255)
         uint48 validFrom;    // Таймстамп старта действия прав
         uint64 validUntil;   // Таймстамп истечения прав (0 = бессрочно)
@@ -135,19 +135,19 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Базовый модификатор для обычных администраторов и логических модулей.
-     * @dev Требует права PERM_ADMIN_STORAGE (Блок 1 Raw Disk и Блок 2 Eternal Storage).
+     * @dev Требует допуск Уровня 1: CLEARANCE_1 (Блок 1 Raw Disk и Блок 2 Eternal Storage).
      */
     modifier onlyAdmins() {
-        _checkAdmin(msg.sender, PERM_ADMIN_STORAGE);
+        _checkAdmin(msg.sender, CLEARANCE_1);
         _;
     }
 
     /**
      * @notice Модификатор для администраторов с доступом к физическим слотам памяти EVM.
-     * @dev Требует права PERM_ADMIN_SLOTS (Блок 3 Low-Level Yul Slots).
+     * @dev Требует допуск Уровня 2: CLEARANCE_2 (Блок 3 Low-Level Yul Slots).
      */
     modifier onlySlotAdmins() {
-        _checkAdmin(msg.sender, PERM_ADMIN_SLOTS);
+        _checkAdmin(msg.sender, CLEARANCE_2);
         _;
     }
 
@@ -167,7 +167,7 @@ contract InfinityVerse_Main_Ga_1 {
             && (validUntil == 0 || block.timestamp <= validUntil);
 
         info.isActive = (_account == superAdmin) ? true : active;
-        info.permissions = (_account == superAdmin) ? PERM_ALL : perms;
+        info.permissions = (_account == superAdmin) ? CLEARANCE_ALL : perms;
         info.role = (_account == superAdmin) ? 255 : uint8(packed >> 8);
         info.validFrom = validFrom;
         info.validUntil = validUntil;
@@ -216,12 +216,12 @@ contract InfinityVerse_Main_Ga_1 {
         _setSlot(bytes32(ADMIN_LIST_PREFIX), bytes32(uint256(uint160(superAdmin))));
         allowedAdminsCount = 1;
 
-        // Упаковываем: PERM_ALL (255), role: 255, indexPlusOne: 1
-        uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(1) << 128);
+        // Упаковываем: CLEARANCE_ALL (255), role: 255, indexPlusOne: 1
+        uint256 packed = uint256(CLEARANCE_ALL) | (uint256(255) << 8) | (uint256(1) << 128);
         assembly {
             sstore(slot, packed)
         }
-        emit AdminAllowed(superAdmin, PERM_ALL, 255);
+        emit AdminAllowed(superAdmin, CLEARANCE_ALL, 255);
     }
 
     // ========================================================================
@@ -481,7 +481,7 @@ contract InfinityVerse_Main_Ga_1 {
     // 1. Системные переменные: слот 0 (nextMain) и слот 1 (superAdmin).
     // 2. Персональные сейфы прав доступа администраторов: диапазон [2^160, 2^161 - 1].
     // Прямой доступ к физической памяти (sload/sstore) за пределами 2^180 доступен только
-    // superAdmin и доверенным модулям с флагом PERM_ADMIN_SLOTS.
+    // superAdmin и доверенным модулям с допуском CLEARANCE_2.
 
     // 3.0. Низкоуровневые микро-хелперы для физической памяти EVM
     function _getSlot(bytes32 slot) internal view returns (bytes32 val) {
@@ -831,12 +831,12 @@ contract InfinityVerse_Main_Ga_1 {
                 idxPlusOne = uint64(count + 1);
             }
 
-            // Принудительно наделяем SuperAdmin высшими вечными правами (PERM_ALL, role 255, без срока истечения)
-            uint256 packed = uint256(PERM_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
+            // Принудительно наделяем SuperAdmin высшим вечным допуском (CLEARANCE_ALL, role 255, без срока истечения)
+            uint256 packed = uint256(CLEARANCE_ALL) | (uint256(255) << 8) | (uint256(idxPlusOne) << 128);
             assembly {
                 sstore(newSlot, packed)
             }
-            emit AdminAllowed(newSuperAdmin, PERM_ALL, 255);
+            emit AdminAllowed(newSuperAdmin, CLEARANCE_ALL, 255);
         }
 
         emit SuperAdminChanged(superAdmin, newSuperAdmin);
