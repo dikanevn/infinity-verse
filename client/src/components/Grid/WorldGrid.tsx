@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { CellView } from './CellView';
+import { Sandworm } from './Sandworm';
 
 interface WorldGridProps {
   cells: CellData[];
@@ -32,6 +33,26 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   scaleRef.current = scale;
   const positionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   positionRef.current = position;
+
+  // Определение поглощения звезды червем (когда на клетке игрока звезда)
+  const [isEatingStar, setIsEatingStar] = useState<boolean>(false);
+  const prevPlayerCoordRef = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!player?.exists) return;
+    const prev = prevPlayerCoordRef.current;
+    if (prev && (prev.x !== player.x || prev.y !== player.y)) {
+      // Проверяем, была ли на новой клетке звезда
+      const targetCell = cells.find(c => c.x === player.x && c.y === player.y);
+      if (targetCell?.object === 3) {
+        setIsEatingStar(true);
+        const timer = setTimeout(() => setIsEatingStar(false), 1200);
+        prevPlayerCoordRef.current = { x: player.x, y: player.y };
+        return () => clearTimeout(timer);
+      }
+    }
+    prevPlayerCoordRef.current = { x: player.x, y: player.y };
+  }, [player?.x, player?.y, player?.exists, cells]);
 
   // Собираем все координаты для отрисовки из загруженных cells
   // Если клеток еще нет — дефолтно рисуем 5х5 вокруг фокуса
@@ -461,6 +482,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
             </div>
           );
         })}
+
+        {/* Червь из Дюны (Шаи-Хулуд) на месте игрока с плавной кинематикой и анимацией атаки */}
+        {player?.exists && (
+          <Sandworm
+            x={player.x}
+            y={player.y}
+            cellPitch={CELL_PITCH}
+            isEatingStar={isEatingStar}
+          />
+        )}
       </div>
     </div>
   );

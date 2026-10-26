@@ -132,13 +132,7 @@ export const CellView: React.FC<CellViewProps> = ({
         lineHeight: 1,
         position: 'relative'
       }}>
-        {player?.exists && player.x === coord.x && player.y === coord.y ? (
-          <span title="Ваш персонаж" style={{ filter: 'drop-shadow(0 0 8px #38bdf8)' }}>
-            🧑‍🚀
-          </span>
-        ) : (
-          (!isFog && cell?.object) ? oInfo.icon : (isFog ? '☁️' : '')
-        )}
+        {(!isFog && cell?.object) ? oInfo.icon : (isFog ? '☁️' : '')}
       </div>
     </button>
   );
