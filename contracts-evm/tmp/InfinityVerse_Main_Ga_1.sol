@@ -38,12 +38,24 @@ contract InfinityVerse_Main_Ga_1 {
         uint32 paramD;
     }
     uint256 public allowedAdminsCount;
+    error Unauthorized();
+    error RightsNotActive();
+    error RightsExpired();
+    error InvalidSlot();
+    error LengthMismatch();
+    error SliceOutOfBounds();
+    error ZeroAddress();
+    error SuperAdminConflict();
+    error EmptyPermissions();
+    error InvalidTimeRange();
+    error AdminNotFound();
+    error MigrationLocked();
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
     event NextMainSet(address indexed nextMainAddress);
     modifier onlySuperAdmin() {
-        require(msg.sender == superAdmin, "error");
+        if (msg.sender != superAdmin) revert Unauthorized();
         _;
     }
     function _readAdminSlot(address _account) internal view returns (uint256 packed) {
@@ -55,10 +67,10 @@ contract InfinityVerse_Main_Ga_1 {
     function _checkAdmin(address _caller, uint8 requiredPerm) internal view {
         if (_caller == superAdmin) return;
         uint256 packed = _readAdminSlot(_caller);
-        require((uint8(packed) & requiredPerm) == requiredPerm, "error");
-        require(block.timestamp >= uint48(packed >> 16), "error");
+        if ((uint8(packed) & requiredPerm) != requiredPerm) revert Unauthorized();
+        if (block.timestamp < uint48(packed >> 16)) revert RightsNotActive();
         uint64 until = uint64(packed >> 64);
-        require(until == 0 || block.timestamp <= until, "error");
+        if (until != 0 && block.timestamp > until) revert RightsExpired();
     }
     modifier onlyAdmins() {
         _checkAdmin(msg.sender, PERM_ADMIN_STORAGE);
@@ -97,12 +109,9 @@ contract InfinityVerse_Main_Ga_1 {
     constructor(address _prevMain) {
         if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
             address prevAdmin = IInfinityVerse_PrevMain(_prevMain).superAdmin();
-            require(
-                prevAdmin == 0x000000000000000000000000000000000000dEaD, "error");
-            require(
-                IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() == 0, "error");
-            require(
-                IInfinityVerse_PrevMain(_prevMain).nextMain() == address(this), "error");
+            if (prevAdmin != 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
+            if (IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() != 0) revert MigrationLocked();
+            if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this)) revert MigrationLocked();
         }
         superAdmin = msg.sender;
         prevMain = _prevMain;
@@ -132,7 +141,7 @@ contract InfinityVerse_Main_Ga_1 {
         disk[sector] = data;
     }
     function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external onlyAdmins {
-        require(sectors.length == data.length, "error");
+        if (sectors.length != data.length) revert LengthMismatch();
         uint256 len = sectors.length;
         for (uint256 i = 0; i < len;) {
             disk[sectors[i]] = data[i];
@@ -140,7 +149,7 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     function readSectorSlice(bytes32 sector, uint256 offset, uint256 length) external view returns (bytes memory slice) {
-        require(offset + length <= 32, "error");
+        if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = disk[sector];
         slice = new bytes(length);
         for (uint256 i = 0; i < length;) {
@@ -269,7 +278,7 @@ contract InfinityVerse_Main_Ga_1 {
         return _getSlot(slot);
     }
     function writeSlot(bytes32 slot, bytes32 val) external onlySlotAdmins {
-        require(uint256(slot) >= RESERVED_SLOTS, "error");
+        if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
         _setSlot(slot, val);
     }
     function readSlotBatch(bytes32[] calldata slots) external view returns (bytes32[] memory) {
@@ -282,17 +291,17 @@ contract InfinityVerse_Main_Ga_1 {
         return result;
     }
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlySlotAdmins {
-        require(slots.length == vals.length, "error");
+        if (slots.length != vals.length) revert LengthMismatch();
         uint256 len = slots.length;
         for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
-            require(uint256(slot) >= RESERVED_SLOTS, "error");
+            if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
             _setSlot(slot, vals[i]);
             unchecked { ++i; }
         }
     }
     function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
-        require(offset + length <= 32, "error");
+        if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = _getSlot(slot);
         slice = new bytes(length);
         for (uint256 i = 0; i < length;) {
@@ -310,7 +319,7 @@ contract InfinityVerse_Main_Ga_1 {
         return result;
     }
     function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlySlotAdmins {
-        require(uint256(baseSlot) >= RESERVED_SLOTS, "error");
+        if (uint256(baseSlot) < RESERVED_SLOTS) revert InvalidSlot();
         uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
         for (uint256 i = 0; i < len;) {
@@ -319,14 +328,14 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     function trimSlot(bytes32 slot) external onlySlotAdmins {
-        require(uint256(slot) >= RESERVED_SLOTS, "error");
+        if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
         _setSlot(slot, 0);
     }
     function trimSlotBatch(bytes32[] calldata slots) external onlySlotAdmins {
         uint256 len = slots.length;
         for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
-            require(uint256(slot) >= RESERVED_SLOTS, "error");
+            if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
             _setSlot(slot, 0);
             unchecked { ++i; }
         }
@@ -345,10 +354,10 @@ contract InfinityVerse_Main_Ga_1 {
         uint16 paramC,
         uint32 paramD
     ) external onlySuperAdmin {
-        require(adminAddress != address(0), "error");
-        require(adminAddress != superAdmin, "error");
-        require(perms != 0, "error");
-        require(validUntil == 0 || validUntil >= validFrom, "error");
+        if (adminAddress == address(0)) revert ZeroAddress();
+        if (adminAddress == superAdmin) revert SuperAdminConflict();
+        if (perms == 0) revert EmptyPermissions();
+        if (validUntil != 0 && validUntil < validFrom) revert InvalidTimeRange();
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
         uint256 idxPlusOne;
         assembly {
@@ -377,14 +386,14 @@ contract InfinityVerse_Main_Ga_1 {
         emit AdminAllowed(adminAddress, perms, role);
     }
     function disallowAdmin(address adminAddress) external onlySuperAdmin {
-        require(adminAddress != superAdmin, "error");
+        if (adminAddress == superAdmin) revert SuperAdminConflict();
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
         uint256 packed;
         assembly {
             packed := sload(slot)
         }
         uint64 idxPlusOne = uint64(packed >> 128);
-        require(idxPlusOne != 0, "error");
+        if (idxPlusOne == 0) revert AdminNotFound();
         uint256 index = idxPlusOne - 1;
         uint256 lastIndex = allowedAdminsCount - 1;
         if (index != lastIndex) {
@@ -428,13 +437,13 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     function setNextMain(address _nextMain) external onlySuperAdmin {
-        require(_nextMain != address(0), "error");
+        if (_nextMain == address(0)) revert ZeroAddress();
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
     }
     function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
-        require(newSuperAdmin != address(0), "error");
-        require(newSuperAdmin != superAdmin, "error");
+        if (newSuperAdmin == address(0)) revert ZeroAddress();
+        if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
         if (_isAdmin(superAdmin)) {
             uint256 prevPacked = _readAdminSlot(superAdmin);
             uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
@@ -456,9 +465,8 @@ contract InfinityVerse_Main_Ga_1 {
             emit AdminDisallowed(superAdmin);
         }
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
-            require(nextMain != address(0), "error");
-            require(
-                allowedAdminsCount == 0, "error");
+            if (nextMain == address(0)) revert MigrationLocked();
+            if (allowedAdminsCount != 0) revert MigrationLocked();
         } else {
             uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
             uint256 existingPacked = _readAdminSlot(newSuperAdmin);

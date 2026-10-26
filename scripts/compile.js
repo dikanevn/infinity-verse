@@ -66,6 +66,8 @@ function compile(contractFileName, contractName) {
   const artifactPath = path.resolve(artifactDir, `${contractName}.json`);
   fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2));
   console.log(`Artifact saved to artifacts/${contractName}.json`);
+  const deployedBytes = (artifact.deployedBytecode.length - 2) / 2;
+  console.log(`Deployed Bytecode Size: ${deployedBytes} bytes (limit: 24576 bytes)`);
 }
 
 const targetFile = process.argv[2] || 'InfinityVerse_main';

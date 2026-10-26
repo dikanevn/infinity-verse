@@ -85,13 +85,27 @@ contract InfinityVerse_Main_Ga_1 {
     // Количество администраторов в реестре (сами адреса лежат в защищенной зоне ADMIN_LIST_PREFIX + i)
     uint256 public allowedAdminsCount;
 
+    // 4-байтные ошибки (Custom Errors) для экономии газа и размера байткода
+    error Unauthorized();
+    error RightsNotActive();
+    error RightsExpired();
+    error InvalidSlot();
+    error LengthMismatch();
+    error SliceOutOfBounds();
+    error ZeroAddress();
+    error SuperAdminConflict();
+    error EmptyPermissions();
+    error InvalidTimeRange();
+    error AdminNotFound();
+    error MigrationLocked();
+
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
     event NextMainSet(address indexed nextMainAddress);
 
     modifier onlySuperAdmin() {
-        require(msg.sender == superAdmin, "Main: caller is not superAdmin");
+        if (msg.sender != superAdmin) revert Unauthorized();
         _;
     }
 
@@ -113,10 +127,10 @@ contract InfinityVerse_Main_Ga_1 {
     function _checkAdmin(address _caller, uint8 requiredPerm) internal view {
         if (_caller == superAdmin) return;
         uint256 packed = _readAdminSlot(_caller);
-        require((uint8(packed) & requiredPerm) == requiredPerm, "Main: insufficient permissions");
-        require(block.timestamp >= uint48(packed >> 16), "Main: rights not active yet");
+        if ((uint8(packed) & requiredPerm) != requiredPerm) revert Unauthorized();
+        if (block.timestamp < uint48(packed >> 16)) revert RightsNotActive();
         uint64 until = uint64(packed >> 64);
-        require(until == 0 || block.timestamp <= until, "Main: rights expired");
+        if (until != 0 && block.timestamp > until) revert RightsExpired();
     }
 
     /**
@@ -184,22 +198,13 @@ contract InfinityVerse_Main_Ga_1 {
             // Проверка запечатывания предыдущего поколения:
             // 1. Главный админ старого контракта должен быть сожжен на Dead-адрес
             address prevAdmin = IInfinityVerse_PrevMain(_prevMain).superAdmin();
-            require(
-                prevAdmin == 0x000000000000000000000000000000000000dEaD,
-                "Main: previous admin is not burned (not dead)"
-            );
+            if (prevAdmin != 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
 
             // 2. Все модули и администраторы старого контракта должны быть отключены
-            require(
-                IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() == 0,
-                "Main: previous generation allowed admins list is not empty"
-            );
+            if (IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() != 0) revert MigrationLocked();
 
             // 3. Старый контракт обязан явно указать этот новый контракт своим наследником
-            require(
-                IInfinityVerse_PrevMain(_prevMain).nextMain() == address(this),
-                "Main: this contract is not registered as nextMain in previous generation"
-            );
+            if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this)) revert MigrationLocked();
         }
 
         superAdmin = msg.sender;
@@ -272,7 +277,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param data Массив 32-байтных значений
      */
     function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external onlyAdmins {
-        require(sectors.length == data.length, "Main: sectors and data length mismatch");
+        if (sectors.length != data.length) revert LengthMismatch();
         uint256 len = sectors.length;
         for (uint256 i = 0; i < len;) {
             disk[sectors[i]] = data[i];
@@ -288,7 +293,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @return slice Срез данных заданной длины
      */
     function readSectorSlice(bytes32 sector, uint256 offset, uint256 length) external view returns (bytes memory slice) {
-        require(offset + length <= 32, "Main: slice out of sector bounds");
+        if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = disk[sector];
         slice = new bytes(length);
         for (uint256 i = 0; i < length;) {
@@ -509,7 +514,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param val Записываемое 32-байтное значение
      */
     function writeSlot(bytes32 slot, bytes32 val) external onlySlotAdmins {
-        require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
+        if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
         _setSlot(slot, val);
     }
 
@@ -534,11 +539,11 @@ contract InfinityVerse_Main_Ga_1 {
      * @param vals Массив 32-байтных значений
      */
     function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlySlotAdmins {
-        require(slots.length == vals.length, "Main: slots and vals length mismatch");
+        if (slots.length != vals.length) revert LengthMismatch();
         uint256 len = slots.length;
         for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
-            require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
+            if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
             _setSlot(slot, vals[i]);
             unchecked { ++i; }
         }
@@ -553,7 +558,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @return slice Срез данных заданной длины
      */
     function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
-        require(offset + length <= 32, "Main: slice out of slot bounds");
+        if (offset + length > 32) revert SliceOutOfBounds();
         bytes32 val = _getSlot(slot);
         slice = new bytes(length);
         for (uint256 i = 0; i < length;) {
@@ -583,7 +588,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param vals Массив значений для записи подряд
      */
     function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlySlotAdmins {
-        require(uint256(baseSlot) >= RESERVED_SLOTS, "Main: baseSlot is in reserved range");
+        if (uint256(baseSlot) < RESERVED_SLOTS) revert InvalidSlot();
         uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
         for (uint256 i = 0; i < len;) {
@@ -597,7 +602,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param slot Физический слот памяти (должен быть >= RESERVED_SLOTS)
      */
     function trimSlot(bytes32 slot) external onlySlotAdmins {
-        require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
+        if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
         _setSlot(slot, 0);
     }
 
@@ -609,7 +614,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint256 len = slots.length;
         for (uint256 i = 0; i < len;) {
             bytes32 slot = slots[i];
-            require(uint256(slot) >= RESERVED_SLOTS, "Main: slot is in reserved range");
+            if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
             _setSlot(slot, 0);
             unchecked { ++i; }
         }
@@ -649,10 +654,10 @@ contract InfinityVerse_Main_Ga_1 {
         uint16 paramC,
         uint32 paramD
     ) external onlySuperAdmin {
-        require(adminAddress != address(0), "Main: zero address");
-        require(adminAddress != superAdmin, "Main: cannot reconfigure superAdmin via allowAdmin");
-        require(perms != 0, "Main: empty permissions");
-        require(validUntil == 0 || validUntil >= validFrom, "Main: invalid time range");
+        if (adminAddress == address(0)) revert ZeroAddress();
+        if (adminAddress == superAdmin) revert SuperAdminConflict();
+        if (perms == 0) revert EmptyPermissions();
+        if (validUntil != 0 && validUntil < validFrom) revert InvalidTimeRange();
 
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
         uint256 idxPlusOne;
@@ -690,7 +695,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @dev sstore(slot, 0) освобождает 32 байта и возвращает газ (Gas Refund).
      */
     function disallowAdmin(address adminAddress) external onlySuperAdmin {
-        require(adminAddress != superAdmin, "Main: cannot disallow current superAdmin directly");
+        if (adminAddress == superAdmin) revert SuperAdminConflict();
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
         uint256 packed;
         assembly {
@@ -698,7 +703,7 @@ contract InfinityVerse_Main_Ga_1 {
         }
 
         uint64 idxPlusOne = uint64(packed >> 128);
-        require(idxPlusOne != 0, "Main: admin not found");
+        if (idxPlusOne == 0) revert AdminNotFound();
 
         uint256 index = idxPlusOne - 1;
         uint256 lastIndex = allowedAdminsCount - 1;
@@ -771,7 +776,7 @@ contract InfinityVerse_Main_Ga_1 {
      * @param _nextMain Адрес контракта-наследника Main
      */
     function setNextMain(address _nextMain) external onlySuperAdmin {
-        require(_nextMain != address(0), "Main: invalid nextMain address");
+        if (_nextMain == address(0)) revert ZeroAddress();
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
     }
@@ -783,8 +788,8 @@ contract InfinityVerse_Main_Ga_1 {
      * @param newSuperAdmin Адрес нового главного администратора
      */
     function changeSuperAdmin(address newSuperAdmin) external onlySuperAdmin {
-        require(newSuperAdmin != address(0), "Main: new superAdmin cannot be zero");
-        require(newSuperAdmin != superAdmin, "Main: address is already superAdmin");
+        if (newSuperAdmin == address(0)) revert ZeroAddress();
+        if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
 
         // 1. Автоматически отзываем права у предыдущего SuperAdmin за O(1)
         if (_isAdmin(superAdmin)) {
@@ -810,11 +815,8 @@ contract InfinityVerse_Main_Ga_1 {
 
         // 2. Если финализируем поколение и сжигаем на dEaD:
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
-            require(nextMain != address(0), "Main: lock nextMain before burning admin");
-            require(
-                allowedAdminsCount == 0,
-                "Main: revoke all admins before burning superAdmin"
-            );
+            if (nextMain == address(0)) revert MigrationLocked();
+            if (allowedAdminsCount != 0) revert MigrationLocked();
         } else {
             // 3. Если передаем новому SuperAdmin — обновляем его статус и реестр
             uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
