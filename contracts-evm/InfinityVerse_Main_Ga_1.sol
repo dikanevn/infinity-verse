@@ -793,10 +793,12 @@ contract InfinityVerse_Main_Ga_1 {
     /**
      * @notice Установка адреса следующего поколения Main (наследника)
      * @dev Может обновляться действующим superAdmin до момента сжигания superAdmin на 0x...dEaD.
+     * Заблокировано, если запущен таймлок на смену/сжигание superAdmin (pendingSuperAdmin != 0).
      * После сжигания superAdmin вызов становится недостижим навсегда.
      * @param _nextMain Адрес контракта-наследника Main
      */
     function setNextMain(address _nextMain) external onlySuperAdmin {
+        if (pendingSuperAdmin != address(0)) revert TimelockActive();
         if (_nextMain == address(0)) revert ZeroAddress();
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);

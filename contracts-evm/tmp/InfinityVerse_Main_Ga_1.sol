@@ -450,6 +450,7 @@ contract InfinityVerse_Main_Ga_1 {
         }
     }
     function setNextMain(address _nextMain) external onlySuperAdmin {
+        if (pendingSuperAdmin != address(0)) revert TimelockActive();
         if (_nextMain == address(0)) revert ZeroAddress();
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
