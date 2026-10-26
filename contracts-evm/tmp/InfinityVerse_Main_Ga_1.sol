@@ -532,12 +532,19 @@ contract InfinityVerse_Main_Ga_1 {
         superAdminChangeUnlockTime = 0;
         emit SuperAdminChangeCanceled(superAdmin, canceledAdmin);
     }
-    function executeSuperAdminChange() external onlySuperAdmin {
-        address newAdmin = pendingSuperAdmin;
-        if (newAdmin == address(0)) revert NoPendingSuperAdmin();
+    function acceptSuperAdmin() external {
+        if (msg.sender != pendingSuperAdmin) revert Unauthorized();
         if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
+        address newAdmin = pendingSuperAdmin;
         pendingSuperAdmin = address(0);
         superAdminChangeUnlockTime = 0;
         _applySuperAdminTransfer(newAdmin);
+    }
+    function executeSuperAdminBurn() external onlySuperAdmin {
+        if (pendingSuperAdmin != 0x000000000000000000000000000000000000dEaD) revert Unauthorized();
+        if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+        _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
     }
 }

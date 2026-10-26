@@ -932,17 +932,33 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Финализация смены SuperAdmin по истечении 48-часового временного замка.
-     * @dev Передает права СТРОГО на тот адрес, который был зафиксирован в pendingSuperAdmin.
+     * @notice Принятие прав SuperAdmin новым владельцем (2-Step Verification).
+     * @dev Защищает контракт от потери управления из-за опечатки в адресе:
+     * вызывается строго самим кандидатом (msg.sender == pendingSuperAdmin) по истечении 48 часов.
      */
-    function executeSuperAdminChange() external onlySuperAdmin {
+    function acceptSuperAdmin() external {
+        if (msg.sender != pendingSuperAdmin) revert Unauthorized();
+        if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
+
         address newAdmin = pendingSuperAdmin;
-        if (newAdmin == address(0)) revert NoPendingSuperAdmin();
+        pendingSuperAdmin = address(0);
+        superAdminChangeUnlockTime = 0;
+
+        _applySuperAdminTransfer(newAdmin);
+    }
+
+    /**
+     * @notice Финализация сжигания прав SuperAdmin на 0x...dEaD по истечении 48 часов.
+     * @dev У адреса 0xdEaD нет приватного ключа для вызова acceptSuperAdmin(), поэтому
+     * сжигание финализирует действующий superAdmin strictly при pendingSuperAdmin == 0xdEaD.
+     */
+    function executeSuperAdminBurn() external onlySuperAdmin {
+        if (pendingSuperAdmin != 0x000000000000000000000000000000000000dEaD) revert Unauthorized();
         if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
 
         pendingSuperAdmin = address(0);
         superAdminChangeUnlockTime = 0;
 
-        _applySuperAdminTransfer(newAdmin);
+        _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
     }
 }
