@@ -57,17 +57,17 @@ contract InfinityVerse_Ga_AAA {
     }
 
     IInfinityVerse_Main_Ga_1 public mainContract;
-    address public immutable superAdmin;
+    address public immutable deployer;
     address public immutable relayer;
 
-    modifier onlySuperAdmin() {
-        if (msg.sender != superAdmin) revert Unauthorized();
+    modifier onlyDeployer() {
+        if (msg.sender != deployer) revert Unauthorized();
         _;
     }
 
     constructor(address _mainContract, address _relayer) {
         if (_mainContract == address(0) || _relayer == address(0)) revert ZeroAddress();
-        superAdmin = msg.sender;
+        deployer = msg.sender;
         mainContract = IInfinityVerse_Main_Ga_1(_mainContract);
         relayer = _relayer;
     }
@@ -75,7 +75,7 @@ contract InfinityVerse_Ga_AAA {
     /**
      * @notice Изменение адреса хранилища Main_Ga_1 на этапе эволюции
      */
-    function setMainContract(address _newMain) external onlySuperAdmin {
+    function setMainContract(address _newMain) external onlyDeployer {
         if (_newMain == address(0)) revert ZeroAddress();
         mainContract = IInfinityVerse_Main_Ga_1(_newMain);
     }
