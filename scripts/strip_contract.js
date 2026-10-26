@@ -7,16 +7,13 @@ let code = fs.readFileSync(srcPath, 'utf8');
 // 1. Remove multi-line comments /* ... */
 code = code.replace(/\/\*[\s\S]*?\*\//g, '');
 
-// 2. Protect strings containing "//" like URLs before stripping comments
-code = code.replace(/"https:\/\/github\.com\/dikanevn\/infinity-verse"/g, '___REPO_URL___');
+// 2. Remove REPOSITORY line (remove github link completely for anonymous AI audit)
+code = code.replace(/string public constant REPOSITORY = "https:\/\/github\.com\/dikanevn\/infinity-verse";\r?\n?/g, '');
 
 // 3. Remove single-line comments // ...
 code = code.replace(/\/\/.*/g, '');
 
-// 4. Restore protected strings
-code = code.replace(/___REPO_URL___/g, '"https://github.com/dikanevn/infinity-verse"');
-
-// 5. Replace all require error messages with "error"
+// 4. Replace all require error messages with "error"
 code = code.replace(/require\s*\(([\s\S]*?),\s*"[^"]*"\s*\)/g, 'require($1, "error")');
 
 // 6. Collapse empty lines and trailing spaces

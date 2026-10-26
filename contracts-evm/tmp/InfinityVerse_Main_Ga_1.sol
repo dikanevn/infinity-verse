@@ -8,7 +8,6 @@ contract InfinityVerse_Main_Ga_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Ga-1";
     string public constant EPOCH = "Ga";
     uint256 public constant GENERATION = 1;
-    string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
     address public immutable prevMain;
     address public nextMain;
     address public superAdmin;
