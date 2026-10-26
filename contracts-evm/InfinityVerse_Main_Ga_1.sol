@@ -902,10 +902,12 @@ contract InfinityVerse_Main_Ga_1 {
         if (newSuperAdmin == address(0)) revert ZeroAddress();
         if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
 
-        // Если планируется сжигание на dEaD — проверяем предварительные условия финализации
+        // Если планируется сжигание на dEaD — проверяем предварительные условия финализации:
+        // 1. nextMain обязан быть уже выставлен
+        // 2. Все сторонние модули/админы обязаны быть отключены (в списке может оставаться только сам superAdmin)
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
             if (nextMain == address(0)) revert MigrationLocked();
-            if (allowedAdminsCount != 0) revert MigrationLocked();
+            if (allowedAdminsCount > 1) revert MigrationLocked();
         }
 
         uint64 unlockTime = uint64(block.timestamp + TIMELOCK_DURATION);
