@@ -493,7 +493,10 @@ contract InfinityVerse_Main_Ga_1 {
     function requestSuperAdminChange(address newSuperAdmin) external onlySuperAdmin {
         if (newSuperAdmin == address(0)) revert ZeroAddress();
         if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
-        if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
+        if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
+            if (nextMain == address(0)) revert MigrationLocked();
+            if (allowedAdminsCount != 0) revert MigrationLocked();
+        }
         uint64 unlockTime = uint64(block.timestamp + TIMELOCK_DURATION);
         pendingSuperAdmin = newSuperAdmin;
         superAdminChangeUnlockTime = unlockTime;
@@ -513,10 +516,5 @@ contract InfinityVerse_Main_Ga_1 {
         pendingSuperAdmin = address(0);
         superAdminChangeUnlockTime = 0;
         _applySuperAdminTransfer(newAdmin);
-    }
-    function changeSuperAdminToDead() external onlySuperAdmin {
-        pendingSuperAdmin = address(0);
-        superAdminChangeUnlockTime = 0;
-        _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
     }
 }

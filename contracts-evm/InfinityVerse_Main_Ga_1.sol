@@ -847,14 +847,19 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Запрос на смену SuperAdmin с 48-часовой задержкой (Timelock).
-     * @dev Защищает контракт от мгновенного перехвата управления при краже ключа.
-     * При сжигании на 0x...dEaD вызов не требуется — используется прямой changeSuperAdminToDead().
-     * @param newSuperAdmin Адрес кандидата в новые SuperAdmin
+     * @dev Фиксирует целевой адрес newSuperAdmin (включая 0x...dEaD при миграции).
+     * Через 48 часов смену можно применить СТРОГО на этот заранее объявленный адрес.
+     * @param newSuperAdmin Адрес кандидата в новые SuperAdmin (или 0x...dEaD)
      */
     function requestSuperAdminChange(address newSuperAdmin) external onlySuperAdmin {
         if (newSuperAdmin == address(0)) revert ZeroAddress();
         if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
-        if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
+
+        // Если планируется сжигание на dEaD — проверяем предварительные условия финализации
+        if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
+            if (nextMain == address(0)) revert MigrationLocked();
+            if (allowedAdminsCount != 0) revert MigrationLocked();
+        }
 
         uint64 unlockTime = uint64(block.timestamp + TIMELOCK_DURATION);
         pendingSuperAdmin = newSuperAdmin;
@@ -877,6 +882,7 @@ contract InfinityVerse_Main_Ga_1 {
 
     /**
      * @notice Финализация смены SuperAdmin по истечении 48-часового временного замка.
+     * @dev Передает права СТРОГО на тот адрес, который был зафиксирован в pendingSuperAdmin.
      */
     function executeSuperAdminChange() external onlySuperAdmin {
         address newAdmin = pendingSuperAdmin;
@@ -887,17 +893,5 @@ contract InfinityVerse_Main_Ga_1 {
         superAdminChangeUnlockTime = 0;
 
         _applySuperAdminTransfer(newAdmin);
-    }
-
-    /**
-     * @notice Мгновенное сжигание прав SuperAdmin на 0x...dEaD для финализации миграции поколений.
-     * @dev Выполняется БЕЗ задержки Timelock, но строго требует: nextMain != address(0) и allowedAdminsCount == 0.
-     */
-    function changeSuperAdminToDead() external onlySuperAdmin {
-        // Очищаем отложенные запросы на смену, если они были
-        pendingSuperAdmin = address(0);
-        superAdminChangeUnlockTime = 0;
-
-        _applySuperAdminTransfer(0x000000000000000000000000000000000000dEaD);
     }
 }
