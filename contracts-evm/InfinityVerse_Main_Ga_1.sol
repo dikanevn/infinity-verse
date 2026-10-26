@@ -58,6 +58,7 @@ contract InfinityVerse_Main_Ga_1 {
     uint256 public constant RESERVED_SLOTS = 1 << 180;
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
     uint256 private constant ADMIN_LIST_PREFIX = 2 << 160;
+    uint256 private constant GENERATIONS_PREFIX = 3 << 160;
 
     // Битовые маски прав доступа (младшие 8 бит слота администратора)
     uint8 public constant CLEARANCE_NONE = 0;        // 00000000: Нет допуска
@@ -89,6 +90,10 @@ contract InfinityVerse_Main_Ga_1 {
     // Количество администраторов в реестре (сами адреса лежат в защищенной зоне ADMIN_LIST_PREFIX + i)
     uint256 public allowedAdminsCount;
 
+    // Хроника поколений Мультивселенной: общее количество зарегистрированных поколений
+    // Сами адреса контрактов поколений навечно запечатаны в защищенной зоне GENERATIONS_PREFIX + generationNumber
+    uint256 public totalGenerations;
+
     // 4-байтные ошибки (Custom Errors) для экономии газа и размера байткода
     error Unauthorized();
     error RightsNotActive();
@@ -104,6 +109,8 @@ contract InfinityVerse_Main_Ga_1 {
     error MigrationLocked();
     error TimelockActive();
     error NoPendingSuperAdmin();
+    error GenerationAlreadyRegistered();
+    error InvalidGenerationOrder();
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
@@ -111,6 +118,7 @@ contract InfinityVerse_Main_Ga_1 {
     event SuperAdminChangeRequested(address indexed currentSuperAdmin, address indexed pendingSuperAdmin, uint64 unlockTime);
     event SuperAdminChangeCanceled(address indexed superAdmin, address indexed canceledPendingAdmin);
     event NextMainSet(address indexed nextMainAddress);
+    event GenerationRegistered(uint256 indexed generationNumber, address indexed contractAddress);
 
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
@@ -230,6 +238,11 @@ contract InfinityVerse_Main_Ga_1 {
             sstore(slot, packed)
         }
         emit AdminAllowed(superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
+
+        // Навечно запечатываем текущий контракт как Поколение 1 в Хронике Мультивселенной
+        _setSlot(bytes32(GENERATIONS_PREFIX + 1), bytes32(uint256(uint160(address(this)))));
+        totalGenerations = 1;
+        emit GenerationRegistered(1, address(this));
     }
 
     // ========================================================================
@@ -787,6 +800,40 @@ contract InfinityVerse_Main_Ga_1 {
         if (_nextMain == address(0)) revert ZeroAddress();
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
+    }
+
+    /**
+     * @notice Регистрация следующего поколения в священной Хронике Поколений Мультивселенной (Append-Only).
+     * @dev Гарантии безопасности:
+     * 1. Нельзя пропустить номер (поколения регистрируются строго по порядку: 2, 3, 4...).
+     * 2. Уже зарегистрированное поколение НЕЛЬЗЯ изменить или стереть ни при каких условиях (даже superAdmin).
+     * 3. Слоты лежат в GENERATIONS_PREFIX (3 << 160) глубоко под барьером RESERVED_SLOTS (1 << 180),
+     *    поэтому ассемблер Yul физически не может до них дотянуться.
+     * @param genAddress Адрес контракта нового поколения
+     */
+    function registerNextGeneration(address genAddress) external onlySuperAdmin {
+        if (genAddress == address(0)) revert ZeroAddress();
+        uint256 nextGen = totalGenerations + 1;
+        bytes32 slot = bytes32(GENERATIONS_PREFIX + nextGen);
+
+        if (_getSlot(slot) != 0) revert GenerationAlreadyRegistered();
+
+        _setSlot(slot, bytes32(uint256(uint160(genAddress))));
+        totalGenerations = nextGen;
+
+        emit GenerationRegistered(nextGen, genAddress);
+    }
+
+    /**
+     * @notice Получение адреса любого поколения из неизменяемой Хроники Мультивселенной за O(1).
+     * @param genNumber Номер поколения (1, 2, 3...)
+     * @return genAddress Адрес контракта поколения (или address(0), если еще не зарегистрировано)
+     */
+    function getGeneration(uint256 genNumber) external view returns (address genAddress) {
+        if (genNumber == 0 || genNumber > totalGenerations) {
+            return address(0);
+        }
+        return address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + genNumber)))));
     }
 
     /**

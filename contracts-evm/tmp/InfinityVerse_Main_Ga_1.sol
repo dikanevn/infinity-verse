@@ -18,6 +18,7 @@ contract InfinityVerse_Main_Ga_1 {
     uint256 public constant RESERVED_SLOTS = 1 << 180;
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
     uint256 private constant ADMIN_LIST_PREFIX = 2 << 160;
+    uint256 private constant GENERATIONS_PREFIX = 3 << 160;
     uint8 public constant CLEARANCE_NONE = 0;
     uint8 public constant CLEARANCE_1    = 1 << 0;
     uint8 public constant CLEARANCE_2    = 1 << 1;
@@ -40,6 +41,7 @@ contract InfinityVerse_Main_Ga_1 {
         uint32 paramD;
     }
     uint256 public allowedAdminsCount;
+    uint256 public totalGenerations;
     error Unauthorized();
     error RightsNotActive();
     error RightsExpired();
@@ -54,12 +56,15 @@ contract InfinityVerse_Main_Ga_1 {
     error MigrationLocked();
     error TimelockActive();
     error NoPendingSuperAdmin();
+    error GenerationAlreadyRegistered();
+    error InvalidGenerationOrder();
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
     event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
     event SuperAdminChangeRequested(address indexed currentSuperAdmin, address indexed pendingSuperAdmin, uint64 unlockTime);
     event SuperAdminChangeCanceled(address indexed superAdmin, address indexed canceledPendingAdmin);
     event NextMainSet(address indexed nextMainAddress);
+    event GenerationRegistered(uint256 indexed generationNumber, address indexed contractAddress);
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
         _;
@@ -129,6 +134,9 @@ contract InfinityVerse_Main_Ga_1 {
             sstore(slot, packed)
         }
         emit AdminAllowed(superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
+        _setSlot(bytes32(GENERATIONS_PREFIX + 1), bytes32(uint256(uint160(address(this)))));
+        totalGenerations = 1;
+        emit GenerationRegistered(1, address(this));
     }
     mapping(bytes32 => bytes32) private disk;
     function readSector(bytes32 sector) external view returns (bytes32) {
@@ -446,6 +454,21 @@ contract InfinityVerse_Main_Ga_1 {
         if (_nextMain == address(0)) revert ZeroAddress();
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
+    }
+    function registerNextGeneration(address genAddress) external onlySuperAdmin {
+        if (genAddress == address(0)) revert ZeroAddress();
+        uint256 nextGen = totalGenerations + 1;
+        bytes32 slot = bytes32(GENERATIONS_PREFIX + nextGen);
+        if (_getSlot(slot) != 0) revert GenerationAlreadyRegistered();
+        _setSlot(slot, bytes32(uint256(uint160(genAddress))));
+        totalGenerations = nextGen;
+        emit GenerationRegistered(nextGen, genAddress);
+    }
+    function getGeneration(uint256 genNumber) external view returns (address genAddress) {
+        if (genNumber == 0 || genNumber > totalGenerations) {
+            return address(0);
+        }
+        return address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + genNumber)))));
     }
     function _applySuperAdminTransfer(address newSuperAdmin) internal {
         if (_isAdmin(superAdmin)) {
