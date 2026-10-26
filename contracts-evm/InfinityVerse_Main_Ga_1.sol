@@ -228,8 +228,8 @@ contract InfinityVerse_Main_Ga_1 {
      * Аудиторы часто спрашивают: как деплоить новое поколение (Gen N+1), если в constructor
      * проверяется, что старое поколение (Gen N) уже установило nextMain == newContract?
      * В Ethereum адрес контракта детерминирован и вычисляется ДО отправки транзакции:
-     *   predictedAddress = address(keccak256(rlp([deployerAddress, nonce])))
-     *   (либо через CREATE2: keccak256(0xff ++ deployer ++ salt ++ keccak256(bytecode)))
+     *   predictedAddress = address(keccak256(rlp([superAdminAddress, nonce])))
+     *   (либо через CREATE2: keccak256(0xff ++ superAdmin ++ salt ++ keccak256(bytecode)))
      * 
      * Идеальный порядок миграции поколений спроектирован намеренно:
      * 1. Владелец заранее рассчитывает адрес будущего контракта (predictedAddress) по своему nonce.
