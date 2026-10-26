@@ -350,12 +350,14 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         touchAction: 'none',
         userSelect: 'none',
         /* Бесконечный процедурный космический туман БЕЗ лишней сетки */
-        backgroundColor: '#05070d',
+        backgroundColor: '#090d16',
         backgroundImage: `
-          radial-gradient(circle, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-          radial-gradient(circle at 50% 50%, rgba(20, 27, 45, 0.4) 0%, rgba(5, 7, 13, 0.98) 100%)
+          radial-gradient(circle, rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+          radial-gradient(ellipse at 30% 20%, rgba(71, 85, 105, 0.45) 0%, transparent 60%),
+          radial-gradient(ellipse at 70% 80%, rgba(51, 65, 85, 0.5) 0%, transparent 65%),
+          radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.6) 0%, rgba(9, 13, 22, 0.98) 100%)
         `,
-        backgroundSize: `48px 48px, 100% 100%`,
+        backgroundSize: `48px 48px, 100% 100%, 100% 100%, 100% 100%`,
         border: '1px solid #475569',
         borderRadius: '0px',
         boxSizing: 'border-box'

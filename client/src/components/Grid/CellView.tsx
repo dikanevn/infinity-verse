@@ -67,10 +67,10 @@ export const CellView: React.FC<CellViewProps> = ({
         width: '62px',
         height: '62px',
         background: isFog 
-          ? 'radial-gradient(circle, #0e1322 0%, #05070d 100%)' 
+          ? 'radial-gradient(circle at 50% 50%, #475569 0%, #334155 45%, #1e293b 80%, #0f172a 100%)' 
           : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : (isChaos ? '#06080f' : tInfo.bg)),
-        border: isSelected ? '2px solid #38bdf8' : 'none',
-        opacity: isFog ? 0.35 : 1,
+        border: isSelected ? '2px solid #38bdf8' : isFog ? '1px dashed rgba(148, 163, 184, 0.25)' : 'none',
+        opacity: isFog ? 0.88 : 1,
         borderRadius: '0px',
         display: 'flex',
         flexDirection: 'column',
@@ -82,9 +82,27 @@ export const CellView: React.FC<CellViewProps> = ({
         position: 'relative',
         padding: '3px 4px',
         transition: 'all 0.15s ease',
-        boxShadow: isSelected ? '0 0 14px rgba(56, 189, 248, 0.7)' : 'none'
+        boxShadow: isSelected 
+          ? '0 0 14px rgba(56, 189, 248, 0.7)' 
+          : isFog 
+          ? 'inset 0 0 16px rgba(15, 23, 42, 0.9), 0 0 8px rgba(100, 116, 139, 0.2)' 
+          : 'none',
+        overflow: 'hidden'
       }}
     >
+      {/* Слой пелены плотного полупрозрачного тумана над неизведанной клеткой */}
+      {isFog && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at 40% 40%, rgba(203, 213, 225, 0.22) 0%, rgba(100, 116, 139, 0.35) 60%, rgba(30, 41, 59, 0.8) 100%)',
+            backdropFilter: 'blur(3px)',
+            mixBlendMode: 'screen'
+          }}
+        />
+      )}
 
 
       {/* Верхняя строка: Координаты и Названия */}
