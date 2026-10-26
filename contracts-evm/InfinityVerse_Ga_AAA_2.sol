@@ -255,6 +255,10 @@ contract InfinityVerse_Ga_AAA_2 {
         _validateAndExecuteDiscoverCell(msg.sender, targetX, targetY);
     }
 
+    function discoverCellsBatchDirect(int32[] calldata xs, int32[] calldata ys) external {
+        _validateAndExecuteDiscoverBatch(msg.sender, xs, ys);
+    }
+
     function discoverBatchDirect(int32[] calldata xs, int32[] calldata ys) external {
         _validateAndExecuteDiscoverBatch(msg.sender, xs, ys);
     }
@@ -331,7 +335,7 @@ contract InfinityVerse_Ga_AAA_2 {
         int32[] calldata xs,
         int32[] calldata ys,
         bytes calldata sig
-    ) external {
+    ) public {
         bytes32 authData = mainContract.readSector(getPlayerAuthKey(player));
         address activeKey;
         uint256 expiry;
@@ -356,6 +360,15 @@ contract InfinityVerse_Ga_AAA_2 {
 
         _incrementNonceInternal(player, authData, currentNonce);
         _validateAndExecuteDiscoverBatch(player, xs, ys);
+    }
+
+    function discoverCellsBatchGasless(
+        address player,
+        int32[] calldata xs,
+        int32[] calldata ys,
+        bytes calldata sig
+    ) external {
+        discoverBatchGasless(player, xs, ys, sig);
     }
 
     // ========================================================================
