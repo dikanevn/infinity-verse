@@ -24,7 +24,7 @@ async function deployNewAaa() {
     language: 'Solidity',
     sources: { 'InfinityVerse_AAA.sol': { content: source } },
     settings: {
-      optimizer: { enabled: true, runs: 200 },
+      optimizer: { enabled: true, runs: 4294967295 },
       outputSelection: { '*': { '*': ['abi', 'evm.bytecode'] } }
     }
   };
