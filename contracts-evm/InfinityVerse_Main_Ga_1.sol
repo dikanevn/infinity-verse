@@ -6,6 +6,7 @@ interface IInfinityVerse_PrevMain {
     function nextMain() external view returns (address);
     function allowedAdminsCount() external view returns (uint256);
     function totalGenerations() external view returns (uint256);
+    function getGeneration(uint256 genNumber) external view returns (address);
 }
 
 /**
@@ -110,8 +111,6 @@ contract InfinityVerse_Main_Ga_1 {
     error MigrationLocked();
     error TimelockActive();
     error NoPendingSuperAdmin();
-    error GenerationAlreadyRegistered();
-    error InvalidGenerationOrder();
     error TransferFailed();
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
@@ -234,14 +233,14 @@ contract InfinityVerse_Main_Ga_1 {
      * 
      * Идеальный порядок миграции поколений спроектирован намеренно:
      * 1. Владелец заранее рассчитывает адрес будущего контракта (predictedAddress) по своему nonce.
-     * 2. В старом поколении (Gen N) вызывает setNextMain(predictedAddress) и registerNextGeneration(predictedAddress).
+     * 2. В старом поколении (Gen N) вызывает setNextMain(predictedAddress).
      * 3. В старом поколении отзывает всех внешних админов/модулей (disallowAdmin).
      * 4. Запускает 48-часовой таймлок на сжигание: requestSuperAdminChange(0xdEaD).
      * 5. По истечении 48 часов сжигает старое поколение: executeSuperAdminBurn().
      *    Теперь в Gen N: superAdmin == 0xdEaD, allowedAdminsCount == 0, nextMain == predictedAddress.
      * 6. Отправляет транзакцию создания Gen N+1 со своего адреса с тем самым nonce:
-     *    адрес контракта совпадает с predictedAddress, проверки в constructor идеально сходятся,
-     *    а история поколений (totalGenerations) неразрывно продолжается.
+     *    адрес контракта совпадает с predictedAddress, проверки в constructor сходятся,
+     *    а вся священная летопись поколений (1 .. N) переносится в новый контракт автоматически!
      * Никакого тупика нет: детерминизм EVM гарантирует математически точную и строгую смену эпох!
      */
     constructor(address _prevMain) {
@@ -258,8 +257,15 @@ contract InfinityVerse_Main_Ga_1 {
             // 3. Старый контракт обязан явно указать этот новый контракт своим наследником
             if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this)) revert MigrationLocked();
 
-            // Бесшовное продолжение священной Хроники Поколений (Lineage)
-            currentGen = IInfinityVerse_PrevMain(_prevMain).totalGenerations() + 1;
+            // Непрерывное копирование священной Хроники Поколений (Lineage)
+            uint256 prevGenerations = IInfinityVerse_PrevMain(_prevMain).totalGenerations();
+            for (uint256 i = 1; i <= prevGenerations;) {
+                address historicalGen = IInfinityVerse_PrevMain(_prevMain).getGeneration(i);
+                _setSlot(bytes32(GENERATIONS_PREFIX + i), bytes32(uint256(uint160(historicalGen))));
+                emit GenerationRegistered(i, historicalGen);
+                unchecked { ++i; }
+            }
+            currentGen = prevGenerations + 1;
         }
 
         superAdmin = msg.sender;
@@ -852,28 +858,6 @@ contract InfinityVerse_Main_Ga_1 {
     }
 
     /**
-     * @notice Регистрация следующего поколения в священной Хронике Поколений Мультивселенной (Append-Only).
-     * @dev Гарантии безопасности:
-     * 1. Нельзя пропустить номер (поколения регистрируются строго по порядку: 2, 3, 4...).
-     * 2. Уже зарегистрированное поколение НЕЛЬЗЯ изменить или стереть ни при каких условиях (даже superAdmin).
-     * 3. Слоты лежат в GENERATIONS_PREFIX (3 << 160) глубоко под барьером RESERVED_SLOTS (1 << 180),
-     *    поэтому ассемблер Yul физически не может до них дотянуться.
-     * @param genAddress Адрес контракта нового поколения
-     */
-    function registerNextGeneration(address genAddress) external onlySuperAdmin {
-        if (genAddress == address(0)) revert ZeroAddress();
-        uint256 nextGen = totalGenerations + 1;
-        bytes32 slot = bytes32(GENERATIONS_PREFIX + nextGen);
-
-        if (_getSlot(slot) != 0) revert GenerationAlreadyRegistered();
-
-        _setSlot(slot, bytes32(uint256(uint160(genAddress))));
-        totalGenerations = nextGen;
-
-        emit GenerationRegistered(nextGen, genAddress);
-    }
-
-    /**
      * @notice Получение адреса любого поколения из неизменяемой Хроники Мультивселенной за O(1).
      * @param genNumber Номер поколения (1, 2, 3...)
      * @return genAddress Адрес контракта поколения (или address(0), если еще не зарегистрировано)
@@ -883,6 +867,21 @@ contract InfinityVerse_Main_Ga_1 {
             return address(0);
         }
         return address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + genNumber)))));
+    }
+
+    /**
+     * @notice Получение полного списка всех поколений мультивселенной (от Gen 1 до текущего).
+     * @dev Позволяет внешним модулям, скриптам миграции и админам в 1 вызов получить все адреса
+     * контрактов истории для быстрого поиска игроков, секторов и данных в прошлых поколениях.
+     * @return allGens Массив адресов контрактов всех зарегистрированных поколений
+     */
+    function getAllGenerations() external view returns (address[] memory allGens) {
+        uint256 count = totalGenerations;
+        allGens = new address[](count);
+        for (uint256 i = 0; i < count;) {
+            allGens[i] = address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + (i + 1))))));
+            unchecked { ++i; }
+        }
     }
 
     /**

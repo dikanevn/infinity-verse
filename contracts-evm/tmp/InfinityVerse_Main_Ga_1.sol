@@ -4,6 +4,7 @@ interface IInfinityVerse_PrevMain {
     function nextMain() external view returns (address);
     function allowedAdminsCount() external view returns (uint256);
     function totalGenerations() external view returns (uint256);
+    function getGeneration(uint256 genNumber) external view returns (address);
 }
 contract InfinityVerse_Main_Ga_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Ga-1";
@@ -56,8 +57,6 @@ contract InfinityVerse_Main_Ga_1 {
     error MigrationLocked();
     error TimelockActive();
     error NoPendingSuperAdmin();
-    error GenerationAlreadyRegistered();
-    error InvalidGenerationOrder();
     error TransferFailed();
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
@@ -130,7 +129,14 @@ contract InfinityVerse_Main_Ga_1 {
             if (prevAdmin != 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
             if (IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() != 0) revert MigrationLocked();
             if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this)) revert MigrationLocked();
-            currentGen = IInfinityVerse_PrevMain(_prevMain).totalGenerations() + 1;
+            uint256 prevGenerations = IInfinityVerse_PrevMain(_prevMain).totalGenerations();
+            for (uint256 i = 1; i <= prevGenerations;) {
+                address historicalGen = IInfinityVerse_PrevMain(_prevMain).getGeneration(i);
+                _setSlot(bytes32(GENERATIONS_PREFIX + i), bytes32(uint256(uint160(historicalGen))));
+                emit GenerationRegistered(i, historicalGen);
+                unchecked { ++i; }
+            }
+            currentGen = prevGenerations + 1;
         }
         superAdmin = msg.sender;
         prevMain = _prevMain;
@@ -472,20 +478,19 @@ contract InfinityVerse_Main_Ga_1 {
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
     }
-    function registerNextGeneration(address genAddress) external onlySuperAdmin {
-        if (genAddress == address(0)) revert ZeroAddress();
-        uint256 nextGen = totalGenerations + 1;
-        bytes32 slot = bytes32(GENERATIONS_PREFIX + nextGen);
-        if (_getSlot(slot) != 0) revert GenerationAlreadyRegistered();
-        _setSlot(slot, bytes32(uint256(uint160(genAddress))));
-        totalGenerations = nextGen;
-        emit GenerationRegistered(nextGen, genAddress);
-    }
     function getGeneration(uint256 genNumber) external view returns (address genAddress) {
         if (genNumber == 0 || genNumber > totalGenerations) {
             return address(0);
         }
         return address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + genNumber)))));
+    }
+    function getAllGenerations() external view returns (address[] memory allGens) {
+        uint256 count = totalGenerations;
+        allGens = new address[](count);
+        for (uint256 i = 0; i < count;) {
+            allGens[i] = address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + (i + 1))))));
+            unchecked { ++i; }
+        }
     }
     function _applySuperAdminTransfer(address newSuperAdmin) internal {
         if (_isAdmin(superAdmin)) {
