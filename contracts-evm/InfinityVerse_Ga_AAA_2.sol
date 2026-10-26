@@ -481,24 +481,37 @@ contract InfinityVerse_Ga_AAA_2 {
     /**
      * @notice Падение звезды вокруг игрока:
      * - Происходит на каждый 2-й ход (50% шанс)
-     * - Выбирает случайное смещение dx, dy в радиусе [-2..2] вокруг целевой позиции игрока
+     * - Выбирает случайное смещение dx, dy в радиусе [-2..2] в зоне 5x5 вокруг целевой позиции игрока
+     * - Если звезда падает прямо червю на голову (dx == 0 && dy == 0), он сразу её съедает и получает токены!
      * - Случайный вес звезды: 1 или 2 токена
-     * - Не перезаписывает препятствия (обелиски/стены) и позицию самого игрока
+     * - Не перезаписывает препятствия (обелиски/стены)
      */
     function _maybeDropStar(address player, int32 targetX, int32 targetY) internal {
         bytes32 rand = keccak256(abi.encodePacked(block.prevrandao, block.timestamp, player, targetX, targetY));
         // Шанс 50% (каждый 2-й ход)
         if (uint8(rand[0]) % 2 != 0) return;
 
-        // Смещение dx, dy в диапазоне [-2..2]
+        // Смещение dx, dy в диапазоне [-2..2] (любая из 25 клеток 5x5)
         int32 dx = int32(uint32(uint8(rand[1]) % 5)) - 2;
         int32 dy = int32(uint32(uint8(rand[2]) % 5)) - 2;
-        if (dx == 0 && dy == 0) {
-            dx = 1; // не падаем под ноги игроку
-        }
 
         int32 starX = targetX + dx;
         int32 starY = targetY + dy;
+
+        // Вес звезды: 1 или 2 токена
+        uint8 weight = (uint8(rand[3]) % 2 == 0) ? 1 : 2;
+
+        // Если звезда падает ровно червю на голову (dx == 0 && dy == 0) — он сразу её съедает!
+        if (dx == 0 && dy == 0) {
+            emit StarDropped(starX, starY, weight);
+            uint256 totalReward = starRewardAmount * uint256(weight);
+            if (address(starToken) != address(0)) {
+                try starToken.mint(player, totalReward) {} catch {}
+            }
+            emit StarCollected(player, starX, starY, totalReward);
+            return;
+        }
+
         bytes32 cellKey = getCellKey(starX, starY);
         bytes32 cellVal = mainContract.readSector(cellKey);
 
@@ -512,8 +525,6 @@ contract InfinityVerse_Ga_AAA_2 {
         // Не падаем на обелиски (1) или стены (2)
         if (obj == OBJECT_OBELISK || obj == OBJECT_WALL) return;
 
-        // Вес звезды: 1 или 2
-        uint8 weight = (uint8(rand[3]) % 2 == 0) ? 1 : 2;
         // Если клетки еще нет (terr == 0), генерируем песок (1)
         uint8 terrainType = terr == 0 ? 1 : terr;
 

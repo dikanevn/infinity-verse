@@ -34,9 +34,10 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   const positionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   positionRef.current = position;
 
-  // Определение поглощения звезды червем (когда на клетке игрока звезда)
+  // Определение поглощения звезды червем (когда на клетке игрока звезда или баланс токенов увеличился)
   const [isEatingStar, setIsEatingStar] = useState<boolean>(false);
   const prevPlayerCoordRef = useRef<{ x: number; y: number } | null>(null);
+  const prevInferBalanceRef = useRef<number | null | undefined>(inferBalance);
 
   useEffect(() => {
     if (!player?.exists) return;
@@ -53,6 +54,23 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     }
     prevPlayerCoordRef.current = { x: player.x, y: player.y };
   }, [player?.x, player?.y, player?.exists, cells]);
+
+  // Если баланс токенов увеличился (например звезда упала прямо червю на голову) - анимация поедания
+  useEffect(() => {
+    if (
+      prevInferBalanceRef.current !== null &&
+      prevInferBalanceRef.current !== undefined &&
+      inferBalance !== null &&
+      inferBalance !== undefined &&
+      inferBalance > prevInferBalanceRef.current
+    ) {
+      setIsEatingStar(true);
+      const timer = setTimeout(() => setIsEatingStar(false), 1200);
+      prevInferBalanceRef.current = inferBalance;
+      return () => clearTimeout(timer);
+    }
+    prevInferBalanceRef.current = inferBalance;
+  }, [inferBalance]);
 
   // Собираем все координаты для отрисовки из загруженных cells
   // Если клеток еще нет — дефолтно рисуем 5х5 вокруг фокуса
