@@ -13,59 +13,70 @@ export const Sandworm: React.FC<SandwormProps> = ({
   cellPitch,
   isEatingStar = false
 }) => {
-  // Вычисляем целевой пиксельный центр
+  // Координаты центра текущей клетки в пикселях мира
   const targetPxX = x * cellPitch;
   const targetPxY = -y * cellPitch;
 
-  // Позиции сегментов тела червя для плавной кинематики ползания (IK tail)
-  // [голова, шея, тело1, тело2, хвост]
+  // Сегменты кинематики ползания червя (голова, 4 сегмента шеи и хвоста)
   const [segments, setSegments] = useState<Array<{ x: number; y: number }>>(() => [
     { x: targetPxX, y: targetPxY },
-    { x: targetPxX - 5, y: targetPxY + 5 },
-    { x: targetPxX - 10, y: targetPxY + 10 },
-    { x: targetPxX - 15, y: targetPxY + 15 },
-    { x: targetPxX - 20, y: targetPxY + 20 }
+    { x: targetPxX - 6, y: targetPxY + 6 },
+    { x: targetPxX - 12, y: targetPxY + 12 },
+    { x: targetPxX - 18, y: targetPxY + 18 },
+    { x: targetPxX - 24, y: targetPxY + 24 }
   ]);
 
-  // Угол поворота головы в радианах
+  // Угол поворота червя по вектору движения
   const [headAngle, setHeadAngle] = useState<number>(0);
-  const [isLunging, setIsLunging] = useState<boolean>(false);
+
+  // Стадия выныривания из песка:
+  // При каждом новом ходе червь уходит под песок (подземная волна песчаной ряби),
+  // а затем эффектно выныривает на новой клетке!
+  const [isSurfacing, setIsSurfacing] = useState<boolean>(false);
+  const [isBurrowing, setIsBurrowing] = useState<boolean>(false);
+
   const prevCoordRef = useRef<{ x: number; y: number }>({ x, y });
   const animFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Проверяем, изменились ли координаты
     const prev = prevCoordRef.current;
     if (prev.x !== x || prev.y !== y) {
       const dx = x - prev.x;
-      const dy = -(y - prev.y); // Инвертируем Y для экранных координат
+      const dy = -(y - prev.y);
       const angle = Math.atan2(dy, dx);
       setHeadAngle(angle);
       prevCoordRef.current = { x, y };
 
-      // Запуск всплытия / атаки из песка (lunge)
-      setIsLunging(true);
-      const timer = setTimeout(() => setIsLunging(false), 900);
-      return () => clearTimeout(timer);
+      // Фаза 1: уход под песок в предыдущей точке (нырок)
+      setIsBurrowing(true);
+      const diveTimeout = setTimeout(() => {
+        setIsBurrowing(false);
+        // Фаза 2: мощное выныривание на целевой клетке с песчаным гейзером
+        setIsSurfacing(true);
+        const surfaceTimeout = setTimeout(() => {
+          setIsSurfacing(false);
+        }, 850);
+        return () => clearTimeout(surfaceTimeout);
+      }, 250);
+
+      return () => clearTimeout(diveTimeout);
     }
   }, [x, y]);
 
-  // Анимация сегментов с легким изгибом и плавным следованием за головой
+  // Плавное следование тела за головой (Inverse Kinematics)
   useEffect(() => {
     let active = true;
 
     const updateKinematics = () => {
       setSegments(prevSegs => {
         const next = [...prevSegs];
-        // Голова стремится к targetPxX, targetPxY
         const head = next[0];
         const hDx = targetPxX - head.x;
         const hDy = targetPxY - head.y;
-        head.x += hDx * 0.18;
-        head.y += hDy * 0.18;
+        head.x += hDx * 0.22;
+        head.y += hDy * 0.22;
 
-        // Последующие сегменты тянутся друг за другом с фиксированной дистанцией
-        const segmentDist = 11;
+        const segmentDist = 12;
         for (let i = 1; i < next.length; i++) {
           const leader = next[i - 1];
           const follower = next[i];
@@ -94,6 +105,14 @@ export const Sandworm: React.FC<SandwormProps> = ({
 
   const head = segments[0] || { x: targetPxX, y: targetPxY };
 
+  // Состояние рта: открыт ТОЛЬКО когда червь ест звезду
+  const mouthOpen = isEatingStar;
+
+  // Видимость червя: при обычном нырке он погружается в песок,
+  // при выныривании эффектно поднимается наружу
+  const wormScale = isBurrowing ? 0.35 : isSurfacing ? 1.15 : 1.0;
+  const wormOpacity = isBurrowing ? 0.35 : 1.0;
+
   return (
     <div
       style={{
@@ -101,10 +120,10 @@ export const Sandworm: React.FC<SandwormProps> = ({
         left: 0,
         top: 0,
         pointerEvents: 'none',
-        zIndex: 20
+        zIndex: 25
       }}
     >
-      {/* Сегменты тела червя (хвост и кольца тела) */}
+      {/* 1. Песчаный гейзер / пылевое облако выныривания из-под земли */}
       <svg
         style={{
           position: 'absolute',
@@ -114,166 +133,214 @@ export const Sandworm: React.FC<SandwormProps> = ({
         }}
       >
         <defs>
-          <radialGradient id="wormSandBurst" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#d97706" stopOpacity="0.8" />
-            <stop offset="60%" stopColor="#92400e" stopOpacity="0.4" />
+          <radialGradient id="sandGeyser" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#d97706" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="#92400e" stopOpacity="0.45" />
             <stop offset="100%" stopColor="#78350f" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="sandTrack" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#451a03" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#451a03" stopOpacity="0" />
           </radialGradient>
         </defs>
 
-        {/* Облако пыли и песка под червем при движении */}
+        {/* Песчаная воронка на месте выныривания */}
         <ellipse
           cx={head.x}
           cy={head.y + 4}
-          rx={isLunging ? 32 : 22}
-          ry={isLunging ? 22 : 14}
-          fill="url(#wormSandBurst)"
+          rx={isSurfacing ? 34 : 20}
+          ry={isSurfacing ? 24 : 12}
+          fill="url(#sandGeyser)"
           style={{
-            transition: 'rx 0.3s ease, ry 0.3s ease',
-            filter: 'blur(3px)'
+            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            filter: 'blur(2px)'
           }}
         />
 
-        {/* Сегменты туловища от хвоста к шее */}
+        {/* Подземные борозды и кольца песчаного червя */}
         {segments.slice(1).map((seg, idx) => {
-          // idx 0 -> сегмент 1 (шея), idx 3 -> хвост
-          const r = Math.max(5, 14 - idx * 2.8);
+          const r = Math.max(4, 13 - idx * 2.5);
           return (
-            <g key={idx}>
+            <g
+              key={idx}
+              style={{
+                opacity: wormOpacity * (1 - idx * 0.12),
+                transition: 'opacity 0.2s ease'
+              }}
+            >
+              {/* Тень под телом */}
+              <circle
+                cx={seg.x}
+                cy={seg.y + 2}
+                r={r + 2}
+                fill="url(#sandTrack)"
+              />
+              {/* Сегмент чешуи Шаи-Хулуда */}
               <circle
                 cx={seg.x}
                 cy={seg.y}
                 r={r}
-                fill="#543828"
+                fill="#4a2e1d"
                 stroke="#291a10"
-                strokeWidth="2.5"
+                strokeWidth="2.2"
                 style={{
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))'
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))'
                 }}
               />
-              {/* Кольца панциря червя */}
+              {/* Бронированный щиток */}
               <circle
                 cx={seg.x}
                 cy={seg.y}
-                r={r * 0.7}
-                fill="#784b30"
-                opacity="0.9"
+                r={r * 0.65}
+                fill="#6e4226"
               />
             </g>
           );
         })}
       </svg>
 
-      {/* Голова песчаного червя Шаи-Хулуда (Пасть с клыками) */}
+      {/* 2. Голова Песчаного Червя (выныривает из песка) */}
       <div
         style={{
           position: 'absolute',
           left: `${head.x}px`,
           top: `${head.y}px`,
-          transform: `translate(-50%, -50%) rotate(${headAngle}rad) scale(${isLunging ? 1.25 : 1})`,
-          transition: 'transform 0.12s ease-out',
-          width: '46px',
-          height: '46px',
+          transform: `translate(-50%, -50%) rotate(${headAngle}rad) scale(${wormScale})`,
+          transition: 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease',
+          opacity: wormOpacity,
+          width: '48px',
+          height: '48px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}
       >
         <svg
-          width="46"
-          height="46"
+          width="48"
+          height="48"
           viewBox="0 0 100 100"
           style={{
             overflow: 'visible',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.85))'
+            filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.9))'
           }}
         >
-          {/* Наружное бронированное кольцо чешуи */}
+          {/* Внешний массивный панцирь головы червя */}
           <circle
             cx="50"
             cy="50"
             r="44"
-            fill="#3d2415"
-            stroke="#1d1109"
+            fill="#361f12"
+            stroke="#1a0e08"
             strokeWidth="5"
           />
 
-          {/* Внутренняя зияющая бездна пасти */}
+          {/* Чешуйчатые складки вокруг пасти */}
           <circle
             cx="50"
             cy="50"
-            r="35"
-            fill="#120703"
+            r="38"
+            fill="#4d2c19"
+            stroke="#26140b"
+            strokeWidth="2.5"
           />
 
-          {/* Трёхстворчатые мощные челюсти Дюны */}
-          <path
-            d="M 50 15 Q 40 38 50 50 Q 60 38 50 15 Z"
-            fill="#6b3a24"
-            stroke="#261309"
-            strokeWidth="2"
-          />
-          <path
-            d="M 20 70 Q 38 60 50 50 Q 30 50 20 70 Z"
-            fill="#6b3a24"
-            stroke="#261309"
-            strokeWidth="2"
-          />
-          <path
-            d="M 80 70 Q 70 50 50 50 Q 62 60 80 70 Z"
-            fill="#6b3a24"
-            stroke="#261309"
-            strokeWidth="2"
-          />
-
-          {/* Концентрические ряды кристаллических зубов (Крис-ножи) */}
-          {/* Внешний ряд зубов */}
-          {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
-            <polygon
-              key={`t1-${i}`}
-              points="50,18 47,27 53,27"
-              fill="#fef08a"
-              stroke="#ca8a04"
-              strokeWidth="0.8"
-              transform={`rotate(${deg} 50 50)`}
-            />
-          ))}
-
-          {/* Внутренний ряд зубов */}
-          {[15, 45, 75, 105, 135, 165, 195, 225, 255, 285, 315, 345].map((deg, i) => (
-            <polygon
-              key={`t2-${i}`}
-              points="50,28 48,34 52,34"
-              fill="#ffffff"
-              stroke="#a1a1aa"
-              strokeWidth="0.6"
-              transform={`rotate(${deg} 50 50)`}
-            />
-          ))}
-
-          {/* Глубинное огненное свечение в жерле спайса */}
+          {/* Жерло/внутренняя полость: видна широко ТОЛЬКО когда открывает рот для поедания */}
           <circle
             cx="50"
             cy="50"
-            r="12"
-            fill="#ea580c"
-            opacity={isEatingStar ? 0.95 : 0.65}
+            r={mouthOpen ? 30 : 12}
+            fill="#0f0502"
             style={{
-              animation: 'spicePulse 1.5s infinite alternate'
+              transition: 'r 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            }}
+          />
+
+          {/* Трёхдольные мощные броне-челюсти червя */}
+          {/* При обычном движении — челюсти сомкнуты в заостренную бронированную форму для пробивания песка! */}
+          {/* При поедании звезды (mouthOpen) — челюсти резко распахиваются наружу в стороны! */}
+          <g style={{ transition: 'transform 0.3s ease', transformOrigin: '50px 50px' }}>
+            {/* Верхняя створка */}
+            <path
+              d={mouthOpen 
+                ? "M 50 8 Q 36 28 42 42 Q 58 28 50 8 Z" 
+                : "M 50 16 Q 42 38 50 50 Q 58 38 50 16 Z"}
+              fill="#6b3a24"
+              stroke="#261309"
+              strokeWidth="2.5"
+              style={{ transition: 'd 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            />
+            {/* Левая нижняя створка */}
+            <path
+              d={mouthOpen 
+                ? "M 14 74 Q 30 52 42 44 Q 24 64 14 74 Z" 
+                : "M 22 68 Q 38 58 50 50 Q 30 52 22 68 Z"}
+              fill="#6b3a24"
+              stroke="#261309"
+              strokeWidth="2.5"
+              style={{ transition: 'd 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            />
+            {/* Правая нижняя створка */}
+            <path
+              d={mouthOpen 
+                ? "M 86 74 Q 70 52 58 44 Q 76 64 86 74 Z" 
+                : "M 78 68 Q 62 58 50 50 Q 70 52 78 68 Z"}
+              fill="#6b3a24"
+              stroke="#261309"
+              strokeWidth="2.5"
+              style={{ transition: 'd 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            />
+          </g>
+
+          {/* Клыки крис-ножей: обнажаются во всей красе ТОЛЬКО когда червь раскрывает пасть */}
+          {mouthOpen && (
+            <g style={{ animation: 'teethGleam 0.3s ease-out' }}>
+              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
+                <polygon
+                  key={`t1-${i}`}
+                  points="50,18 47,28 53,28"
+                  fill="#fef08a"
+                  stroke="#ca8a04"
+                  strokeWidth="0.8"
+                  transform={`rotate(${deg} 50 50)`}
+                />
+              ))}
+              {[15, 45, 75, 105, 135, 165, 195, 225, 255, 285, 315, 345].map((deg, i) => (
+                <polygon
+                  key={`t2-${i}`}
+                  points="50,29 48,36 52,36"
+                  fill="#ffffff"
+                  stroke="#a1a1aa"
+                  strokeWidth="0.6"
+                  transform={`rotate(${deg} 50 50)`}
+                />
+              ))}
+            </g>
+          )}
+
+          {/* Спайсовое пламя в центре пасти (вспыхивает при поедании звезды) */}
+          <circle
+            cx="50"
+            cy="50"
+            r={mouthOpen ? 16 : 4}
+            fill="#f97316"
+            opacity={mouthOpen ? 0.95 : 0.3}
+            style={{
+              transition: 'all 0.3s ease',
+              filter: mouthOpen ? 'drop-shadow(0 0 10px #ea580c)' : 'none'
             }}
           />
         </svg>
 
-        {/* Анимация поглощения звезды снизу пастью червя */}
-        {isEatingStar && (
+        {/* 3. Анимация затягивания звезды снизу в открытую пасть */}
+        {mouthOpen && (
           <div
             style={{
               position: 'absolute',
-              fontSize: '1.4rem',
-              animation: 'starDevour 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-              zIndex: 30,
+              fontSize: '1.5rem',
+              animation: 'starDevour 1.0s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+              zIndex: 35,
               pointerEvents: 'none',
-              filter: 'drop-shadow(0 0 10px #facc15)'
+              filter: 'drop-shadow(0 0 14px #facc15)'
             }}
           >
             ⭐
@@ -282,22 +349,26 @@ export const Sandworm: React.FC<SandwormProps> = ({
       </div>
 
       <style>{`
-        @keyframes spicePulse {
-          0% { r: 9px; opacity: 0.5; filter: drop-shadow(0 0 4px #f97316); }
-          100% { r: 13px; opacity: 0.85; filter: drop-shadow(0 0 10px #eab308); }
+        @keyframes teethGleam {
+          0% { opacity: 0; transform: scale(0.6); }
+          100% { opacity: 1; transform: scale(1); }
         }
         @keyframes starDevour {
           0% {
-            transform: scale(1.6) translateY(12px);
+            transform: scale(1.6) translateY(18px);
             opacity: 1;
-            filter: drop-shadow(0 0 14px #facc15);
+            filter: drop-shadow(0 0 16px #facc15);
           }
-          50% {
-            transform: scale(1.1) translateY(2px);
-            opacity: 0.9;
+          40% {
+            transform: scale(1.2) translateY(6px);
+            opacity: 0.95;
+          }
+          75% {
+            transform: scale(0.6) translateY(-4px) rotate(140deg);
+            opacity: 0.8;
           }
           100% {
-            transform: scale(0.1) translateY(-8px) rotate(180deg);
+            transform: scale(0.05) translateY(-12px) rotate(240deg);
             opacity: 0;
             filter: drop-shadow(0 0 0px #000);
           }
