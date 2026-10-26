@@ -127,7 +127,7 @@ function App() {
     }
   };
 
-  // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 3x3 ВОКРУГ ИГРОКА
+  // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 5x5 ВОКРУГ ИГРОКА
   const discoveringRef = useState<{ inFlight: boolean; visited: Set<string> }>({
     inFlight: false,
     visited: new Set()
@@ -137,12 +137,12 @@ function App() {
     // Ждём пока загрузятся клетки (минимум 25 клеток вокруг игрока)
     if (!player?.exists || !connectedAddress || actionPending || discoveringRef.inFlight || cells.length === 0) return;
 
-    // Ищем только те клетки 3х3 вокруг игрока, которые РЕАЛЬНО есть в загруженных cells и у которых terrain === 0
+    // Ищем только те клетки 5х5 вокруг игрока (dx in [-2..2], dy in [-2..2]), которые есть в загруженных cells и у которых terrain === 0
     const neededXs: number[] = [];
     const neededYs: number[] = [];
 
-    for (let dy = 1; dy >= -1; dy--) {
-      for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = 2; dy >= -2; dy--) {
+      for (let dx = -2; dx <= 2; dx++) {
         const tx = player.x + dx;
         const ty = player.y + dy;
         const coordKey = `${tx},${ty}`;
@@ -159,7 +159,7 @@ function App() {
     }
 
     if (neededXs.length > 0) {
-      console.log(`🌌 [AUTO-DISCOVER] Обнаружена пустота! Разведываем ${neededXs.length} клеток:`, neededXs, neededYs);
+      console.log(`🌌 [AUTO-DISCOVER 5x5] Обнаружена пустота! Разведываем ${neededXs.length} клеток:`, neededXs, neededYs);
       discoveringRef.inFlight = true;
       neededXs.forEach((x, i) => discoveringRef.visited.add(`${x},${neededYs[i]}`));
 

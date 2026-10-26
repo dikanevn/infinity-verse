@@ -84,6 +84,7 @@ contract InfinityVerse_Ga_AAA_2 {
     address public immutable relayer;
 
     event StarCollected(address indexed player, int32 x, int32 y, uint256 reward);
+    event StarDropped(int32 indexed x, int32 indexed y, uint8 weight);
 
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
@@ -419,6 +420,7 @@ contract InfinityVerse_Ga_AAA_2 {
         }
 
         _handleCellInteraction(player, targetX, targetY);
+        _maybeDropStar(player, targetX, targetY);
 
         // Обновляем координаты игрока
         bytes32 updatedPos;
@@ -463,6 +465,58 @@ contract InfinityVerse_Ga_AAA_2 {
         }
     }
 
+    /**
+     * @notice Падение звезды вокруг игрока:
+     * - Происходит на каждый 2-й ход (50% шанс)
+     * - Выбирает случайное смещение dx, dy в радиусе [-2..2] вокруг целевой позиции игрока
+     * - Случайный вес звезды: 1 или 2 токена
+     * - Не перезаписывает препятствия (обелиски/стены) и позицию самого игрока
+     */
+    function _maybeDropStar(address player, int32 targetX, int32 targetY) internal {
+        bytes32 rand = keccak256(abi.encodePacked(block.prevrandao, block.timestamp, player, targetX, targetY));
+        // Шанс 50% (каждый 2-й ход)
+        if (uint8(rand[0]) % 2 != 0) return;
+
+        // Смещение dx, dy в диапазоне [-2..2]
+        int32 dx = int32(uint32(uint8(rand[1]) % 5)) - 2;
+        int32 dy = int32(uint32(uint8(rand[2]) % 5)) - 2;
+        if (dx == 0 && dy == 0) {
+            dx = 1; // не падаем под ноги игроку
+        }
+
+        int32 starX = targetX + dx;
+        int32 starY = targetY + dy;
+        bytes32 cellKey = getCellKey(starX, starY);
+        bytes32 cellVal = mainContract.readSector(cellKey);
+
+        uint8 obj;
+        uint8 terr;
+        assembly {
+            terr := byte(0, cellVal)
+            obj  := byte(1, cellVal)
+        }
+
+        // Не падаем на обелиски (1) или стены (2)
+        if (obj == OBJECT_OBELISK || obj == OBJECT_WALL) return;
+
+        // Вес звезды: 1 или 2
+        uint8 weight = (uint8(rand[3]) % 2 == 0) ? 1 : 2;
+        // Если клетки еще нет (terr == 0), генерируем песок (1)
+        uint8 terrainType = terr == 0 ? 1 : terr;
+
+        bytes32 starCell;
+        assembly {
+            // [terrainType: 1B][OBJECT_STAR(3): 1B][weight: 1B][reserved(0): 1B]
+            starCell := or(
+                or(shl(248, terrainType), shl(240, 3)),
+                shl(232, weight)
+            )
+        }
+
+        mainContract.writeSector(cellKey, starCell);
+        emit StarDropped(starX, starY, weight);
+    }
+
     function _validateAndExecuteDiscoverCell(address player, int32 targetX, int32 targetY) internal {
         bytes32 posKey = getPlayerPosKey(player);
         bytes32 currentPos = mainContract.readSector(posKey);
@@ -481,7 +535,7 @@ contract InfinityVerse_Ga_AAA_2 {
         int32 dy = targetY - currentY;
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
-        if (dx > 1 || dy > 1) revert MoveTooFar();
+        if (dx > 2 || dy > 2) revert MoveTooFar();
 
         bytes32 cellKey = getCellKey(targetX, targetY);
         bytes32 currentCell = mainContract.readSector(cellKey);
@@ -525,7 +579,7 @@ contract InfinityVerse_Ga_AAA_2 {
             int32 dy = targetCellY - currentY;
             if (dx < 0) dx = -dx;
             if (dy < 0) dy = -dy;
-            if (dx > 1 || dy > 1) revert MoveTooFar();
+            if (dx > 2 || dy > 2) revert MoveTooFar();
 
             keys[i] = getCellKey(targetCellX, targetCellY);
             unchecked { ++i; }
