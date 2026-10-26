@@ -23,7 +23,7 @@ contract InfinityVerse_Main_Ga_1 {
     uint8 public constant PERM_B         = 1 << 4;
     uint8 public constant PERM_C         = 1 << 5;
     uint8 public constant PERM_D         = 1 << 6;
-    uint8 public constant PERM_EXT       = 1 << 7;
+    uint8 public constant PERM_E         = 1 << 7;
     uint8 public constant PERM_ALL       = 255;
     struct AdminInfo {
         bool isActive;

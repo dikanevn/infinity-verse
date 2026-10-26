@@ -63,7 +63,7 @@ contract InfinityVerse_Main_Ga_1 {
     uint8 public constant PERM_B         = 1 << 4;   // 00010000 (16): Модульное право B (резерв под внешние модули)
     uint8 public constant PERM_C         = 1 << 5;   // 00100000 (32): Модульное право C (резерв под внешние модули)
     uint8 public constant PERM_D         = 1 << 6;   // 01000000 (64): Модульное право D (резерв под внешние модули)
-    uint8 public constant PERM_EXT       = 1 << 7;   // 10000000 (128): Расширенное право (резерв под будущие стандарты)
+    uint8 public constant PERM_E         = 1 << 7;   // 10000000 (128): Модульное право E (резерв под внешние модули)
     uint8 public constant PERM_ALL       = 255;      // 11111111: Полный доступ ко всем битам (включая будущие)
 
     /**
