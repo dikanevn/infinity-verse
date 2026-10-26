@@ -328,19 +328,29 @@ contract InfinityVerse_Main_Ga_1 {
     function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSlot);
+        unchecked {
+            if (base + count < base) revert InvalidSlot();
+        }
         for (uint256 i = 0; i < count;) {
-            result[i] = _getSlot(bytes32(base + i));
-            unchecked { ++i; }
+            unchecked {
+                result[i] = _getSlot(bytes32(base + i));
+                ++i;
+            }
         }
         return result;
     }
     function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlySlotAdmins {
-        if (uint256(baseSlot) < RESERVED_SLOTS) revert InvalidSlot();
-        uint256 len = vals.length;
         uint256 base = uint256(baseSlot);
+        if (base < RESERVED_SLOTS) revert InvalidSlot();
+        uint256 len = vals.length;
+        unchecked {
+            if (base + len < base) revert InvalidSlot();
+        }
         for (uint256 i = 0; i < len;) {
-            _setSlot(bytes32(base + i), vals[i]);
-            unchecked { ++i; }
+            unchecked {
+                _setSlot(bytes32(base + i), vals[i]);
+                ++i;
+            }
         }
     }
     function trimSlot(bytes32 slot) external onlySlotAdmins {
