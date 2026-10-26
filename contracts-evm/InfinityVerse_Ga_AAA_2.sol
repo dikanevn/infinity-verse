@@ -23,6 +23,7 @@ interface IInfinityVerse_Ga_TTT {
     function setFrozenAccount(address target, bool freeze) external;
     function setAllowedMinter(address minter, bool allowed) external;
     function transferSuperAdminDirect(address newAdmin) external;
+    function setNameAndSymbol(string memory _name, string memory _symbol) external;
 }
 
 /**
@@ -174,24 +175,24 @@ contract InfinityVerse_Ga_AAA_2 {
     // === ОНЧЕЙН ГЕТТЕРЫ (VIEW) ДЛЯ ФРОНТЕНДА ===
     // ========================================================================
 
-    function getCell(int32 x, int32 y) external view returns (uint8 terrain, uint8 object, uint8 state, uint8 reserved) {
+    function getCell(int32 x, int32 y) public view returns (Cell memory c) {
         bytes32 val = mainContract.readSector(getCellKey(x, y));
-        assembly {
-            terrain  := byte(0, val)
-            object   := byte(1, val)
-            state    := byte(2, val)
-            reserved := byte(3, val)
-        }
+        return Cell({
+            terrain: uint8(val[0]),
+            object: uint8(val[1]),
+            state: uint8(val[2]),
+            reserved: uint8(val[3])
+        });
     }
 
-    function getPlayer(address player) external view returns (
+    function getPlayer(address player) public view returns (
         int32 x,
         int32 y,
         bool exists,
         address sessionKey,
         uint256 sessionExpiry,
-        uint256 registeredAtBlock,
-        uint256 registeredAtTimestamp
+        uint64 registeredAtBlock,
+        uint64 registeredAtTimestamp
     ) {
         bytes32 posVal = mainContract.readSector(getPlayerPosKey(player));
         bytes32 authVal = mainContract.readSector(getPlayerAuthKey(player));
@@ -214,33 +215,27 @@ contract InfinityVerse_Ga_AAA_2 {
         }
     }
 
-    function getCellsBatch(int32[] calldata xs, int32[] calldata ys) external view returns (Cell[] memory) {
+    function getCellsBatch(int32[] calldata xs, int32[] calldata ys) external view returns (Cell[] memory cells) {
+        if (xs.length != ys.length) revert ArrayLengthMismatch();
         uint256 len = xs.length;
-        if (len != ys.length) revert ArrayLengthMismatch();
-
         bytes32[] memory keys = new bytes32[](len);
-        for (uint256 i = 0; i < len; ) {
+        for (uint256 i = 0; i < len;) {
             keys[i] = getCellKey(xs[i], ys[i]);
             unchecked { ++i; }
         }
 
         bytes32[] memory rawData = mainContract.readSectorBatch(keys);
-        Cell[] memory result = new Cell[](len);
-
-        for (uint256 i = 0; i < len; ) {
-            bytes32 v = rawData[i];
-            uint8 t; uint8 o; uint8 s; uint8 r;
-            assembly {
-                t := byte(0, v)
-                o := byte(1, v)
-                s := byte(2, v)
-                r := byte(3, v)
-            }
-            result[i] = Cell({ terrain: t, object: o, state: s, reserved: r });
+        cells = new Cell[](len);
+        for (uint256 i = 0; i < len;) {
+            bytes32 val = rawData[i];
+            cells[i] = Cell({
+                terrain: uint8(val[0]),
+                object: uint8(val[1]),
+                state: uint8(val[2]),
+                reserved: uint8(val[3])
+            });
             unchecked { ++i; }
         }
-
-        return result;
     }
 
     // ========================================================================
@@ -403,48 +398,27 @@ contract InfinityVerse_Ga_AAA_2 {
         bytes32 posKey = getPlayerPosKey(player);
         bytes32 currentPos = mainContract.readSector(posKey);
 
-        int32 currentX;
-        int32 currentY;
-        bool exists;
-        assembly {
-            currentX := sar(224, currentPos)
-            currentY := sar(224, shl(32, currentPos))
-            exists := byte(8, currentPos)
-        }
-        if (!exists) revert PlayerNotSpawned();
-
-        int32 dx = targetX - currentX;
-        int32 dy = targetY - currentY;
-        if (dx < 0) dx = -dx;
-        if (dy < 0) dy = -dy;
-
-        if (dx > 1 || dy > 1) revert MoveTooFar();
-        if (dx + dy == 0) revert MoveZeroDistance();
-
-        bytes32 cellKey = getCellKey(targetX, targetY);
-        bytes32 cellVal = mainContract.readSector(cellKey);
-        uint8 objectType;
-        assembly {
-            objectType := byte(1, cellVal)
-        }
-        if (objectType == OBJECT_OBELISK) revert ObstacleObelisk();
-        if (objectType == OBJECT_WALL) revert ObstacleWall();
-
-        // Если наступили на Звезду — собираем её и начисляем Ga_TTT токен
-        if (objectType == OBJECT_STAR) {
-            bytes32 clearedCell;
+        {
+            int32 currentX;
+            int32 currentY;
+            bool exists;
             assembly {
-                // Стираем objectType (байт 1 ставим в 0), сохраняя terrain и прочее
-                clearedCell := and(cellVal, 0xFF00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+                currentX := sar(224, currentPos)
+                currentY := sar(224, shl(32, currentPos))
+                exists := byte(8, currentPos)
             }
-            mainContract.writeSector(cellKey, clearedCell);
+            if (!exists) revert PlayerNotSpawned();
 
-            if (address(starToken) != address(0)) {
-                // Безопасный вызов минта (если у токена разрешен минт для этого модуля)
-                try starToken.mint(player, starRewardAmount) {} catch {}
-            }
-            emit StarCollected(player, targetX, targetY, starRewardAmount);
+            int32 dx = targetX - currentX;
+            int32 dy = targetY - currentY;
+            if (dx < 0) dx = -dx;
+            if (dy < 0) dy = -dy;
+
+            if (dx > 1 || dy > 1) revert MoveTooFar();
+            if (dx + dy == 0) revert MoveZeroDistance();
         }
+
+        _handleCellInteraction(player, targetX, targetY);
 
         // Обновляем координаты игрока
         bytes32 updatedPos;
@@ -455,6 +429,38 @@ contract InfinityVerse_Ga_AAA_2 {
         }
 
         mainContract.writeSector(posKey, updatedPos);
+    }
+
+    function _handleCellInteraction(address player, int32 targetX, int32 targetY) internal {
+        bytes32 cellKey = getCellKey(targetX, targetY);
+        bytes32 cellVal = mainContract.readSector(cellKey);
+        uint8 objectType;
+        assembly {
+            objectType := byte(1, cellVal)
+        }
+        if (objectType == OBJECT_OBELISK) revert ObstacleObelisk();
+        if (objectType == OBJECT_WALL) revert ObstacleWall();
+
+        // Если наступили на Звезду — считываем её вес (state: байт 2) и минтим weight * 1 ether токенов
+        if (objectType == OBJECT_STAR) {
+            uint8 starWeight;
+            assembly {
+                starWeight := byte(2, cellVal)
+            }
+            uint256 weightMultiplier = starWeight > 0 ? uint256(starWeight) : 1;
+            uint256 totalReward = starRewardAmount * weightMultiplier;
+
+            bytes32 clearedCell;
+            assembly {
+                clearedCell := and(cellVal, 0xFF0000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            }
+            mainContract.writeSector(cellKey, clearedCell);
+
+            if (address(starToken) != address(0)) {
+                try starToken.mint(player, totalReward) {} catch {}
+            }
+            emit StarCollected(player, targetX, targetY, totalReward);
+        }
     }
 
     function _validateAndExecuteDiscoverCell(address player, int32 targetX, int32 targetY) internal {

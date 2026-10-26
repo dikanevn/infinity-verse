@@ -94,6 +94,11 @@ contract InfinityVerse_Ga_TTT {
         emit SuperAdminTransferAccepted(address(0), _initialAdmin);
     }
 
+    function setNameAndSymbol(string memory _name, string memory _symbol) external onlySuperAdmin {
+        name = _name;
+        symbol = _symbol;
+    }
+
     // ========================================================================
     // === СТАНДАРТ ERC-20 ===
     // ========================================================================
