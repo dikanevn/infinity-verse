@@ -50,16 +50,16 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   const isFirstMountRef = useRef<boolean>(true);
 
-  // Автоматически удерживаем камеру на игроке при начальной загрузке
+  // Автоматически центрируем камеру на игроке при начальной загрузке и при каждом изменении координат игрока (после хода)
   useEffect(() => {
-    if (player?.exists && isFirstMountRef.current) {
+    if (player?.exists) {
       isFirstMountRef.current = false;
-      const initialPos = {
+      const targetPos = {
         x: -player.x * CELL_PITCH * scaleRef.current,
         y: player.y * CELL_PITCH * scaleRef.current
       };
-      setPosition(initialPos);
-      positionRef.current = initialPos;
+      setPosition(targetPos);
+      positionRef.current = targetPos;
     }
   }, [player?.x, player?.y, player?.exists]);
 
