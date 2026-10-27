@@ -26,11 +26,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
     let startTime = performance.now();
 
-    // Внешние макро-порядки площади (10^2 .. 10^18)
-    // 10x10 = 10^2 (100 кл)
-    // 100x100 = 10^4 (10 000 кл)
-    // ...
-    // 10^9 x 10^9 = 10^18 (Граница мира / 2^64)
+    // 1. ВНЕШНИЕ МАКРО-ПОРЯДКИ (10^2 .. 10^18)
     const macroOrders = [
       { exp: 1, side: 10, power: 2, label: '10^2 (100 кл)' },
       { exp: 2, side: 100, power: 4, label: '10^4 (10 000 кл)' },
@@ -43,18 +39,23 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       { exp: 9, side: 1000000000, power: 18, label: '10^18 (Граница мира)' }
     ];
 
-    // Внутренние микро-порядки внутрь клетки
-    const microOrders = [
-      { exp: -1, fraction: 0.1, power: -2, label: '10^-2' },
-      { exp: -2, fraction: 0.01, power: -4, label: '10^-4' },
-      { exp: -3, fraction: 0.001, power: -6, label: '10^-6' },
-      { exp: -4, fraction: 0.0001, power: -8, label: '10^-8' },
-      { exp: -5, fraction: 0.00001, power: -10, label: '10^-10' },
-      { exp: -6, fraction: 0.000001, power: -12, label: '10^-12' },
-      { exp: -7, fraction: 0.0000001, power: -14, label: '10^-14' },
-      { exp: -8, fraction: 0.00000001, power: -16, label: '10^-16' },
-      { exp: -9, fraction: 0.000000001, power: -18, label: '10^-18 (Квантовое ядро)' }
-    ];
+    // 2. БЕСКОНЕЧНЫЕ ВНУТРЕННИЕ МИКРО-ПОРЯДКИ (вплоть до 10^-70)
+    const microOrders: { exp: number; fraction: number; power: number; label: string }[] = [];
+    for (let exp = 1; exp <= 35; exp++) {
+      const power = exp * 2;
+      let note = '';
+      if (power === 2) note = ' (0.01 кл)';
+      else if (power === 6) note = ' (Микро)';
+      else if (power === 18) note = ' (Квант Wei)';
+      else if (power === 34) note = ' (Планковский масштаб)';
+      else if (power === 70) note = ' (Квантовая сингулярность)';
+      microOrders.push({
+        exp: -exp,
+        fraction: Math.pow(10, -exp),
+        power: -power,
+        label: `10^-${power}${note}`
+      });
+    }
 
     const render = (time: number) => {
       ctx.clearRect(0, 0, width, height);
@@ -65,7 +66,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       const t = (time - startTime) / 1000;
       const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
 
-      // 1. ВНЕШНИЕ РАМКИ
+      // 1. ОТРИСОВКА ВНЕШНИХ РАМОК (10^2 .. 10^18)
       for (let i = 0; i < macroOrders.length; i++) {
         const item = macroOrders[i];
         const isOuterMost = i === macroOrders.length - 1; // 10^18 Граница мира
@@ -127,10 +128,9 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         ctx.restore();
       }
 
-      // 2. ВНУТРЕННИЕ МИКРО-РАМКИ ВГЛУБЬ КЛЕТКИ
+      // 2. ОТРИСОВКА БЕСКОНЕЧНЫХ ВНУТРЕННИХ МИКРО-РАМОК (10^-2 .. 10^-70 ...)
       for (let i = 0; i < microOrders.length; i++) {
         const item = microOrders[i];
-        const isCore = i === microOrders.length - 1; // 10^-18
         const halfWorldSize = (62 * item.fraction) / 2;
 
         const screenLeft = originX - halfWorldSize * scale;
@@ -138,44 +138,21 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         const screenWidth = halfWorldSize * 2 * scale;
         const screenHeight = screenWidth;
 
+        // Отсекаем невидимые на текущем зуме: меньше 3 пикселей или огромные за экраном
         if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
 
         ctx.save();
-        if (isCore) {
-          const grad = ctx.createLinearGradient(
-            screenLeft,
-            screenTop,
-            screenLeft + screenWidth,
-            screenTop + screenHeight
-          );
-          grad.addColorStop(0, `hsl(190, 100%, ${65 + pulse * 20}%)`);
-          grad.addColorStop(0.5, `hsl(280, 100%, ${70 + pulse * 15}%)`);
-          grad.addColorStop(1, `hsl(220, 100%, ${75 + pulse * 15}%)`);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 3;
+        ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
 
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = 2.5 + pulse * 1.5;
-          ctx.shadowColor = 'rgba(56, 189, 248, 0.9)';
-          ctx.shadowBlur = 12 + pulse * 10;
-          ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
-
-          ctx.fillStyle = '#bae6fd';
-          ctx.font = 'bold 12px monospace';
-          ctx.shadowColor = '#0284c7';
-          ctx.shadowBlur = 8;
-          ctx.fillText(item.label, screenLeft + 8, screenTop + 16);
-        } else {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-          ctx.lineWidth = 1.5;
-          ctx.shadowColor = '#000000';
-          ctx.shadowBlur = 3;
-          ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 11px monospace';
-          ctx.shadowColor = '#000000';
-          ctx.shadowBlur = 4;
-          ctx.fillText(item.label, screenLeft + 6, screenTop + 14);
-        }
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px monospace';
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 4;
+        ctx.fillText(item.label, screenLeft + 6, screenTop + 14);
         ctx.restore();
       }
 
