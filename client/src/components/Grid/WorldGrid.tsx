@@ -210,6 +210,12 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     if (!el) return;
 
     const onTouchStart = (e: TouchEvent) => {
+      // Игнорируем касания по элементам управления (бегунок зума, кнопки и т.д.)
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('.zoom-controls-panel')) {
+        return;
+      }
+
       if (e.touches.length === 1) {
         isDraggingRef.current = true;
         isPinchingRef.current = false;
@@ -388,21 +394,29 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
       </div>
 
       {/* Кнопки зума (+, -), бегунок масштабирования и центрирования (🎯) */}
-      <div style={{
-        position: 'absolute',
-        top: '8px',
-        right: '8px',
-        zIndex: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '6px',
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        padding: '6px 4px',
-        borderRadius: '8px',
-        border: '1px solid rgba(71, 85, 105, 0.7)',
-        backdropFilter: 'blur(4px)'
-      }}>
+      <div
+        className="zoom-controls-panel"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          zIndex: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '6px',
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          padding: '6px 4px',
+          borderRadius: '8px',
+          border: '1px solid rgba(71, 85, 105, 0.7)',
+          backdropFilter: 'blur(4px)',
+          touchAction: 'none'
+        }}
+      >
         <button
           onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
           title="Приблизить"
