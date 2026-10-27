@@ -96,7 +96,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.font = 'bold 12px monospace';
           ctx.shadowColor = '#a855f7';
           ctx.shadowBlur = 8;
-          ctx.fillText(`🌌 10^${item.order} (${item.name})`, screenLeft + 8, screenTop + 16);
+          ctx.fillText(`10^${item.order} (${item.name})`, screenLeft + 8, screenTop + 16);
         } else {
           // Обычные белые рамки для промежуточных порядков
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
@@ -109,7 +109,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.font = 'bold 11px monospace';
           ctx.shadowColor = '#000000';
           ctx.shadowBlur = 4;
-          ctx.fillText(`◽ 10^${item.order} (${item.name} кл)`, screenLeft + 6, screenTop + 14);
+          ctx.fillText(`10^${item.order} (${item.name} кл)`, screenLeft + 6, screenTop + 14);
         }
 
         ctx.restore();
