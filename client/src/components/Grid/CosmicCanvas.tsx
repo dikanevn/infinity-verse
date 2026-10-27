@@ -39,24 +39,6 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       { exp: 9, side: 1000000000, power: 18, label: '10^18 (Граница мира)' }
     ];
 
-    // 2. БЕСКОНЕЧНЫЕ ВНУТРЕННИЕ МИКРО-ПОРЯДКИ (вплоть до 10^-70)
-    const microOrders: { exp: number; fraction: number; power: number; label: string }[] = [];
-    for (let exp = 1; exp <= 35; exp++) {
-      const power = exp * 2;
-      let note = '';
-      if (power === 2) note = ' (0.01 кл)';
-      else if (power === 6) note = ' (Микро)';
-      else if (power === 18) note = ' (Квант Wei)';
-      else if (power === 34) note = ' (Планковский масштаб)';
-      else if (power === 70) note = ' (Квантовая сингулярность)';
-      microOrders.push({
-        exp: -exp,
-        fraction: Math.pow(10, -exp),
-        power: -power,
-        label: `10^-${power}${note}`
-      });
-    }
-
     const render = (time: number) => {
       ctx.clearRect(0, 0, width, height);
 
@@ -128,32 +110,39 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         ctx.restore();
       }
 
-      // 2. ОТРИСОВКА БЕСКОНЕЧНЫХ ВНУТРЕННИХ МИКРО-РАМОК (10^-2 .. 10^-70 ...)
-      for (let i = 0; i < microOrders.length; i++) {
-        const item = microOrders[i];
-        const halfWorldSize = (62 * item.fraction) / 2;
+      // 2. ДИНАМИЧЕСКИЙ БЕСКОНЕЧНЫЙ МИКРО-ЗУМ (ПОЛНОСТЬЮ БЕЗ ОГРАНИЧЕНИЙ)
+      // Находим текущий порядок масштаба на экране через Math.log10
+      // Размер клетки 62px * scale. Когда scale огромен, мы находим диапазон видимых порядков:
+      if (scale > 1) {
+        const centerOrder = Math.floor(Math.log10(scale * 62 / 100)); // порядок рамки размером ~100px
+        const minExp = Math.max(1, centerOrder - 3);
+        const maxExp = centerOrder + 3;
 
-        const screenLeft = originX - halfWorldSize * scale;
-        const screenTop = originY - halfWorldSize * scale;
-        const screenWidth = halfWorldSize * 2 * scale;
-        const screenHeight = screenWidth;
+        for (let exp = minExp; exp <= maxExp; exp++) {
+          const power = exp * 2;
+          const fraction = Math.pow(10, -exp);
+          const screenWidth = 62 * fraction * scale;
 
-        // Отсекаем невидимые на текущем зуме: меньше 3 пикселей или огромные за экраном
-        if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
+          if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
 
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = '#000000';
-        ctx.shadowBlur = 3;
-        ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
+          const half = screenWidth / 2;
+          const screenLeft = originX - half;
+          const screenTop = originY - half;
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px monospace';
-        ctx.shadowColor = '#000000';
-        ctx.shadowBlur = 4;
-        ctx.fillText(item.label, screenLeft + 6, screenTop + 14);
-        ctx.restore();
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = '#000000';
+          ctx.shadowBlur = 3;
+          ctx.strokeRect(screenLeft, screenTop, screenWidth, screenWidth);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 11px monospace';
+          ctx.shadowColor = '#000000';
+          ctx.shadowBlur = 4;
+          ctx.fillText(`10^-${power}`, screenLeft + 6, screenTop + 14);
+          ctx.restore();
+        }
       }
 
       animFrameRef.current = requestAnimationFrame(render);

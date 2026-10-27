@@ -138,7 +138,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Масштабирование по кнопкам относительно центра экрана
   const handleZoomIn = () => {
     const curScale = scaleRef.current;
-    const newScale = Math.min(10000000000, curScale * 1.5);
+    const newScale = Math.min(1e100, curScale * 1.5);
     const scaleMultiplier = newScale / curScale;
     setScale(newScale);
     setPosition(prev => {
@@ -277,7 +277,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         const t2 = e.touches[1];
         const curDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
         const distRatio = curDist / pinchStartDistRef.current;
-        const newScale = Math.min(10000000000, Math.max(0.0000000001, pinchStartScaleRef.current * distRatio));
+        const newScale = Math.min(1e100, Math.max(0.0000000001, pinchStartScaleRef.current * distRatio));
 
         const curMidX = (t1.clientX + t2.clientX) / 2;
         const curMidY = (t1.clientY + t2.clientY) / 2;
@@ -329,7 +329,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
     const curScale = scaleRef.current;
-    const newScale = Math.min(10000000000, Math.max(0.0000000001, curScale * zoomFactor));
+    const newScale = Math.min(1e100, Math.max(0.0000000001, curScale * zoomFactor));
 
     const scaleMultiplier = newScale / curScale;
     setScale(newScale);
