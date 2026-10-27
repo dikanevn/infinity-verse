@@ -7,20 +7,40 @@ interface IInfinityVerse_PrevMain {
     function allowedAdminsCount() external view returns (uint256);
     function totalGenerations() external view returns (uint256);
     function getGeneration(uint256 genNumber) external view returns (address);
+    function totalPlayers() external view returns (uint256);
+    function getPlayerAddress(uint256 id) external view returns (address);
+    function getPlayerId(address account) external view returns (uint256);
 }
 
 /**
  * @title InfinityVerse_Main_Gb_1
- * @notice Это главный контракт и постоянная память мультивселенной на миллион лет.
- * Вечный универсальный ончейн-накопитель данных (Universal Onchain Storage) - Попытка Gb, Поколение 1.
- * Полностью лишен жестких игровых структур (координат, клеток, игроков).
- * Архитектура строго разделена на 3 независимых блока хранения + блок управления:
+ * @author Николай Диканёв (dikanevn)
+ *
+ * Тут наверно много галлюцинаций от ИИ если чё
+ *
+ * СуперАдмин должен каждые 5 дней а лучше каждый день нажимать IAmHere. Так задумано пока активная разработка.
+ * 
+ *  * @notice Главный контракт и вечный универсальный ончейн-накопитель мультивселенной Infinity-Verse.
+ * Создан на основе манифеста PurplePaper: создание вселенных, бесконечных во времени.
+ *
+ * ФИЛОСОФИЯ И МАТЕМАТИКА ПАМЯТИ (PurplePaper):
+ * - Внутренние вселенные внутри больше, чем снаружи.
+ * - Число элементарных частиц во Вселенной (~10^80) превышает число бит в памяти одного EVM-контракта
+ *   (2^256 * 256 бит ~ 3 * 10^79) всего примерно в 3 раза. Базовый смарт-контракт всего втрое меньше реальности!
+ * - Но внутри одного смарт-контракта (уровень 0) располагаются ссылки на адреса вложенных контрактов-вселенных
+ *   уровня 1. Память вырастает в 2^160 раз: вселенная в блокчейне становится больше реальности в 4.38 * 10^47
+ *   (четыреста тридцать восемь септиллионов) раз!
+ * - При бесконечной иерархии уровней (0 -> 1 -> 2 -> ... -> N) мы получаем вложенную мультивселенную бесконечного размера.
+ * - Реальность работает в точности как разреженная память (sparse storage) и «ленивые вычисления» (lazy evaluation):
+ *   квантовый хаос там, где нет наблюдателя, и фиксация материи при появлении взгляда.
+ * - Вечное правило долговечности: при приближении к границам чисел (миллиарды лет) и мощностей подбора
+ *   система обновляется на новые поколения/попытки. Все временные переменные спроектированы под сверхдолговечность.
+ *
+ * АРХИТЕКТУРА ХРАНИЛИЩА (3 независимых блока + управление):
  * 1. БЛОК 1: RAW DISK (Сырые 32-байтные секторы bytes32 => bytes32).
  * 2. БЛОК 2: ETERNAL STORAGE (Универсальное типизированное хранилище и BLOB'ы).
- * 3. БЛОК 3: LOW-LEVEL SLOTS (Прямой доступ к слотам памяти EVM через ассемблер Yul).
- * 4. БЛОК 4: АДМИНИСТРИРОВАНИЕ И НАСЛЕДОВАНИЕ (Система SuperAdmin/allowAdmin и Золотой Канон).
- *    Верховный администратор (superAdmin) в перспективе будет передан в смарт-контракт,
- *    управляемый децентрализованным сообществом (DAO / Timelock).
+ * 3. БЛОК 3: LOW-LEVEL SLOTS (Прямой доступ к физическим слотам памяти EVM через Yul).
+ * 4. БЛОК 4: РЕЕСТР ЖИТЕЛЕЙ, АДМИНИСТРИРОВАНИЕ И НАСЛЕДОВАНИЕ (Dead Man's Switch, Археологический ревайв, Золотой Канон).
  *
  * Полный регламент эволюции и правила наследования описаны в:
  * contracts-evm/правила наследования.md
@@ -29,15 +49,13 @@ interface IInfinityVerse_PrevMain {
  * - Compiler: solc 0.8.20
  * - Optimizer: enabled = true, runs = 4294967295 (максимум uint32)
  * - Обоснование: максимальное число runs обеспечивает предельно дешевый газ для вызовов функций
- *   в течение всей жизни контракта.
- *   Если в будущем при добавлении нового кода контракт перестанет влезать в лимит 24 576 байт,
- *   значение runs необходимо ступенчато снижать (например: 50000 -> 10000 -> 200).
+ *   в течение всей жизни контракта на миллионы лет.
  */
 contract InfinityVerse_Main_Gb_1 {
     string public constant VERSION = "0.0.0.0.1-MAIN-Gb-1";
     string public constant ATTEMPT = "Gb";
-    uint256 public constant GENERATION = 1;
-    string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
+    string public constant REPOSITORY =
+        "https://github.com/dikanevn/infinity-verse";
 
     // ========================================================================
     // ИЕРАРХИЯ ПОКОЛЕНИЙ И СИСТЕМА ДОСТУПА
@@ -50,7 +68,17 @@ contract InfinityVerse_Main_Gb_1 {
     // Временной замок (48-Hour Timelock) для защиты передачи полномочий SuperAdmin
     uint256 public constant TIMELOCK_DURATION = 48 hours;
     address public pendingSuperAdmin;
-    uint64 public superAdminChangeUnlockTime;
+    uint256 public superAdminChangeUnlockTime;
+
+    // Таймстамп последней активности верховного администратора (Dead Man's Switch)
+    uint256 public lastSuperAdminActiveAt;
+
+    // Резервный SuperAdmin и задержка неактивности для перехвата управления (7 дней)
+    address public backupSuperAdmin;
+    uint256 public constant BACKUP_CLAIM_DELAY = 7 days;
+
+    // Задержка археологического открытия забытого мира (365 дней абсолютной неактивности)
+    uint256 public constant ARCHAEOLOGICAL_CLAIM_DELAY = 365 days;
 
     // ========================================================================
     // === СИСТЕМА ПРЯМОЙ АДРЕСАЦИИ СЛОТОВ И ГРАНИЦЫ БЕЗОПАСНОСТИ 2^180     ===
@@ -61,32 +89,37 @@ contract InfinityVerse_Main_Gb_1 {
     uint256 private constant ADMIN_SLOT_PREFIX = 1 << 160;
     uint256 private constant ADMIN_LIST_PREFIX = 2 << 160;
     uint256 private constant GENERATIONS_PREFIX = 3 << 160;
+    uint256 private constant PLAYER_LIST_PREFIX = 4 << 160;
+    uint256 private constant PLAYER_ID_PREFIX = 5 << 160;
+
+    // 64-битная маска для распаковки индексов и очистки слотов
+    uint256 private constant MASK_64 = 0xFFFFFFFFFFFFFFFF;
 
     // Битовые маски прав доступа (младшие 8 бит слота администратора)
-    uint8 public constant CLEARANCE_NONE = 0;        // 00000000: Нет допуска
-    uint8 public constant CLEARANCE_1    = 1 << 0;   // 00000001 (1): Допуск Уровня 1: Raw Disk (Блок 1) и Eternal Storage (Блок 2)
-    uint8 public constant CLEARANCE_2    = 1 << 1;   // 00000010 (2): Допуск Уровня 2: Low-Level Yul Slots (Блок 3)
-    uint8 public constant PERM_MOD       = 1 << 2;   // 00000100 (4): Роль модератора / оператора
-    uint8 public constant PERM_A         = 1 << 3;   // 00001000 (8): Модульное право A (резерв под внешние модули)
-    uint8 public constant PERM_B         = 1 << 4;   // 00010000 (16): Модульное право B (резерв под внешние модули)
-    uint8 public constant PERM_C         = 1 << 5;   // 00100000 (32): Модульное право C (резерв под внешние модули)
-    uint8 public constant PERM_D         = 1 << 6;   // 01000000 (64): Модульное право D (резерв под внешние модули)
-    uint8 public constant PERM_E         = 1 << 7;   // 10000000 (128): Модульное право E (резерв под внешние модули)
+    uint8 public constant CLEARANCE_NONE = 0; // 00000000: Нет допуска
+    uint8 public constant CLEARANCE_1 = 1 << 0; // 00000001 (1): Допуск Уровня 1: Raw Disk (Блок 1) и Eternal Storage (Блок 2)
+    uint8 public constant CLEARANCE_2 = 1 << 1; // 00000010 (2): Допуск Уровня 2: Low-Level Yul Slots (Блок 3)
+    uint8 public constant CLEARANCE_MOD = 1 << 2; // 00000100 (4): Роль модератора / оператора
+    uint8 public constant PERM_A = 1 << 3; // 00001000 (8): Модульное право A (резерв под внешние модули)
+    uint8 public constant PERM_B = 1 << 4; // 00010000 (16): Модульное право B (резерв под внешние модули)
+    uint8 public constant PERM_C = 1 << 5; // 00100000 (32): Модульное право C (резерв под внешние модули)
+    uint8 public constant PERM_D = 1 << 6; // 01000000 (64): Модульное право D (резерв под внешние модули)
+    uint8 public constant PERM_E = 1 << 7; // 10000000 (128): Модульное право E (резерв под внешние модули)
 
     /**
      * @notice Структура распакованных данных администратора для вывода (View, RPC, UI)
      */
     struct AdminInfo {
-        bool isActive;       // Активен ли прямо сейчас с учетом времени и прав
-        uint8 permissions;   // Битовая маска прав (CLEARANCE_1, CLEARANCE_2, PERM_MOD и др.)
-        uint8 role;          // Роль / ранг (0..255)
-        uint48 validFrom;    // Таймстамп старта действия прав
-        uint64 validUntil;   // Таймстамп истечения прав (0 = бессрочно)
-        uint64 listIndex;    // Индекс в массиве allowedAdminsList
-        uint8 paramA;        // Пользовательский модульный параметр A
-        uint8 paramB;        // Пользовательский модульный параметр B
-        uint16 paramC;       // Пользовательский модульный параметр C
-        uint32 paramD;       // Пользовательский модульный параметр D
+        bool isActive; // Активен ли прямо сейчас с учетом времени и прав
+        uint8 permissions; // Битовая маска прав (CLEARANCE_1, CLEARANCE_2, CLEARANCE_MOD и др.)
+        uint8 role; // Роль / ранг (0..255)
+        uint56 validFrom; // Таймстамп старта действия прав (до 2.28 млрд лет)
+        uint56 validUntil; // Таймстамп истечения прав (0 = бессрочно, до 2.28 млрд лет)
+        uint64 listIndex; // Индекс в массиве allowedAdminsList
+        uint8 paramA; // Пользовательский модульный параметр A
+        uint8 paramB; // Пользовательский модульный параметр B
+        uint16 paramC; // Пользовательский модульный параметр C
+        uint32 paramD; // Пользовательский модульный параметр D
     }
 
     // Количество администраторов в реестре (сами адреса лежат в защищенной зоне ADMIN_LIST_PREFIX + i)
@@ -95,6 +128,10 @@ contract InfinityVerse_Main_Gb_1 {
     // Хроника поколений Мультивселенной: общее количество зарегистрированных поколений
     // Сами адреса контрактов поколений навечно запечатаны в защищенной зоне GENERATIONS_PREFIX + generationNumber
     uint256 public totalGenerations;
+
+    // Общее количество зарегистрированных игроков (жителей Вселенной)
+    // Сами адреса лежат в защищенной зоне PLAYER_LIST_PREFIX + id, а ID игрока в PLAYER_ID_PREFIX | uint160(account)
+    uint256 public totalPlayers;
 
     // 4-байтные ошибки (Custom Errors) для экономии газа и размера байткода
     error Unauthorized();
@@ -112,26 +149,70 @@ contract InfinityVerse_Main_Gb_1 {
     error TimelockActive();
     error NoPendingSuperAdmin();
     error TransferFailed();
+    error InactivityPeriodNotElapsed();
+    error ReentrancyDetected();
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
-    event SuperAdminChanged(address indexed oldSuperAdmin, address indexed newSuperAdmin);
-    event SuperAdminChangeRequested(address indexed currentSuperAdmin, address indexed pendingSuperAdmin, uint64 unlockTime);
-    event SuperAdminChangeCanceled(address indexed superAdmin, address indexed canceledPendingAdmin);
+    event SuperAdminChanged(
+        address indexed oldSuperAdmin,
+        address indexed newSuperAdmin
+    );
+    event SuperAdminActive(address indexed admin, uint256 timestamp);
+    event SuperAdminChangeRequested(
+        address indexed currentSuperAdmin,
+        address indexed pendingSuperAdmin,
+        uint256 unlockTime
+    );
+    event SuperAdminChangeCanceled(
+        address indexed superAdmin,
+        address indexed canceledPendingAdmin
+    );
+    event BackupSuperAdminSet(address indexed backupAdmin);
+    event BackupSuperAdminActivated(
+        address indexed oldSuperAdmin,
+        address indexed newSuperAdmin
+    );
+    event AncientEraRevived(
+        address indexed previousAdmin,
+        address indexed archaeologist,
+        address newBackupAdmin
+    );
     event NextMainSet(address indexed nextMainAddress);
-    event GenerationRegistered(uint256 indexed generationNumber, address indexed contractAddress);
-    event TokensRescued(address indexed token, address indexed to, uint256 amount);
+    event GenerationRegistered(
+        uint256 indexed generationNumber,
+        address indexed contractAddress
+    );
+    event PlayerRegistered(address indexed account, uint256 indexed playerId);
+    event TokensRescued(
+        address indexed token,
+        address indexed to,
+        uint256 amount
+    );
     event ETHRescued(address indexed to, uint256 amount);
+
+    // Флаг защиты от повторного входа (1 = разблокировано, 2 = заблокировано)
+    uint256 private _reentrancyStatus;
+
+    modifier nonReentrant() {
+        if (_reentrancyStatus == 2) revert ReentrancyDetected();
+        _reentrancyStatus = 2;
+        _;
+        _reentrancyStatus = 1;
+    }
 
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
+        lastSuperAdminActiveAt = block.timestamp;
         _;
     }
 
     /**
      * @dev Изолированное низкоуровневое чтение персонального слота администратора.
      */
-    function _readAdminSlot(address _account) internal view returns (uint256 packed) {
+    function _readAdminSlot(
+        address _account
+    ) internal view returns (uint256 packed) {
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(_account);
         assembly {
             packed := sload(slot)
@@ -146,9 +227,10 @@ contract InfinityVerse_Main_Gb_1 {
     function _checkAdmin(address _caller, uint8 requiredPerm) internal view {
         if (_caller == superAdmin) return;
         uint256 packed = _readAdminSlot(_caller);
-        if ((uint8(packed) & requiredPerm) != requiredPerm) revert Unauthorized();
-        if (block.timestamp < uint48(packed >> 16)) revert RightsNotActive();
-        uint64 until = uint64(packed >> 64);
+        if ((uint8(packed) & requiredPerm) != requiredPerm)
+            revert Unauthorized();
+        if (block.timestamp < uint56(packed >> 16)) revert RightsNotActive();
+        uint56 until = uint56(packed >> 72);
         if (until != 0 && block.timestamp > until) revert RightsExpired();
     }
 
@@ -174,19 +256,23 @@ contract InfinityVerse_Main_Gb_1 {
      * @notice Возвращает полную информацию об администраторе в распакованном виде.
      * @param _account Адрес администратора или модуля
      */
-    function getAdminInfo(address _account) public view returns (AdminInfo memory info) {
+    function getAdminInfo(
+        address _account
+    ) public view returns (AdminInfo memory info) {
         uint256 packed = _readAdminSlot(_account);
         uint8 perms = uint8(packed);
-        uint48 validFrom = uint48(packed >> 16);
-        uint64 validUntil = uint64(packed >> 64);
+        uint56 validFrom = uint56(packed >> 16);
+        uint56 validUntil = uint56(packed >> 72);
         uint64 idxPlusOne = uint64(packed >> 128);
 
-        bool active = (perms != 0)
-            && (block.timestamp >= validFrom)
-            && (validUntil == 0 || block.timestamp <= validUntil);
+        bool active = (perms != 0) &&
+            (block.timestamp >= validFrom) &&
+            (validUntil == 0 || block.timestamp <= validUntil);
 
         info.isActive = (_account == superAdmin) ? true : active;
-        info.permissions = (_account == superAdmin) ? (CLEARANCE_1 | CLEARANCE_2) : perms;
+        info.permissions = (_account == superAdmin)
+            ? (CLEARANCE_1 | CLEARANCE_2)
+            : perms;
         info.role = (_account == superAdmin) ? 0 : uint8(packed >> 8);
         info.validFrom = validFrom;
         info.validUntil = validUntil;
@@ -203,7 +289,9 @@ contract InfinityVerse_Main_Gb_1 {
      * @param _account Адрес администратора или модуля
      * @return packed Сырое упакованное 256-битное значение слота
      */
-    function getRawAdminSlot(address _account) external view returns (uint256 packed) {
+    function getRawAdminSlot(
+        address _account
+    ) external view returns (uint256 packed) {
         return _readAdminSlot(_account);
     }
 
@@ -230,7 +318,7 @@ contract InfinityVerse_Main_Gb_1 {
      * В Ethereum адрес контракта детерминирован и вычисляется ДО отправки транзакции:
      *   predictedAddress = address(keccak256(rlp([superAdminAddress, nonce])))
      *   (либо через CREATE2: keccak256(0xff ++ superAdmin ++ salt ++ keccak256(bytecode)))
-     * 
+     *
      * Идеальный порядок миграции поколений спроектирован намеренно:
      * 1. Владелец заранее рассчитывает адрес будущего контракта (predictedAddress) по своему nonce.
      * 2. В старом поколении (Gen N) вызывает setNextMain(predictedAddress).
@@ -243,58 +331,105 @@ contract InfinityVerse_Main_Gb_1 {
      *    а вся священная летопись поколений (1 .. N) переносится в новый контракт автоматически!
      * Никакого тупика нет: детерминизм EVM гарантирует математически точную и строгую смену эпох!
      */
-    constructor(address _prevMain) {
+    constructor(address _prevMain, address _backupSuperAdmin) {
+        if (
+            _backupSuperAdmin == address(0) ||
+            _backupSuperAdmin == 0x000000000000000000000000000000000000dEaD
+        ) {
+            revert ZeroAddress();
+        }
+        if (_backupSuperAdmin == msg.sender) {
+            revert SuperAdminConflict();
+        }
+
         uint256 currentGen = 1;
-        if (_prevMain != address(0) && _prevMain != 0x000000000000000000000000000000000000dEaD) {
+        if (
+            _prevMain != address(0) &&
+            _prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
             // Проверка запечатывания предыдущего поколения:
             // 1. Главный админ старого контракта должен быть сожжен на Dead-адрес
             address prevAdmin = IInfinityVerse_PrevMain(_prevMain).superAdmin();
-            if (prevAdmin != 0x000000000000000000000000000000000000dEaD) revert MigrationLocked();
+            if (prevAdmin != 0x000000000000000000000000000000000000dEaD)
+                revert MigrationLocked();
 
             // 2. Все модули и администраторы старого контракта должны быть отключены
-            if (IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() != 0) revert MigrationLocked();
+            if (IInfinityVerse_PrevMain(_prevMain).allowedAdminsCount() != 0)
+                revert MigrationLocked();
 
             // 3. Старый контракт обязан явно указать этот новый контракт своим наследником
-            if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this)) revert MigrationLocked();
+            if (IInfinityVerse_PrevMain(_prevMain).nextMain() != address(this))
+                revert MigrationLocked();
 
             // Непрерывное копирование священной Хроники Поколений (Lineage)
-            uint256 prevGenerations = IInfinityVerse_PrevMain(_prevMain).totalGenerations();
-            for (uint256 i = 1; i <= prevGenerations;) {
-                address historicalGen = IInfinityVerse_PrevMain(_prevMain).getGeneration(i);
-                _setSlot(bytes32(GENERATIONS_PREFIX + i), bytes32(uint256(uint160(historicalGen))));
-                emit GenerationRegistered(i, historicalGen);
-                unchecked { ++i; }
+            uint256 prevGenerations = IInfinityVerse_PrevMain(_prevMain)
+                .totalGenerations();
+            for (uint256 i = 1; i <= prevGenerations; ) {
+                address historicalGen = IInfinityVerse_PrevMain(_prevMain)
+                    .getGeneration(i);
+                _setSlot(
+                    bytes32(GENERATIONS_PREFIX + i),
+                    bytes32(uint256(uint160(historicalGen)))
+                );
+                unchecked {
+                    ++i;
+                }
             }
             currentGen = prevGenerations + 1;
+
+            // Наследование общего количества зарегистрированных жителей Мультивселенной
+            try IInfinityVerse_PrevMain(_prevMain).totalPlayers() returns (
+                uint256 prevPlayers
+            ) {
+                totalPlayers = prevPlayers;
+            } catch {
+                totalPlayers = 0;
+            }
         }
 
         superAdmin = msg.sender;
+        backupSuperAdmin = _backupSuperAdmin;
+        emit BackupSuperAdminSet(_backupSuperAdmin);
+        lastSuperAdminActiveAt = block.timestamp;
         prevMain = _prevMain;
 
         // Предоставляем супер-администратору прямые права в персональный слот с рождения хранилища
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
         // Добавляем superAdmin как первого элемента списка по прямому адресу ADMIN_LIST_PREFIX + 0
-        _setSlot(bytes32(ADMIN_LIST_PREFIX), bytes32(uint256(uint160(superAdmin))));
+        _setSlot(
+            bytes32(ADMIN_LIST_PREFIX),
+            bytes32(uint256(uint160(superAdmin)))
+        );
         allowedAdminsCount = 1;
 
         // Упаковываем: CLEARANCE_1 | CLEARANCE_2, role: 0, indexPlusOne: 1
-        uint256 packed = uint256(CLEARANCE_1 | CLEARANCE_2) | (uint256(1) << 128);
+        uint256 packed = uint256(CLEARANCE_1 | CLEARANCE_2) |
+            (uint256(1) << 128);
         assembly {
             sstore(slot, packed)
         }
         emit AdminAllowed(superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
 
         // Навечно запечатываем текущий контракт в священной Хронике Мультивселенной
-        _setSlot(bytes32(GENERATIONS_PREFIX + currentGen), bytes32(uint256(uint160(address(this)))));
+        _setSlot(
+            bytes32(GENERATIONS_PREFIX + currentGen),
+            bytes32(uint256(uint160(address(this))))
+        );
         totalGenerations = currentGen;
         emit GenerationRegistered(currentGen, address(this));
+
+        // Инициализируем статус ReentrancyGuard (1 = NOT_ENTERED)
+        _reentrancyStatus = 1;
     }
 
     // ========================================================================
     // ========================================================================
-    // === БЛОК 1: RAW DISK (СЫРЫЕ 32-БАЙТНЫЕ СЕКТОРЫ) - ОСНОВНОЙ РЕЖИМ   ===
+    // === БЛОК 1: RAW DISK (СЫРЫЕ 32-БАЙТНЫЕ СЕКТОРЫ) - РАЗРЕЖЕННАЯ ПАМЯТЬ ===
     // ========================================================================
     // ========================================================================
+    // Концепция PurplePaper: наша Вселенная работает в точности как разреженная память (sparse storage)
+    // и «ленивые вычисления» (lazy evaluation). Клетки, где рядом не было наблюдателя, пребывают
+    // в суперпозиции / квантовом хаосе и материализуются на внешнем диске ровно в момент записи.
 
     // 1.1. Хранилище секторов (Сектор => 32 байта данных)
     mapping(bytes32 => bytes32) private disk;
@@ -305,7 +440,7 @@ contract InfinityVerse_Main_Gb_1 {
     // Это исключает лишний расход газа на проверки и оставляет пространство для расширения
     // при росте Block Gas Limit сети. Контроль разбиения на порции возложен на вызывающие модули.
     /**
-     * @notice Чтение одного 32-байтного сектора по ключу
+     * @notice Чтение одного 32-байтного сектора по ключу (наблюдение сектора мира)
      * @param sector 32-байтный хеш-адрес сектора
      * @return 32 байта данных сектора
      */
@@ -318,12 +453,16 @@ contract InfinityVerse_Main_Gb_1 {
      * @param sectors Массив 32-байтных адресов секторов
      * @return Массив 32-байтных значений данных
      */
-    function readSectorBatch(bytes32[] calldata sectors) external view returns (bytes32[] memory) {
+    function readSectorBatch(
+        bytes32[] calldata sectors
+    ) external view returns (bytes32[] memory) {
         uint256 len = sectors.length;
         bytes32[] memory result = new bytes32[](len);
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             result[i] = disk[sectors[i]];
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
         return result;
     }
@@ -342,14 +481,38 @@ contract InfinityVerse_Main_Gb_1 {
      * @param sectors Массив адресов секторов
      * @param data Массив 32-байтных значений
      */
-    function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external onlyAdmins {
+    function writeSectorBatch(
+        bytes32[] calldata sectors,
+        bytes32[] calldata data
+    ) external onlyAdmins {
         if (sectors.length != data.length) revert LengthMismatch();
         uint256 len = sectors.length;
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             disk[sectors[i]] = data[i];
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
     }
+    /**
+     * @dev Внутренний хелпер извлечения среза байт из 32-байтного слова без мусора в хвосте
+     */
+    function _sliceBytes32(
+        bytes32 val,
+        uint256 offset,
+        uint256 length
+    ) internal pure returns (bytes memory slice) {
+        if (offset + length > 32) revert SliceOutOfBounds();
+        slice = new bytes(length);
+        if (length == 0) return slice;
+        assembly {
+            let shifted := shl(mul(offset, 8), val)
+            let tailBits := mul(sub(32, length), 8)
+            let cleanVal := shl(tailBits, shr(tailBits, shifted))
+            mstore(add(slice, 32), cleanVal)
+        }
+    }
+
     /**
      * @notice Чтение среза байт из 32-байтного сектора (Offset / Length Sub-slice в стиле MUD Store)
      * @dev Позволяет извлечь компактное поле (например, 2 байта hp или 4 байта таймстампа) без загрузки всего сектора в память
@@ -358,13 +521,12 @@ contract InfinityVerse_Main_Gb_1 {
      * @param length Длина среза в байтах (offset + length <= 32)
      * @return slice Срез данных заданной длины
      */
-    function readSectorSlice(bytes32 sector, uint256 offset, uint256 length) external view returns (bytes memory slice) {
-        if (offset + length > 32) revert SliceOutOfBounds();
-        bytes32 val = disk[sector];
-        slice = new bytes(length);
-        assembly {
-            mstore(add(slice, 32), shl(mul(offset, 8), val))
-        }
+    function readSectorSlice(
+        bytes32 sector,
+        uint256 offset,
+        uint256 length
+    ) external view returns (bytes memory slice) {
+        return _sliceBytes32(disk[sector], offset, length);
     }
 
     /**
@@ -373,12 +535,17 @@ contract InfinityVerse_Main_Gb_1 {
      * @param count Количество непрерывных секторов для чтения подряд
      * @return result Массив считанных 32-байтных секторов
      */
-    function readSequential(bytes32 baseSector, uint256 count) external view returns (bytes32[] memory) {
+    function readSequential(
+        bytes32 baseSector,
+        uint256 count
+    ) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSector);
-        for (uint256 i = 0; i < count;) {
+        for (uint256 i = 0; i < count; ) {
             result[i] = disk[bytes32(base + i)];
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
         return result;
     }
@@ -388,12 +555,17 @@ contract InfinityVerse_Main_Gb_1 {
      * @param baseSector Начальный сектор
      * @param data Массив 32-байтных данных, записываемых подряд в baseSector + i
      */
-    function writeSequential(bytes32 baseSector, bytes32[] calldata data) external onlyAdmins {
+    function writeSequential(
+        bytes32 baseSector,
+        bytes32[] calldata data
+    ) external onlyAdmins {
         uint256 len = data.length;
         uint256 base = uint256(baseSector);
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             disk[bytes32(base + i)] = data[i];
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -411,13 +583,13 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function trimSectorBatch(bytes32[] calldata sectors) external onlyAdmins {
         uint256 len = sectors.length;
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             delete disk[sectors[i]];
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
     }
-
-
 
     // ========================================================================
     // ========================================================================
@@ -426,125 +598,248 @@ contract InfinityVerse_Main_Gb_1 {
     // ========================================================================
 
     // 2.1. Маппинги типов данных
-    mapping(bytes32 => uint8)   private u8s;
-    mapping(bytes32 => uint16)  private u16s;
-    mapping(bytes32 => uint32)  private u32s;
-    mapping(bytes32 => uint64)  private u64s;
+    mapping(bytes32 => uint8) private u8s;
+    mapping(bytes32 => uint16) private u16s;
+    mapping(bytes32 => uint32) private u32s;
+    mapping(bytes32 => uint64) private u64s;
     mapping(bytes32 => uint128) private u128s;
     mapping(bytes32 => uint256) private u256s;
 
-    mapping(bytes32 => int8)    private i8s;
-    mapping(bytes32 => int16)   private i16s;
-    mapping(bytes32 => int32)   private i32s;
-    mapping(bytes32 => int64)   private i64s;
-    mapping(bytes32 => int128)  private i128s;
-    mapping(bytes32 => int256)  private i256s;
+    mapping(bytes32 => int8) private i8s;
+    mapping(bytes32 => int16) private i16s;
+    mapping(bytes32 => int32) private i32s;
+    mapping(bytes32 => int64) private i64s;
+    mapping(bytes32 => int128) private i128s;
+    mapping(bytes32 => int256) private i256s;
 
-    mapping(bytes32 => bool)    private bools;
+    mapping(bytes32 => bool) private bools;
     mapping(bytes32 => address) private addrs;
-    mapping(bytes32 => bytes1)  private b1s;
-    mapping(bytes32 => bytes4)  private b4s;
-    mapping(bytes32 => bytes8)  private b8s;
+    mapping(bytes32 => bytes1) private b1s;
+    mapping(bytes32 => bytes4) private b4s;
+    mapping(bytes32 => bytes8) private b8s;
     mapping(bytes32 => bytes16) private b16s;
 
-    mapping(bytes32 => string)  private strings;
-    mapping(bytes32 => bytes)   private blobs;
+    mapping(bytes32 => string) private strings;
+    mapping(bytes32 => bytes) private blobs;
 
-    
     // 2.3. Методы чтения, записи и очистки: Беззнаковые целые (uint8 ... uint256)
-    function getUint8(bytes32 key) external view returns (uint8) { return u8s[key]; }
-    function setUint8(bytes32 key, uint8 val) external onlyAdmins { u8s[key] = val; }
-    function trimUint8(bytes32 key) external onlyAdmins { delete u8s[key]; }
+    function getUint8(bytes32 key) external view returns (uint8) {
+        return u8s[key];
+    }
+    function setUint8(bytes32 key, uint8 val) external onlyAdmins {
+        u8s[key] = val;
+    }
+    function trimUint8(bytes32 key) external onlyAdmins {
+        delete u8s[key];
+    }
 
-    function getUint16(bytes32 key) external view returns (uint16) { return u16s[key]; }
-    function setUint16(bytes32 key, uint16 val) external onlyAdmins { u16s[key] = val; }
-    function trimUint16(bytes32 key) external onlyAdmins { delete u16s[key]; }
+    function getUint16(bytes32 key) external view returns (uint16) {
+        return u16s[key];
+    }
+    function setUint16(bytes32 key, uint16 val) external onlyAdmins {
+        u16s[key] = val;
+    }
+    function trimUint16(bytes32 key) external onlyAdmins {
+        delete u16s[key];
+    }
 
-    function getUint32(bytes32 key) external view returns (uint32) { return u32s[key]; }
-    function setUint32(bytes32 key, uint32 val) external onlyAdmins { u32s[key] = val; }
-    function trimUint32(bytes32 key) external onlyAdmins { delete u32s[key]; }
+    function getUint32(bytes32 key) external view returns (uint32) {
+        return u32s[key];
+    }
+    function setUint32(bytes32 key, uint32 val) external onlyAdmins {
+        u32s[key] = val;
+    }
+    function trimUint32(bytes32 key) external onlyAdmins {
+        delete u32s[key];
+    }
 
-    function getUint64(bytes32 key) external view returns (uint64) { return u64s[key]; }
-    function setUint64(bytes32 key, uint64 val) external onlyAdmins { u64s[key] = val; }
-    function trimUint64(bytes32 key) external onlyAdmins { delete u64s[key]; }
+    function getUint64(bytes32 key) external view returns (uint64) {
+        return u64s[key];
+    }
+    function setUint64(bytes32 key, uint64 val) external onlyAdmins {
+        u64s[key] = val;
+    }
+    function trimUint64(bytes32 key) external onlyAdmins {
+        delete u64s[key];
+    }
 
-    function getUint128(bytes32 key) external view returns (uint128) { return u128s[key]; }
-    function setUint128(bytes32 key, uint128 val) external onlyAdmins { u128s[key] = val; }
-    function trimUint128(bytes32 key) external onlyAdmins { delete u128s[key]; }
+    function getUint128(bytes32 key) external view returns (uint128) {
+        return u128s[key];
+    }
+    function setUint128(bytes32 key, uint128 val) external onlyAdmins {
+        u128s[key] = val;
+    }
+    function trimUint128(bytes32 key) external onlyAdmins {
+        delete u128s[key];
+    }
 
-    function getUint256(bytes32 key) external view returns (uint256) { return u256s[key]; }
-    function setUint256(bytes32 key, uint256 val) external onlyAdmins { u256s[key] = val; }
-    function trimUint256(bytes32 key) external onlyAdmins { delete u256s[key]; }
+    function getUint256(bytes32 key) external view returns (uint256) {
+        return u256s[key];
+    }
+    function setUint256(bytes32 key, uint256 val) external onlyAdmins {
+        u256s[key] = val;
+    }
+    function trimUint256(bytes32 key) external onlyAdmins {
+        delete u256s[key];
+    }
 
     // 2.4. Методы чтения, записи и очистки: Знаковые целые (int8 ... int256)
-    function getInt8(bytes32 key) external view returns (int8) { return i8s[key]; }
-    function setInt8(bytes32 key, int8 val) external onlyAdmins { i8s[key] = val; }
-    function trimInt8(bytes32 key) external onlyAdmins { delete i8s[key]; }
+    function getInt8(bytes32 key) external view returns (int8) {
+        return i8s[key];
+    }
+    function setInt8(bytes32 key, int8 val) external onlyAdmins {
+        i8s[key] = val;
+    }
+    function trimInt8(bytes32 key) external onlyAdmins {
+        delete i8s[key];
+    }
 
-    function getInt16(bytes32 key) external view returns (int16) { return i16s[key]; }
-    function setInt16(bytes32 key, int16 val) external onlyAdmins { i16s[key] = val; }
-    function trimInt16(bytes32 key) external onlyAdmins { delete i16s[key]; }
+    function getInt16(bytes32 key) external view returns (int16) {
+        return i16s[key];
+    }
+    function setInt16(bytes32 key, int16 val) external onlyAdmins {
+        i16s[key] = val;
+    }
+    function trimInt16(bytes32 key) external onlyAdmins {
+        delete i16s[key];
+    }
 
-    function getInt32(bytes32 key) external view returns (int32) { return i32s[key]; }
-    function setInt32(bytes32 key, int32 val) external onlyAdmins { i32s[key] = val; }
-    function trimInt32(bytes32 key) external onlyAdmins { delete i32s[key]; }
+    function getInt32(bytes32 key) external view returns (int32) {
+        return i32s[key];
+    }
+    function setInt32(bytes32 key, int32 val) external onlyAdmins {
+        i32s[key] = val;
+    }
+    function trimInt32(bytes32 key) external onlyAdmins {
+        delete i32s[key];
+    }
 
-    function getInt64(bytes32 key) external view returns (int64) { return i64s[key]; }
-    function setInt64(bytes32 key, int64 val) external onlyAdmins { i64s[key] = val; }
-    function trimInt64(bytes32 key) external onlyAdmins { delete i64s[key]; }
+    function getInt64(bytes32 key) external view returns (int64) {
+        return i64s[key];
+    }
+    function setInt64(bytes32 key, int64 val) external onlyAdmins {
+        i64s[key] = val;
+    }
+    function trimInt64(bytes32 key) external onlyAdmins {
+        delete i64s[key];
+    }
 
-    function getInt128(bytes32 key) external view returns (int128) { return i128s[key]; }
-    function setInt128(bytes32 key, int128 val) external onlyAdmins { i128s[key] = val; }
-    function trimInt128(bytes32 key) external onlyAdmins { delete i128s[key]; }
+    function getInt128(bytes32 key) external view returns (int128) {
+        return i128s[key];
+    }
+    function setInt128(bytes32 key, int128 val) external onlyAdmins {
+        i128s[key] = val;
+    }
+    function trimInt128(bytes32 key) external onlyAdmins {
+        delete i128s[key];
+    }
 
-    function getInt256(bytes32 key) external view returns (int256) { return i256s[key]; }
-    function setInt256(bytes32 key, int256 val) external onlyAdmins { i256s[key] = val; }
-    function trimInt256(bytes32 key) external onlyAdmins { delete i256s[key]; }
+    function getInt256(bytes32 key) external view returns (int256) {
+        return i256s[key];
+    }
+    function setInt256(bytes32 key, int256 val) external onlyAdmins {
+        i256s[key] = val;
+    }
+    function trimInt256(bytes32 key) external onlyAdmins {
+        delete i256s[key];
+    }
 
     // 2.5. Методы чтения, записи и очистки: Булевы значения и адреса
-    function getBool(bytes32 key) external view returns (bool) { return bools[key]; }
-    function setBool(bytes32 key, bool val) external onlyAdmins { bools[key] = val; }
-    function trimBool(bytes32 key) external onlyAdmins { delete bools[key]; }
+    function getBool(bytes32 key) external view returns (bool) {
+        return bools[key];
+    }
+    function setBool(bytes32 key, bool val) external onlyAdmins {
+        bools[key] = val;
+    }
+    function trimBool(bytes32 key) external onlyAdmins {
+        delete bools[key];
+    }
 
-    function getAddress(bytes32 key) external view returns (address) { return addrs[key]; }
-    function setAddress(bytes32 key, address val) external onlyAdmins { addrs[key] = val; }
-    function trimAddress(bytes32 key) external onlyAdmins { delete addrs[key]; }
+    function getAddress(bytes32 key) external view returns (address) {
+        return addrs[key];
+    }
+    function setAddress(bytes32 key, address val) external onlyAdmins {
+        addrs[key] = val;
+    }
+    function trimAddress(bytes32 key) external onlyAdmins {
+        delete addrs[key];
+    }
 
     // 2.6. Методы чтения, записи и очистки: Фиксированные байты
-    function getBytes1(bytes32 key) external view returns (bytes1) { return b1s[key]; }
-    function setBytes1(bytes32 key, bytes1 val) external onlyAdmins { b1s[key] = val; }
-    function trimBytes1(bytes32 key) external onlyAdmins { delete b1s[key]; }
+    function getBytes1(bytes32 key) external view returns (bytes1) {
+        return b1s[key];
+    }
+    function setBytes1(bytes32 key, bytes1 val) external onlyAdmins {
+        b1s[key] = val;
+    }
+    function trimBytes1(bytes32 key) external onlyAdmins {
+        delete b1s[key];
+    }
 
-    function getBytes4(bytes32 key) external view returns (bytes4) { return b4s[key]; }
-    function setBytes4(bytes32 key, bytes4 val) external onlyAdmins { b4s[key] = val; }
-    function trimBytes4(bytes32 key) external onlyAdmins { delete b4s[key]; }
+    function getBytes4(bytes32 key) external view returns (bytes4) {
+        return b4s[key];
+    }
+    function setBytes4(bytes32 key, bytes4 val) external onlyAdmins {
+        b4s[key] = val;
+    }
+    function trimBytes4(bytes32 key) external onlyAdmins {
+        delete b4s[key];
+    }
 
-    function getBytes8(bytes32 key) external view returns (bytes8) { return b8s[key]; }
-    function setBytes8(bytes32 key, bytes8 val) external onlyAdmins { b8s[key] = val; }
-    function trimBytes8(bytes32 key) external onlyAdmins { delete b8s[key]; }
+    function getBytes8(bytes32 key) external view returns (bytes8) {
+        return b8s[key];
+    }
+    function setBytes8(bytes32 key, bytes8 val) external onlyAdmins {
+        b8s[key] = val;
+    }
+    function trimBytes8(bytes32 key) external onlyAdmins {
+        delete b8s[key];
+    }
 
-    function getBytes16(bytes32 key) external view returns (bytes16) { return b16s[key]; }
-    function setBytes16(bytes32 key, bytes16 val) external onlyAdmins { b16s[key] = val; }
-    function trimBytes16(bytes32 key) external onlyAdmins { delete b16s[key]; }
+    function getBytes16(bytes32 key) external view returns (bytes16) {
+        return b16s[key];
+    }
+    function setBytes16(bytes32 key, bytes16 val) external onlyAdmins {
+        b16s[key] = val;
+    }
+    function trimBytes16(bytes32 key) external onlyAdmins {
+        delete b16s[key];
+    }
 
     // 2.7. Методы чтения, записи и очистки: Динамические строки и произвольные байты (BLOBs)
-    function getString(bytes32 key) external view returns (string memory) { return strings[key]; }
-    function setString(bytes32 key, string calldata val) external onlyAdmins { strings[key] = val; }
-    function trimString(bytes32 key) external onlyAdmins { delete strings[key]; }
+    function getString(bytes32 key) external view returns (string memory) {
+        return strings[key];
+    }
+    function setString(bytes32 key, string calldata val) external onlyAdmins {
+        strings[key] = val;
+    }
+    function trimString(bytes32 key) external onlyAdmins {
+        delete strings[key];
+    }
 
-    function getBlob(bytes32 key) external view returns (bytes memory) { return blobs[key]; }
-    function setBlob(bytes32 key, bytes calldata val) external onlyAdmins { blobs[key] = val; }
-    function trimBlob(bytes32 key) external onlyAdmins { delete blobs[key]; }
+    function getBlob(bytes32 key) external view returns (bytes memory) {
+        return blobs[key];
+    }
+    function setBlob(bytes32 key, bytes calldata val) external onlyAdmins {
+        blobs[key] = val;
+    }
+    function trimBlob(bytes32 key) external onlyAdmins {
+        delete blobs[key];
+    }
 
     // ========================================================================
     // ========================================================================
-    // === БЛОК 3: LOW-LEVEL SLOTS (DIAMOND / ASSEMBLY SLOAD & SSTORE)     ===
+    // === БЛОК 3: LOW-LEVEL SLOTS (ВЛОЖЕННЫЕ ВСЕЛЕННЫЕ И ASSEMBLY YUL)     ===
     // ========================================================================
     // ========================================================================
-    // Архитектурное примечание по безопасности:
-    // Диапазон RESERVED_SLOTS (первые 2^180 слотов) гарантированно защищает:
-    // 1. Системные переменные: слот 0 (nextMain) и слот 1 (superAdmin).
-    // 2. Персональные сейфы прав доступа администраторов: диапазон [2^160, 2^161 - 1].
+    // Архитектурное примечание по памяти и безопасности (PurplePaper):
+    // 1. Вложенные миры: хранилище уровня 0 способно хранить ссылки на вложенные адреса смарт-контрактов
+    //    уровня 1. Память одного контракта EVM (3 * 10^79 бит) умножается на 2^160 возможных адресов,
+    //    создавая внутреннюю бесконечность размером 4.38 * 10^47 раз больше физической Вселенной.
+    // 2. Диапазон RESERVED_SLOTS (первые 2^180 слотов) гарантированно защищает:
+    //    - Системные переменные ядра, таймлоки и адреса поколений.
+    //    - Персональные сейфы прав доступа администраторов (1 << 160).
+    //    - Реестр участников и постоянные ID жителей (4 << 160 и 5 << 160).
     // Прямой доступ к физической памяти (sload/sstore) за пределами 2^180 доступен только
     // superAdmin и доверенным модулям с допуском CLEARANCE_2.
 
@@ -588,12 +883,16 @@ contract InfinityVerse_Main_Gb_1 {
      * @param slots Массив номеров слотов
      * @return result Массив считанных 32-байтных значений
      */
-    function readSlotBatch(bytes32[] calldata slots) external view returns (bytes32[] memory) {
+    function readSlotBatch(
+        bytes32[] calldata slots
+    ) external view returns (bytes32[] memory) {
         uint256 len = slots.length;
         bytes32[] memory result = new bytes32[](len);
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             result[i] = _getSlot(slots[i]);
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
         return result;
     }
@@ -603,14 +902,19 @@ contract InfinityVerse_Main_Gb_1 {
      * @param slots Массив номеров слотов (каждый должен быть >= RESERVED_SLOTS)
      * @param vals Массив 32-байтных значений
      */
-    function writeSlotBatch(bytes32[] calldata slots, bytes32[] calldata vals) external onlySlotAdmins {
+    function writeSlotBatch(
+        bytes32[] calldata slots,
+        bytes32[] calldata vals
+    ) external onlySlotAdmins {
         if (slots.length != vals.length) revert LengthMismatch();
         uint256 len = slots.length;
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             bytes32 slot = slots[i];
             if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
             _setSlot(slot, vals[i]);
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -622,13 +926,12 @@ contract InfinityVerse_Main_Gb_1 {
      * @param length Длина среза в байтах (offset + length <= 32)
      * @return slice Срез данных заданной длины
      */
-    function readSlotSlice(bytes32 slot, uint256 offset, uint256 length) external view returns (bytes memory slice) {
-        if (offset + length > 32) revert SliceOutOfBounds();
-        bytes32 val = _getSlot(slot);
-        slice = new bytes(length);
-        assembly {
-            mstore(add(slice, 32), shl(mul(offset, 8), val))
-        }
+    function readSlotSlice(
+        bytes32 slot,
+        uint256 offset,
+        uint256 length
+    ) external view returns (bytes memory slice) {
+        return _sliceBytes32(_getSlot(slot), offset, length);
     }
 
     /**
@@ -636,13 +939,16 @@ contract InfinityVerse_Main_Gb_1 {
      * @param baseSlot Начальный физический слот памяти
      * @param count Количество слотов подряд
      */
-    function readSlotSequential(bytes32 baseSlot, uint256 count) external view returns (bytes32[] memory) {
+    function readSlotSequential(
+        bytes32 baseSlot,
+        uint256 count
+    ) external view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](count);
         uint256 base = uint256(baseSlot);
         unchecked {
             if (base + count < base) revert InvalidSlot();
         }
-        for (uint256 i = 0; i < count;) {
+        for (uint256 i = 0; i < count; ) {
             unchecked {
                 result[i] = _getSlot(bytes32(base + i));
                 ++i;
@@ -656,14 +962,17 @@ contract InfinityVerse_Main_Gb_1 {
      * @param baseSlot Начальный физический слот (должен быть >= RESERVED_SLOTS)
      * @param vals Массив значений для записи подряд
      */
-    function writeSlotSequential(bytes32 baseSlot, bytes32[] calldata vals) external onlySlotAdmins {
+    function writeSlotSequential(
+        bytes32 baseSlot,
+        bytes32[] calldata vals
+    ) external onlySlotAdmins {
         uint256 base = uint256(baseSlot);
         if (base < RESERVED_SLOTS) revert InvalidSlot();
         uint256 len = vals.length;
         unchecked {
             if (base + len < base) revert InvalidSlot();
         }
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             unchecked {
                 _setSlot(bytes32(base + i), vals[i]);
                 ++i;
@@ -686,11 +995,13 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function trimSlotBatch(bytes32[] calldata slots) external onlySlotAdmins {
         uint256 len = slots.length;
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             bytes32 slot = slots[i];
             if (uint256(slot) < RESERVED_SLOTS) revert InvalidSlot();
             _setSlot(slot, 0);
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -701,11 +1012,13 @@ contract InfinityVerse_Main_Gb_1 {
      * @param namespaceId Текстовый идентификатор модуля/пространства (например, "infinity.module.movement")
      * @return rootSlot Уникальный базовый слот физической памяти EVM, гарантированно свободный от коллизий
      */
-    function getNamespaceSlot(string calldata namespaceId) external pure returns (bytes32 rootSlot) {
-        return keccak256(abi.encode(uint256(keccak256(bytes(namespaceId))) - 1)) & ~bytes32(uint256(0xff));
+    function getNamespaceSlot(
+        string calldata namespaceId
+    ) external pure returns (bytes32 rootSlot) {
+        return
+            keccak256(abi.encode(uint256(keccak256(bytes(namespaceId))) - 1)) &
+            ~bytes32(uint256(0xff));
     }
-
-
 
     // ========================================================================
     // ========================================================================
@@ -721,8 +1034,8 @@ contract InfinityVerse_Main_Gb_1 {
         address adminAddress,
         uint8 perms,
         uint8 role,
-        uint48 validFrom,
-        uint64 validUntil,
+        uint56 validFrom,
+        uint56 validUntil,
         uint8 paramA,
         uint8 paramB,
         uint16 paramC,
@@ -731,17 +1044,21 @@ contract InfinityVerse_Main_Gb_1 {
         if (adminAddress == address(0)) revert ZeroAddress();
         if (adminAddress == superAdmin) revert SuperAdminConflict();
         if (perms == 0) revert EmptyPermissions();
-        if (validUntil != 0 && validUntil < validFrom) revert InvalidTimeRange();
+        if (validUntil != 0 && validUntil < validFrom)
+            revert InvalidTimeRange();
 
         uint256 slot = ADMIN_SLOT_PREFIX | uint160(adminAddress);
         uint256 idxPlusOne;
         assembly {
-            idxPlusOne := shr(128, sload(slot))
+            idxPlusOne := and(shr(128, sload(slot)), MASK_64)
         }
 
         if (idxPlusOne == 0) {
             uint256 count = allowedAdminsCount;
-            _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(adminAddress))));
+            _setSlot(
+                bytes32(ADMIN_LIST_PREFIX + count),
+                bytes32(uint256(uint160(adminAddress)))
+            );
             allowedAdminsCount = count + 1;
             idxPlusOne = count + 1;
         }
@@ -751,7 +1068,7 @@ contract InfinityVerse_Main_Gb_1 {
             packed := or(
                 or(
                     or(perms, shl(8, role)),
-                    or(shl(16, validFrom), shl(64, validUntil))
+                    or(shl(16, validFrom), shl(72, validUntil))
                 ),
                 or(
                     or(shl(128, idxPlusOne), shl(192, paramA)),
@@ -784,14 +1101,21 @@ contract InfinityVerse_Main_Gb_1 {
 
         // Мгновенное удаление методом Swap & Pop за O(1) внутри защищенной зоны ADMIN_LIST_PREFIX
         if (index != lastIndex) {
-            bytes32 lastAdminVal = _getSlot(bytes32(ADMIN_LIST_PREFIX + lastIndex));
+            bytes32 lastAdminVal = _getSlot(
+                bytes32(ADMIN_LIST_PREFIX + lastIndex)
+            );
             address lastAdmin = address(uint160(uint256(lastAdminVal)));
             _setSlot(bytes32(ADMIN_LIST_PREFIX + index), lastAdminVal);
 
             // Обновляем indexPlusOne у перенесённого админа в его личном слоте
             uint256 lastPacked = _readAdminSlot(lastAdmin);
-            lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(idxPlusOne) << 128);
-            _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)), bytes32(lastPacked));
+            lastPacked =
+                (lastPacked & ~(MASK_64 << 128)) |
+                (uint256(idxPlusOne) << 128);
+            _setSlot(
+                bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)),
+                bytes32(lastPacked)
+            );
         }
 
         _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIndex), 0);
@@ -811,35 +1135,48 @@ contract InfinityVerse_Main_Gb_1 {
     function getAllowedAdmins() public view returns (address[] memory) {
         uint256 count = allowedAdminsCount;
         address[] memory list = new address[](count);
-        for (uint256 i = 0; i < count;) {
-            list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + i)))));
-            unchecked { ++i; }
+        for (uint256 i = 0; i < count; ) {
+            list[i] = address(
+                uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + i))))
+            );
+            unchecked {
+                ++i;
+            }
         }
         return list;
     }
 
     /**
-     * @notice Пагинация списка администраторов для безопасного чтения при больших объемах (защита от Out of Gas)
+     * @notice Последовательное чтение списка администраторов пачками (защита от Out of Gas)
      * @param offset Начальный индекс смещения
-     * @param limit Максимальное количество возвращаемых адресов
-     * @return list Массив адресов запрошенной страницы
+     * @param count Количество возвращаемых адресов
+     * @return list Массив адресов запрошенной порции
      */
-    function getAllowedAdminsPaginated(uint256 offset, uint256 limit) external view returns (address[] memory list) {
-        uint256 count = allowedAdminsCount;
-        if (offset >= count || limit == 0) {
+    function getAllowedAdminsSequential(
+        uint256 offset,
+        uint256 count
+    ) external view returns (address[] memory list) {
+        uint256 total = allowedAdminsCount;
+        if (offset >= total || count == 0) {
             return new address[](0);
         }
 
-        uint256 end = offset + limit;
-        if (end > count) {
-            end = count;
+        uint256 end = offset + count;
+        if (end > total) {
+            end = total;
         }
 
         uint256 resultLen = end - offset;
         list = new address[](resultLen);
-        for (uint256 i = 0; i < resultLen;) {
-            list[i] = address(uint160(uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + offset + i)))));
-            unchecked { ++i; }
+        for (uint256 i = 0; i < resultLen; ) {
+            list[i] = address(
+                uint160(
+                    uint256(_getSlot(bytes32(ADMIN_LIST_PREFIX + offset + i)))
+                )
+            );
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -862,11 +1199,18 @@ contract InfinityVerse_Main_Gb_1 {
      * @param genNumber Номер поколения (1, 2, 3...)
      * @return genAddress Адрес контракта поколения (или address(0), если еще не зарегистрировано)
      */
-    function getGeneration(uint256 genNumber) external view returns (address genAddress) {
+    function getGeneration(
+        uint256 genNumber
+    ) external view returns (address genAddress) {
         if (genNumber == 0 || genNumber > totalGenerations) {
             return address(0);
         }
-        return address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + genNumber)))));
+        return
+            address(
+                uint160(
+                    uint256(_getSlot(bytes32(GENERATIONS_PREFIX + genNumber)))
+                )
+            );
     }
 
     /**
@@ -875,12 +1219,218 @@ contract InfinityVerse_Main_Gb_1 {
      * контрактов истории для быстрого поиска игроков, секторов и данных в прошлых поколениях.
      * @return allGens Массив адресов контрактов всех зарегистрированных поколений
      */
-    function getAllGenerations() external view returns (address[] memory allGens) {
+    function getAllGenerations()
+        external
+        view
+        returns (address[] memory allGens)
+    {
         uint256 count = totalGenerations;
         allGens = new address[](count);
-        for (uint256 i = 0; i < count;) {
-            allGens[i] = address(uint160(uint256(_getSlot(bytes32(GENERATIONS_PREFIX + (i + 1))))));
-            unchecked { ++i; }
+        for (uint256 i = 0; i < count; ) {
+            allGens[i] = address(
+                uint160(
+                    uint256(_getSlot(bytes32(GENERATIONS_PREFIX + (i + 1))))
+                )
+            );
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    // ========================================================================
+    // ========================================================================
+    // === РЕЕСТР УЧАСТНИКОВ (PLAYER IDS & REGISTRY)                        ===
+    // ========================================================================
+    // ========================================================================
+
+    /**
+     * @notice Регистрация нового участника мультивселенной и выдача вечного порядкового ID.
+     * @dev Вызывается авторизованными модулями (только с CLEARANCE_1 / onlyAdmins, например при рождении в спавне).
+     * Обладает встроенной защитой от дубликатов: если игрок уже зарегистрирован, возвращает существующий ID.
+     * @param account Адрес кошелька игрока
+     * @return playerId Присвоенный или уже существующий порядковый номер игрока (1, 2, 3...)
+     */
+    function registerPlayer(
+        address account
+    ) external onlyAdmins returns (uint256 playerId) {
+        if (account == address(0)) revert ZeroAddress();
+
+        uint256 idSlot = PLAYER_ID_PREFIX | uint160(account);
+        playerId = uint256(_getSlot(bytes32(idSlot)));
+
+        // Если игрок уже зарегистрирован в текущем поколении — возвращаем его постоянный ID
+        if (playerId != 0) {
+            return playerId;
+        }
+
+        // Если контракт является наследником, проверяем: не был ли игрок рожден в предыдущих мирах
+        if (
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            try IInfinityVerse_PrevMain(prevMain).getPlayerId(account) returns (
+                uint256 ancestorId
+            ) {
+                if (ancestorId != 0) {
+                    // Сохраняем древний ID в локальном реестре для мгновенного O(1) доступа
+                    _setSlot(bytes32(idSlot), bytes32(ancestorId));
+                    _setSlot(
+                        bytes32(PLAYER_LIST_PREFIX + ancestorId),
+                        bytes32(uint256(uint160(account)))
+                    );
+                    return ancestorId;
+                }
+            } catch {}
+        }
+
+        uint256 newId = totalPlayers + 1;
+        totalPlayers = newId;
+
+        // Связываем двунаправленно: ID -> Address и Address -> ID
+        _setSlot(
+            bytes32(PLAYER_LIST_PREFIX + newId),
+            bytes32(uint256(uint160(account)))
+        );
+        _setSlot(bytes32(idSlot), bytes32(newId));
+
+        emit PlayerRegistered(account, newId);
+        return newId;
+    }
+
+    /**
+     * @notice Получение адреса игрока по его порядковому ID за O(1) со сквозным поиском в предках.
+     * @param id Порядковый номер участника (1 .. totalPlayers)
+     * @return account Адрес кошелька игрока (или address(0), если не зарегистрирован)
+     */
+    function getPlayerAddress(
+        uint256 id
+    ) external view returns (address account) {
+        if (id == 0 || id > totalPlayers) {
+            return address(0);
+        }
+        account = address(
+            uint160(uint256(_getSlot(bytes32(PLAYER_LIST_PREFIX + id))))
+        );
+        if (
+            account == address(0) &&
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            try IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id) returns (
+                address prevAccount
+            ) {
+                return prevAccount;
+            } catch {}
+        }
+    }
+
+    /**
+     * @notice Получение постоянного ID игрока по его адресу кошелька за O(1) со сквозным поиском в предках.
+     * @param account Адрес кошелька игрока
+     * @return id Порядковый номер участника (0, если игрок еще ни разу не регистрировался)
+     */
+    function getPlayerId(address account) external view returns (uint256 id) {
+        id = uint256(_getSlot(bytes32(PLAYER_ID_PREFIX | uint160(account))));
+        if (
+            id == 0 &&
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            try IInfinityVerse_PrevMain(prevMain).getPlayerId(account) returns (
+                uint256 prevId
+            ) {
+                return prevId;
+            } catch {}
+        }
+    }
+
+    /**
+     * @notice Синхронизация и ончейн-материализация пачки игроков из предыдущих эпох Мультивселенной
+     * @param startId Начальный порядковый номер игрока (1 .. totalPlayers)
+     * @param count Количество игроков для синхронизации подряд
+     * @return syncedCount Количество фактически перенесенных в текущий мир игроков
+     */
+    function syncPlayersFromAllGenerations(
+        uint256 startId,
+        uint256 count
+    ) external onlyAdmins returns (uint256 syncedCount) {
+        if (
+            startId == 0 ||
+            prevMain == address(0) ||
+            prevMain == 0x000000000000000000000000000000000000dEaD
+        ) {
+            return 0;
+        }
+
+        uint256 total = totalPlayers;
+        if (startId > total) return 0;
+        uint256 end = startId + count;
+        if (end > total + 1) {
+            end = total + 1;
+        }
+
+        for (uint256 id = startId; id < end; ) {
+            bytes32 listSlot = bytes32(PLAYER_LIST_PREFIX + id);
+            address localAddr = address(uint160(uint256(_getSlot(listSlot))));
+            if (localAddr == address(0)) {
+                try
+                    IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id)
+                returns (address ancestorAddr) {
+                    if (ancestorAddr != address(0)) {
+                        _setSlot(
+                            listSlot,
+                            bytes32(uint256(uint160(ancestorAddr)))
+                        );
+                        _setSlot(
+                            bytes32(PLAYER_ID_PREFIX | uint160(ancestorAddr)),
+                            bytes32(id)
+                        );
+                        unchecked {
+                            ++syncedCount;
+                        }
+                    }
+                } catch {}
+            }
+            unchecked {
+                ++id;
+            }
+        }
+    }
+
+    /**
+     * @notice Последовательное чтение списка участников Мультивселенной пачками.
+     * @param offset Начальный индекс (0-indexed смещение: 0 соответствует ID=1)
+     * @param count Количество возвращаемых адресов игроков
+     * @return list Массив адресов участников запрошенной порции
+     */
+    function getPlayersSequential(
+        uint256 offset,
+        uint256 count
+    ) external view returns (address[] memory list) {
+        uint256 total = totalPlayers;
+        if (offset >= total || count == 0) {
+            return new address[](0);
+        }
+
+        uint256 end = offset + count;
+        if (end > total) {
+            end = total;
+        }
+
+        uint256 resultLen = end - offset;
+        list = new address[](resultLen);
+        for (uint256 i = 0; i < resultLen; ) {
+            list[i] = address(
+                uint160(
+                    uint256(
+                        _getSlot(bytes32(PLAYER_LIST_PREFIX + (offset + i + 1)))
+                    )
+                )
+            );
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -888,56 +1438,239 @@ contract InfinityVerse_Main_Gb_1 {
      * @dev Внутренняя низкоуровневая передача полномочий SuperAdmin (общая логика).
      */
     function _applySuperAdminTransfer(address newSuperAdmin) internal {
-        // 1. Автоматически отзываем права у предыдущего SuperAdmin за O(1)
-        if (_isAdmin(superAdmin)) {
-            uint256 prevPacked = _readAdminSlot(superAdmin);
-            uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
-            if (prevIdxPlusOne != 0) {
-                uint256 prevIdx = prevIdxPlusOne - 1;
-                uint256 lastIdx = allowedAdminsCount - 1;
-                if (prevIdx != lastIdx) {
-                    bytes32 lastAdminVal = _getSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx));
-                    address lastAdmin = address(uint160(uint256(lastAdminVal)));
-                    _setSlot(bytes32(ADMIN_LIST_PREFIX + prevIdx), lastAdminVal);
-                    uint256 lastPacked = _readAdminSlot(lastAdmin);
-                    lastPacked = (lastPacked & ~(uint256(0xFFFFFFFFFFFFFFFF) << 128)) | (uint256(prevIdxPlusOne) << 128);
-                    _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)), bytes32(lastPacked));
-                }
-                _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx), 0);
-                allowedAdminsCount = lastIdx;
-            }
-            _setSlot(bytes32(ADMIN_SLOT_PREFIX | uint160(superAdmin)), 0);
-            emit AdminDisallowed(superAdmin);
-        }
+        address oldSuperAdmin = superAdmin;
 
-        // 2. Если финализируем поколение и сжигаем на dEaD:
+        // ====================================================================
+        // СЦЕНАРИЙ А: Сожжение поколения на Dead-адрес (Миграция)
+        // ====================================================================
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
             if (nextMain == address(0)) revert MigrationLocked();
+
+            // Отзываем права у текущего superAdmin
+            uint256 prevPacked = _readAdminSlot(oldSuperAdmin);
+            if (prevPacked != 0) {
+                uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
+                if (prevIdxPlusOne != 0) {
+                    uint256 prevIdx = prevIdxPlusOne - 1;
+                    uint256 lastIdx = allowedAdminsCount - 1;
+                    if (prevIdx != lastIdx) {
+                        bytes32 lastAdminVal = _getSlot(
+                            bytes32(ADMIN_LIST_PREFIX + lastIdx)
+                        );
+                        address lastAdmin = address(
+                            uint160(uint256(lastAdminVal))
+                        );
+                        _setSlot(
+                            bytes32(ADMIN_LIST_PREFIX + prevIdx),
+                            lastAdminVal
+                        );
+                        uint256 lastPacked = _readAdminSlot(lastAdmin);
+                        lastPacked =
+                            (lastPacked & ~(MASK_64 << 128)) |
+                            (uint256(prevIdxPlusOne) << 128);
+                        _setSlot(
+                            bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)),
+                            bytes32(lastPacked)
+                        );
+                    }
+                    _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx), 0);
+                    allowedAdminsCount = lastIdx;
+                }
+                _setSlot(
+                    bytes32(ADMIN_SLOT_PREFIX | uint160(oldSuperAdmin)),
+                    0
+                );
+                emit AdminDisallowed(oldSuperAdmin);
+            }
+
+            // Жесткая проверка: после удаления суперадмина список ДОЛЖЕН быть абсолютно пуст (0 модулей)
             if (allowedAdminsCount != 0) revert MigrationLocked();
+            backupSuperAdmin = address(0);
         } else {
-            // 3. Если передаем новому SuperAdmin — обновляем его статус и реестр
-            uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
+            // ====================================================================
+            // СЦЕНАРИЙ Б: Передача живому новому SuperAdmin
+            // ====================================================================
+            // Читаем статус нового владельца ДО любых мутаций списка
             uint256 existingPacked = _readAdminSlot(newSuperAdmin);
-            uint64 idxPlusOne = uint64(existingPacked >> 128);
+            uint64 targetIdxPlusOne = uint64(existingPacked >> 128);
 
-            // Если нового SuperAdmin еще не было в списке — добавляем в конец реестра
-            if (idxPlusOne == 0) {
+            // 1. Отзываем права у старого superAdmin
+            uint256 prevPacked = _readAdminSlot(oldSuperAdmin);
+            if (prevPacked != 0) {
+                uint64 prevIdxPlusOne = uint64(prevPacked >> 128);
+                if (prevIdxPlusOne != 0) {
+                    uint256 prevIdx = prevIdxPlusOne - 1;
+                    uint256 lastIdx = allowedAdminsCount - 1;
+
+                    // Если новый суперадмин был на позиции lastIdx, его индекс станет prevIdx!
+                    if (prevIdx != lastIdx) {
+                        bytes32 lastAdminVal = _getSlot(
+                            bytes32(ADMIN_LIST_PREFIX + lastIdx)
+                        );
+                        address lastAdmin = address(
+                            uint160(uint256(lastAdminVal))
+                        );
+                        _setSlot(
+                            bytes32(ADMIN_LIST_PREFIX + prevIdx),
+                            lastAdminVal
+                        );
+                        uint256 lastPacked = _readAdminSlot(lastAdmin);
+                        lastPacked =
+                            (lastPacked & ~(MASK_64 << 128)) |
+                            (uint256(prevIdxPlusOne) << 128);
+                        _setSlot(
+                            bytes32(ADMIN_SLOT_PREFIX | uint160(lastAdmin)),
+                            bytes32(lastPacked)
+                        );
+
+                        // Если перемещенный lastAdmin как раз и есть newSuperAdmin, обновляем его целевой индекс
+                        if (lastAdmin == newSuperAdmin) {
+                            targetIdxPlusOne = prevIdxPlusOne;
+                        }
+                    }
+                    _setSlot(bytes32(ADMIN_LIST_PREFIX + lastIdx), 0);
+                    allowedAdminsCount = lastIdx;
+                }
+                _setSlot(
+                    bytes32(ADMIN_SLOT_PREFIX | uint160(oldSuperAdmin)),
+                    0
+                );
+                emit AdminDisallowed(oldSuperAdmin);
+            }
+
+            // 2. Если нового админа не было в реестре (targetIdxPlusOne == 0) — добавляем в конец
+            if (targetIdxPlusOne == 0) {
                 uint256 count = allowedAdminsCount;
-                _setSlot(bytes32(ADMIN_LIST_PREFIX + count), bytes32(uint256(uint160(newSuperAdmin))));
+                _setSlot(
+                    bytes32(ADMIN_LIST_PREFIX + count),
+                    bytes32(uint256(uint160(newSuperAdmin)))
+                );
                 allowedAdminsCount = count + 1;
-                idxPlusOne = uint64(count + 1);
+                targetIdxPlusOne = uint64(count + 1);
             }
 
-            // Принудительно наделяем SuperAdmin высшим допуском (CLEARANCE_1 | CLEARANCE_2, role 0, без срока истечения)
-            uint256 packed = uint256(CLEARANCE_1 | CLEARANCE_2) | (uint256(idxPlusOne) << 128);
-            assembly {
-                sstore(newSlot, packed)
-            }
+            // 3. Наделяем нового SuperAdmin высшими правами с корректным targetIdxPlusOne
+            uint256 newSlot = ADMIN_SLOT_PREFIX | uint160(newSuperAdmin);
+            uint256 packed = uint256(CLEARANCE_1 | CLEARANCE_2) |
+                (uint256(targetIdxPlusOne) << 128);
+            _setSlot(bytes32(newSlot), bytes32(packed));
             emit AdminAllowed(newSuperAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
         }
 
-        emit SuperAdminChanged(superAdmin, newSuperAdmin);
+        emit SuperAdminChanged(oldSuperAdmin, newSuperAdmin);
         superAdmin = newSuperAdmin;
+        lastSuperAdminActiveAt = block.timestamp;
+
+        // Обязательный сброс активного таймлока и отложенной передачи прав при любой смене superAdmin
+        if (pendingSuperAdmin != address(0)) {
+            address canceledPending = pendingSuperAdmin;
+            pendingSuperAdmin = address(0);
+            superAdminChangeUnlockTime = 0;
+            if (canceledPending != newSuperAdmin) {
+                emit SuperAdminChangeCanceled(oldSuperAdmin, canceledPending);
+            }
+        }
+    }
+
+    /**
+     * @notice Сигнал присутствия верховного администратора («Я на месте»).
+     * @dev Обновляет метку времени lastSuperAdminActiveAt через модификатор onlySuperAdmin.
+     * Предотвращает перехват управления резервным админом при долгом отсутствии других транзакций.
+     */
+    function iAmHere() external onlySuperAdmin {
+        emit SuperAdminActive(msg.sender, block.timestamp);
+    }
+
+    /**
+     * @notice Смена адреса резервного SuperAdmin.
+     * @param newBackupAdmin Новый адрес резервного админа (не может быть нулевым, dead или действующим superAdmin)
+     */
+    function setBackupSuperAdmin(
+        address newBackupAdmin
+    ) external onlySuperAdmin {
+        if (pendingSuperAdmin != address(0)) revert TimelockActive();
+        if (
+            newBackupAdmin == address(0) ||
+            newBackupAdmin == 0x000000000000000000000000000000000000dEaD
+        ) {
+            revert ZeroAddress();
+        }
+        if (newBackupAdmin == superAdmin) revert SuperAdminConflict();
+
+        backupSuperAdmin = newBackupAdmin;
+        emit BackupSuperAdminSet(newBackupAdmin);
+    }
+
+    /**
+     * @notice Активация резервного SuperAdmin при неактивности основного более 7 дней (Dead Man's Switch).
+     * @dev Вызывается СТРОГО действующим backupSuperAdmin.
+     * Обязывает сразу указать nextCycleBackupAdmin, чтобы контракт ни на 1 секунду не оставался без резерва!
+     * @param nextCycleBackupAdmin Новый адрес резервного админа для следующего цикла защиты
+     */
+    function activateBackupSuperAdmin(address nextCycleBackupAdmin) external {
+        if (superAdmin == 0x000000000000000000000000000000000000dEaD) {
+            revert MigrationLocked();
+        }
+        if (msg.sender != backupSuperAdmin) revert Unauthorized();
+        if (block.timestamp < lastSuperAdminActiveAt + BACKUP_CLAIM_DELAY) {
+            revert InactivityPeriodNotElapsed();
+        }
+        if (
+            nextCycleBackupAdmin == address(0) ||
+            nextCycleBackupAdmin == 0x000000000000000000000000000000000000dEaD
+        ) {
+            revert ZeroAddress();
+        }
+        if (nextCycleBackupAdmin == msg.sender) revert SuperAdminConflict();
+
+        address previousInactiveAdmin = superAdmin;
+
+        // 1. Назначаем новый резерв для следующего цикла защиты
+        backupSuperAdmin = nextCycleBackupAdmin;
+        emit BackupSuperAdminSet(nextCycleBackupAdmin);
+
+        // 2. Передаем права: вызывающий резервный админ (msg.sender) становится полноправным SuperAdmin
+        _applySuperAdminTransfer(msg.sender);
+
+        emit BackupSuperAdminActivated(previousInactiveAdmin, msg.sender);
+    }
+
+    /**
+     * @notice Археологическое открытие: если Вселенная заброшена более 365 дней (тишина от superAdmin и резерва),
+     * любой исследователь-археолог может заново открыть древний мир, вдохнуть в него жизнь и стать новым SuperAdmin!
+     * @dev Защищено от сожженных миров: если контракт уже мигрировал и финализирован (superAdmin == 0xdEaD), вызов запрещен.
+     * Обязывает сразу указать nextCycleBackupAdmin, чтобы возрожденный мир был защищен резервом с первой секунды.
+     * @param nextCycleBackupAdmin Новый адрес резервного админа для следующего жизненного цикла Вселенной
+     */
+    function discoverAncientWorld(address nextCycleBackupAdmin) external {
+        if (superAdmin == 0x000000000000000000000000000000000000dEaD) {
+            revert MigrationLocked();
+        }
+        if (
+            block.timestamp <
+            lastSuperAdminActiveAt + ARCHAEOLOGICAL_CLAIM_DELAY
+        ) {
+            revert InactivityPeriodNotElapsed();
+        }
+        if (
+            nextCycleBackupAdmin == address(0) ||
+            nextCycleBackupAdmin == 0x000000000000000000000000000000000000dEaD
+        ) {
+            revert ZeroAddress();
+        }
+        if (nextCycleBackupAdmin == msg.sender) revert SuperAdminConflict();
+        if (msg.sender == superAdmin) revert SuperAdminConflict();
+
+        address previousAdmin = superAdmin;
+
+        // 1. Назначаем новый резерв для возрожденной эпохи
+        backupSuperAdmin = nextCycleBackupAdmin;
+        emit BackupSuperAdminSet(nextCycleBackupAdmin);
+
+        // 2. Передаем полноправное верховное руководство археологу-первооткрывателю (msg.sender)
+        _applySuperAdminTransfer(msg.sender);
+
+        emit AncientEraRevived(previousAdmin, msg.sender, nextCycleBackupAdmin);
     }
 
     /**
@@ -946,19 +1679,27 @@ contract InfinityVerse_Main_Gb_1 {
      * Через 48 часов смену можно применить СТРОГО на этот заранее объявленный адрес.
      * @param newSuperAdmin Адрес кандидата в новые SuperAdmin (или 0x...dEaD)
      */
-    function requestSuperAdminChange(address newSuperAdmin) external onlySuperAdmin {
+    function requestSuperAdminChange(
+        address newSuperAdmin
+    ) external onlySuperAdmin {
         if (newSuperAdmin == address(0)) revert ZeroAddress();
         if (newSuperAdmin == superAdmin) revert SuperAdminConflict();
+        if (newSuperAdmin == backupSuperAdmin) revert SuperAdminConflict();
+
+        // Если уже был активен запрос на другого кандидата, логируем его отмену
+        if (pendingSuperAdmin != address(0)) {
+            emit SuperAdminChangeCanceled(superAdmin, pendingSuperAdmin);
+        }
 
         // Если планируется сжигание на dEaD — проверяем предварительные условия финализации:
         // 1. nextMain обязан быть уже выставлен
         // 2. Все сторонние модули/админы обязаны быть отключены (в списке может оставаться только сам superAdmin)
         if (newSuperAdmin == 0x000000000000000000000000000000000000dEaD) {
             if (nextMain == address(0)) revert MigrationLocked();
-            if (allowedAdminsCount > 1) revert MigrationLocked();
+            if (allowedAdminsCount != 1) revert MigrationLocked();
         }
 
-        uint64 unlockTime = uint64(block.timestamp + TIMELOCK_DURATION);
+        uint256 unlockTime = block.timestamp + TIMELOCK_DURATION;
         pendingSuperAdmin = newSuperAdmin;
         superAdminChangeUnlockTime = unlockTime;
 
@@ -984,7 +1725,8 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function acceptSuperAdmin() external {
         if (msg.sender != pendingSuperAdmin) revert Unauthorized();
-        if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
+        if (block.timestamp < superAdminChangeUnlockTime)
+            revert TimelockActive();
 
         address newAdmin = pendingSuperAdmin;
         pendingSuperAdmin = address(0);
@@ -999,8 +1741,10 @@ contract InfinityVerse_Main_Gb_1 {
      * сжигание финализирует действующий superAdmin strictly при pendingSuperAdmin == 0xdEaD.
      */
     function executeSuperAdminBurn() external onlySuperAdmin {
-        if (pendingSuperAdmin != 0x000000000000000000000000000000000000dEaD) revert Unauthorized();
-        if (block.timestamp < superAdminChangeUnlockTime) revert TimelockActive();
+        if (pendingSuperAdmin != 0x000000000000000000000000000000000000dEaD)
+            revert Unauthorized();
+        if (block.timestamp < superAdminChangeUnlockTime)
+            revert TimelockActive();
 
         pendingSuperAdmin = address(0);
         superAdminChangeUnlockTime = 0;
@@ -1014,57 +1758,43 @@ contract InfinityVerse_Main_Gb_1 {
 
     /**
      * @notice Спасение ошибочно отправленных на контракт ERC-20 токенов
-     * @dev Требует допуск CLEARANCE_2 (или superAdmin)
+     * @dev Доступно СТРОГО верховному администратору (SuperAdmin) с защитой от Reentrancy
      * @param token Адрес смарт-контракта ERC-20 токена
      * @param to Адрес законного получателя
      * @param amount Количество токенов для вывода
      */
-    function rescueERC20(address token, address to, uint256 amount) external onlySlotAdmins {
+    function rescueERC20(
+        address token,
+        address to,
+        uint256 amount
+    ) external onlySuperAdmin nonReentrant {
         if (to == address(0)) revert ZeroAddress();
+        emit TokensRescued(token, to, amount);
         // Низкоуровневый вызов transfer(address,uint256) без внешних тяжелых зависимостей
         (bool success, bytes memory data) = token.call(
             abi.encodeWithSelector(0xa9059cbb, to, amount)
         );
-        if (!success || (data.length != 0 && !abi.decode(data, (bool)))) revert TransferFailed();
-        emit TokensRescued(token, to, amount);
+        if (!success || (data.length != 0 && !abi.decode(data, (bool))))
+            revert TransferFailed();
     }
 
     /**
-     * @notice Спасение принудительно попавшего на контракт нативного ETH
-     * @dev Требует допуск CLEARANCE_2 (или superAdmin)
+     * @notice Спасение принудительно попавшего на контракт нативного MON/ETH
+     * @dev Доступно СТРОГО верховному администратору (SuperAdmin) с защитой от Reentrancy
      * @param to Адрес законного получателя
+     * @param amount Количество нативных монет (0 = вывести весь баланс контракта)
      */
-    function rescueETH(address payable to) external onlySlotAdmins {
+    function rescueETH(
+        address payable to,
+        uint256 amount
+    ) external onlySuperAdmin nonReentrant {
         if (to == address(0)) revert ZeroAddress();
         uint256 balance = address(this).balance;
-        (bool success, ) = to.call{value: balance}("");
+        uint256 toRescue = amount == 0 ? balance : amount;
+        if (toRescue > balance) revert TransferFailed();
+
+        emit ETHRescued(to, toRescue);
+        (bool success, ) = to.call{value: toRescue}("");
         if (!success) revert TransferFailed();
-        emit ETHRescued(to, balance);
-    }
-
-    // ========================================================================
-    // === МУЛЬТИВЫЗОВ (ATOMIC BATCH MULTICALL)                            ===
-    // ========================================================================
-
-    /**
-     * @notice Универсальный пакетный вызов любых функций контракта в рамках одной транзакции (Multicall).
-     * @dev Позволяет атомарно выполнять пачки разнородных операций (диск + типизированные хранилища)
-     * с однократными накладными расходами на транзакцию. При delegatecall к address(this) msg.sender сохраняется.
-     * @param data Массив закодированных calldata вызовов функций этого контракта
-     * @return results Массив результатов выполнения каждого вызова
-     */
-    function multicall(bytes[] calldata data) external returns (bytes[] memory results) {
-        uint256 len = data.length;
-        results = new bytes[](len);
-        for (uint256 i = 0; i < len;) {
-            (bool success, bytes memory result) = address(this).delegatecall(data[i]);
-            if (!success) {
-                assembly {
-                    revert(add(result, 32), mload(result))
-                }
-            }
-            results[i] = result;
-            unchecked { ++i; }
-        }
     }
 }
