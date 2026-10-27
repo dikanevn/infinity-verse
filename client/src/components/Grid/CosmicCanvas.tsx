@@ -26,7 +26,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
     let startTime = performance.now();
 
-    const orders = [
+    // Внешние порядки (от 10^1 до 10^9)
+    const macroOrders = [
       { order: 1, name: '10' },
       { order: 2, name: '100' },
       { order: 3, name: '1 000' },
@@ -38,19 +39,32 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       { order: 9, name: 'Граница мира' }
     ];
 
+    // Внутренние микро-порядки внутрь клетки (от 10^-1 до 10^-9)
+    const microOrders = [
+      { order: -1, name: '0.1' },
+      { order: -2, name: '0.01' },
+      { order: -3, name: '0.001' },
+      { order: -4, name: '10^-4' },
+      { order: -5, name: '10^-5' },
+      { order: -6, name: '10^-6 (Микро)' },
+      { order: -7, name: '10^-7' },
+      { order: -8, name: '10^-8' },
+      { order: -9, name: 'Квантовое ядро' }
+    ];
+
     const render = (time: number) => {
       ctx.clearRect(0, 0, width, height);
 
       const originX = width / 2 + position.x;
       const originY = height / 2 + position.y;
 
-      // Фаза переливания для самого внешнего квадрата (период ~2.5 секунды)
       const t = (time - startTime) / 1000;
       const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
 
-      for (let i = 0; i < orders.length; i++) {
-        const item = orders[i];
-        const isOuterMost = i === orders.length - 1; // 10^9 - самый внешний предел мира
+      // 1. ВНЕШНИЕ РАМКИ (10^1 .. 10^9)
+      for (let i = 0; i < macroOrders.length; i++) {
+        const item = macroOrders[i];
+        const isOuterMost = i === macroOrders.length - 1; // 10^9
         const radius = Math.floor(Math.pow(10, item.order) / 2);
 
         const worldLeft = -radius * cellPitch - 31;
@@ -66,13 +80,10 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         const screenWidth = screenRight - screenLeft;
         const screenHeight = screenBottom - screenTop;
 
-        if (screenWidth < 3) continue;
-        if (screenWidth > Math.max(width, height) * 8) continue;
+        if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
 
         ctx.save();
-
         if (isOuterMost) {
-          // Градиентное неоновое фиолетово-маджентовое переливание для внешнего предела Вселенной
           const grad = ctx.createLinearGradient(
             screenLeft,
             screenTop,
@@ -91,14 +102,12 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.shadowBlur = 12 + pulse * 10;
           ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
 
-          // Неоновый бейдж подписи
           ctx.fillStyle = '#f5d0fe';
           ctx.font = 'bold 12px monospace';
           ctx.shadowColor = '#a855f7';
           ctx.shadowBlur = 8;
           ctx.fillText(`10^${item.order} (${item.name})`, screenLeft + 8, screenTop + 16);
         } else {
-          // Обычные белые рамки для промежуточных порядков
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
           ctx.lineWidth = 1.5;
           ctx.shadowColor = '#000000';
@@ -111,7 +120,62 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.shadowBlur = 4;
           ctx.fillText(`10^${item.order} (${item.name} кл)`, screenLeft + 6, screenTop + 14);
         }
+        ctx.restore();
+      }
 
+      // 2. ВНУТРЕННИЕ МИКРО-РАМКИ ВГЛУБЬ КЛЕТКИ (10^-1 .. 10^-9)
+      // Рассчитываются от центра клетки (0, 0), размер: 62px * 10^order
+      for (let i = 0; i < microOrders.length; i++) {
+        const item = microOrders[i];
+        const isCore = i === microOrders.length - 1; // 10^-9
+        const fraction = Math.pow(10, item.order); // 0.1, 0.01, ...
+        const halfWorldSize = (62 * fraction) / 2;
+
+        const screenLeft = originX - halfWorldSize * scale;
+        const screenTop = originY - halfWorldSize * scale;
+        const screenWidth = halfWorldSize * 2 * scale;
+        const screenHeight = screenWidth;
+
+        if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
+
+        ctx.save();
+        if (isCore) {
+          // Внутреннее квантовое ядро 10^-9: неоновый лазурно-фиолетовый пульсирующий свет
+          const grad = ctx.createLinearGradient(
+            screenLeft,
+            screenTop,
+            screenLeft + screenWidth,
+            screenTop + screenHeight
+          );
+          grad.addColorStop(0, `hsl(${190}, 100%, ${65 + pulse * 20}%)`);
+          grad.addColorStop(0.5, `hsl(${280}, 100%, ${70 + pulse * 15}%)`);
+          grad.addColorStop(1, `hsl(${220}, 100%, ${75 + pulse * 15}%)`);
+
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 2.5 + pulse * 1.5;
+          ctx.shadowColor = 'rgba(56, 189, 248, 0.9)';
+          ctx.shadowBlur = 12 + pulse * 10;
+          ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
+
+          ctx.fillStyle = '#bae6fd';
+          ctx.font = 'bold 12px monospace';
+          ctx.shadowColor = '#0284c7';
+          ctx.shadowBlur = 8;
+          ctx.fillText(`10^${item.order} (${item.name})`, screenLeft + 8, screenTop + 16);
+        } else {
+          // Белые рамки микро-порядков
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = '#000000';
+          ctx.shadowBlur = 3;
+          ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 11px monospace';
+          ctx.shadowColor = '#000000';
+          ctx.shadowBlur = 4;
+          ctx.fillText(`10^${item.order} (${item.name})`, screenLeft + 6, screenTop + 14);
+        }
         ctx.restore();
       }
 
