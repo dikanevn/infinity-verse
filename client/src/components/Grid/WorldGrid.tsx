@@ -210,7 +210,18 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     if (!el) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      // Игнорируем касания по элементам управления (бегунок зума, кнопки и т.д.)
+      // Игнорируем касания в правом верхнем углу (зона кнопок и ползунка: правые 90px и верхние 260px)
+      const rect = el.getBoundingClientRect();
+      const touch = e.touches[0];
+      if (touch) {
+        const relX = touch.clientX - rect.left;
+        const relY = touch.clientY - rect.top;
+        if (relX > rect.width - 90 && relY < 260) {
+          return;
+        }
+      }
+
+      // Дополнительно: игнорируем любые элементы внутри панели
       const target = e.target as HTMLElement | null;
       if (target && target.closest('.zoom-controls-panel')) {
         return;
