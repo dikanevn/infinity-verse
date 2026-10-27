@@ -5,7 +5,7 @@ import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 // === АКТУАЛЬНЫЕ АДРЕСА ЭПОХИ GA (MAIN_GA_1 + СИММЕТРИЧНЫЙ GA_AAA) ===
 // ============================================================================
 const MAIN_GA1_ADDRESS = '0xf32bd8705ee1c7682d9a5f2d00b18815929d4482';
-const AAA_ADDRESS = '0x90fb2752cd408d727029243cf5f913e1c331053e';
+const AAA_ADDRESS = '0xb98c6aef0ef851ffc53b94560ab43f90ae68b123';
 
 // ABI для чтения нонсов и состояния из хранилища Main_G_2
 const MAIN_ABI = parseAbi([
