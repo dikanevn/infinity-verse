@@ -35,7 +35,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       { order: 6, name: '1 млн' },
       { order: 7, name: '10 млн' },
       { order: 8, name: '100 млн' },
-      { order: 9, name: '1 млрд (Граница мира Monad int32)' }
+      { order: 9, name: 'Граница мира' }
     ];
 
     const render = (time: number) => {
