@@ -10,6 +10,9 @@ interface IInfinityVerse_PrevMain {
     function totalPlayers() external view returns (uint256);
     function getPlayerAddress(uint256 id) external view returns (address);
     function getPlayerId(address account) external view returns (uint256);
+    function totalPortals() external view returns (uint256);
+    function getPortalId(address targetContract) external view returns (uint256);
+    function getPortalByFounder(address founder) external view returns (uint256);
 }
 
 /**
@@ -439,6 +442,9 @@ contract InfinityVerse_Main_Gb_1 {
 
             // Наследование общего количества зарегистрированных жителей Мультивселенной
             totalPlayers = IInfinityVerse_PrevMain(_prevMain).totalPlayers();
+
+            // Наследование общего количества открытых порталов Мультивселенной
+            totalPortals = IInfinityVerse_PrevMain(_prevMain).totalPortals();
         }
 
         superAdmin = _superAdmin;
@@ -1328,21 +1334,35 @@ contract InfinityVerse_Main_Gb_1 {
     }
 
     /**
-     * @notice Получение ID портала по адресу вложенного смарт-контракта за O(1)
+     * @notice Получение ID портала по адресу вложенного смарт-контракта за O(1) со сквозным поиском в предках.
      * @param targetContract Адрес смарт-контракта вложенного мира
      * @return id Порядковый номер портала (0, если не существует)
      */
     function getPortalId(address targetContract) external view returns (uint256 id) {
         id = uint256(_getSlot(bytes32(PORTAL_ID_PREFIX | uint160(targetContract))));
+        if (
+            id == 0 &&
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            return IInfinityVerse_PrevMain(prevMain).getPortalId(targetContract);
+        }
     }
 
     /**
-     * @notice Получение ID портала, созданного указанным основателем (1 портал на создателя)
+     * @notice Получение ID портала, созданного указанным основателем (1 портал на создателя) со сквозным поиском в предках.
      * @param founder Адрес кошелька создателя
      * @return portalId ID созданного портала (или 0, если еще не открывал портал)
      */
     function getPortalByFounder(address founder) external view returns (uint256 portalId) {
         portalId = uint256(_getSlot(bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(founder))));
+        if (
+            portalId == 0 &&
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            return IInfinityVerse_PrevMain(prevMain).getPortalByFounder(founder);
+        }
     }
 
     /**
