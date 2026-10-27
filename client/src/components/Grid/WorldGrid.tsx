@@ -523,6 +523,33 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </button>
       </div>
 
+      {/* Подсказка при выходе за пределы бегунка */}
+      {(currentSliderValue >= 5 || currentSliderValue <= -9) && (
+        <div style={{
+          position: 'absolute',
+          top: '12px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 15,
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          border: '1px solid #8b5cf6',
+          borderRadius: '20px',
+          padding: '5px 14px',
+          color: '#e2e8f0',
+          fontSize: '0.75rem',
+          fontFamily: 'monospace',
+          pointerEvents: 'none',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          textAlign: 'center',
+          whiteSpace: 'nowrap',
+          backdropFilter: 'blur(4px)'
+        }}>
+          {currentSliderValue >= 5
+            ? 'Ползунок на максимуме, но масштаб бесконечен — приближай кнопкой «+» или щипком пальцев'
+            : 'Ползунок на минимуме, но масштаб бесконечен — отдаляй кнопкой «-» или щипком пальцев'}
+        </div>
+      )}
+
       {/* Легковесный 2D Canvas для космических рамок масштаба */}
       <CosmicCanvas
         scale={scale}
