@@ -11,8 +11,12 @@ interface IInfinityVerse_PrevMain {
     function getPlayerAddress(uint256 id) external view returns (address);
     function getPlayerId(address account) external view returns (uint256);
     function totalPortals() external view returns (uint256);
-    function getPortalId(address targetContract) external view returns (uint256);
-    function getPortalByFounder(address founder) external view returns (uint256);
+    function getPortalId(
+        address targetContract
+    ) external view returns (uint256);
+    function getPortalByFounder(
+        address founder
+    ) external view returns (uint256);
 }
 
 /**
@@ -63,7 +67,6 @@ interface IInfinityVerse_PrevMain {
 contract InfinityVerse_Main_Gb_1 {
     string public constant CREATOR = "Nikolai Dikanev (dikanevn)";
     string public constant VERSION = "0.0.0.0.1-MAIN-Gb-1";
-    string public constant ATTEMPT = "Gb";
     string public constant REPOSITORY =
         "https://github.com/dikanevn/infinity-verse";
 
@@ -103,13 +106,13 @@ contract InfinityVerse_Main_Gb_1 {
     uint256 private constant PLAYER_ID_PREFIX = 5 << 160;
 
     // --- Префиксы бесконечных вложенных порталов Мультивселенной ---
-    uint256 private constant PORTAL_LIST_PREFIX   = 6 << 160; // ID -> targetContract (адрес вложенного мира)
-    uint256 private constant PORTAL_ID_PREFIX     = 7 << 160; // targetContract -> ID
+    uint256 private constant PORTAL_LIST_PREFIX = 6 << 160; // ID -> targetContract (адрес вложенного мира)
+    uint256 private constant PORTAL_ID_PREFIX = 7 << 160; // targetContract -> ID
     uint256 private constant PORTAL_FOUNDER_PREFIX = 8 << 160; // ID -> имя основателя (bytes32 founderName)
-    uint256 private constant PORTAL_WORLD_PREFIX   = 9 << 160; // ID -> название мира (bytes32 worldName)
-    uint256 private constant PORTAL_OWNER_PREFIX  = 10 << 160; // ID -> адрес создателя (founder)
+    uint256 private constant PORTAL_WORLD_PREFIX = 9 << 160; // ID -> название мира (bytes32 worldName)
+    uint256 private constant PORTAL_OWNER_PREFIX = 10 << 160; // ID -> адрес создателя (founder)
     uint256 private constant PORTAL_PARENT_PREFIX = 11 << 160; // ID -> контракт-источник (parentContract)
-    uint256 private constant PORTAL_TIME_PREFIX   = 12 << 160; // ID -> время открытия (createdAt)
+    uint256 private constant PORTAL_TIME_PREFIX = 12 << 160; // ID -> время открытия (createdAt)
     uint256 private constant PORTAL_FOUNDER_PORTAL_PREFIX = 13 << 160; // founderAddress -> portalId (1 портал на человека)
 
     // 64-битная маска для распаковки индексов и очистки слотов
@@ -146,13 +149,13 @@ contract InfinityVerse_Main_Gb_1 {
      * @notice Структура описания Врат/Портала во вложенную вселенную
      */
     struct PortalInfo {
-        uint256 id;              // Порядковый номер портала
-        address parentContract;  // Контракт-источник, из которого ведут врата (мир 0-го уровня или текущий мир)
-        address targetContract;  // Адрес вложенного контракта-вселенной
-        address founder;         // Кошелек основателя (msg.sender)
-        bytes32 founderName;     // Имя основателя
-        bytes32 worldName;       // Название вложенного мира
-        uint256 createdAt;       // Таймстамп открытия портала
+        uint256 id; // Порядковый номер портала
+        address parentContract; // Контракт-источник, из которого ведут врата (мир 0-го уровня или текущий мир)
+        address targetContract; // Адрес вложенного контракта-вселенной
+        address founder; // Кошелек основателя (msg.sender)
+        bytes32 founderName; // Имя основателя
+        bytes32 worldName; // Название вложенного мира
+        uint256 createdAt; // Таймстамп открытия портала
     }
 
     // Количество администраторов в реестре (сами адреса лежат в защищенной зоне ADMIN_LIST_PREFIX + i)
@@ -1097,7 +1100,9 @@ contract InfinityVerse_Main_Gb_1 {
 
         // Если контракт является наследником, проверяем: не был ли игрок рожден в предыдущих мирах
         if (prevMain != address(0)) {
-            uint256 ancestorId = IInfinityVerse_PrevMain(prevMain).getPlayerId(account);
+            uint256 ancestorId = IInfinityVerse_PrevMain(prevMain).getPlayerId(
+                account
+            );
             if (ancestorId != 0) {
                 // Сохраняем древний ID в локальном реестре для мгновенного O(1) доступа
                 _setSlot(bytes32(idSlot), bytes32(ancestorId));
@@ -1173,12 +1178,10 @@ contract InfinityVerse_Main_Gb_1 {
             bytes32 listSlot = bytes32(PLAYER_LIST_PREFIX + id);
             address localAddr = address(uint160(uint256(_getSlot(listSlot))));
             if (localAddr == address(0)) {
-                address ancestorAddr = IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id);
+                address ancestorAddr = IInfinityVerse_PrevMain(prevMain)
+                    .getPlayerAddress(id);
                 if (ancestorAddr != address(0)) {
-                    _setSlot(
-                        listSlot,
-                        bytes32(uint256(uint160(ancestorAddr)))
-                    );
+                    _setSlot(listSlot, bytes32(uint256(uint160(ancestorAddr))));
                     _setSlot(
                         bytes32(PLAYER_ID_PREFIX | uint160(ancestorAddr)),
                         bytes32(id)
@@ -1256,7 +1259,8 @@ contract InfinityVerse_Main_Gb_1 {
         if (worldName == bytes32(0)) revert EmptyWorldName();
 
         // Проверка: один портал на одного человека
-        uint256 founderSlot = PORTAL_FOUNDER_PORTAL_PREFIX | uint160(msg.sender);
+        uint256 founderSlot = PORTAL_FOUNDER_PORTAL_PREFIX |
+            uint160(msg.sender);
         if (uint256(_getSlot(bytes32(founderSlot))) != 0) {
             revert FounderAlreadyHasPortal();
         }
@@ -1269,14 +1273,26 @@ contract InfinityVerse_Main_Gb_1 {
         portalId = ++totalPortals;
 
         // Фиксация в защищенных слотах памяти O(1):
-        _setSlot(bytes32(PORTAL_LIST_PREFIX + portalId), bytes32(uint256(uint160(targetContract))));
+        _setSlot(
+            bytes32(PORTAL_LIST_PREFIX + portalId),
+            bytes32(uint256(uint160(targetContract)))
+        );
         _setSlot(bytes32(idSlot), bytes32(portalId));
         _setSlot(bytes32(founderSlot), bytes32(portalId));
         _setSlot(bytes32(PORTAL_FOUNDER_PREFIX + portalId), founderName);
         _setSlot(bytes32(PORTAL_WORLD_PREFIX + portalId), worldName);
-        _setSlot(bytes32(PORTAL_OWNER_PREFIX + portalId), bytes32(uint256(uint160(msg.sender))));
-        _setSlot(bytes32(PORTAL_PARENT_PREFIX + portalId), bytes32(uint256(uint160(address(this)))));
-        _setSlot(bytes32(PORTAL_TIME_PREFIX + portalId), bytes32(block.timestamp));
+        _setSlot(
+            bytes32(PORTAL_OWNER_PREFIX + portalId),
+            bytes32(uint256(uint160(msg.sender)))
+        );
+        _setSlot(
+            bytes32(PORTAL_PARENT_PREFIX + portalId),
+            bytes32(uint256(uint160(address(this))))
+        );
+        _setSlot(
+            bytes32(PORTAL_TIME_PREFIX + portalId),
+            bytes32(block.timestamp)
+        );
 
         emit PortalCreated(
             portalId,
@@ -1293,20 +1309,28 @@ contract InfinityVerse_Main_Gb_1 {
      * @notice Получение полной информации о портале по его ID за O(1)
      * @param id Порядковый номер портала (1 .. totalPortals)
      */
-    function getPortal(uint256 id) external view returns (PortalInfo memory info) {
+    function getPortal(
+        uint256 id
+    ) external view returns (PortalInfo memory info) {
         if (id == 0 || id > totalPortals) {
             return info;
         }
 
-        address target = address(uint160(uint256(_getSlot(bytes32(PORTAL_LIST_PREFIX + id)))));
+        address target = address(
+            uint160(uint256(_getSlot(bytes32(PORTAL_LIST_PREFIX + id))))
+        );
         if (target == address(0)) {
             return info;
         }
 
         info.id = id;
         info.targetContract = target;
-        info.parentContract = address(uint160(uint256(_getSlot(bytes32(PORTAL_PARENT_PREFIX + id)))));
-        info.founder = address(uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + id)))));
+        info.parentContract = address(
+            uint160(uint256(_getSlot(bytes32(PORTAL_PARENT_PREFIX + id))))
+        );
+        info.founder = address(
+            uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + id))))
+        );
         info.founderName = _getSlot(bytes32(PORTAL_FOUNDER_PREFIX + id));
         info.worldName = _getSlot(bytes32(PORTAL_WORLD_PREFIX + id));
         info.createdAt = uint256(_getSlot(bytes32(PORTAL_TIME_PREFIX + id)));
@@ -1317,8 +1341,12 @@ contract InfinityVerse_Main_Gb_1 {
      * @param targetContract Адрес смарт-контракта вложенного мира
      * @return id Порядковый номер портала (0, если не существует)
      */
-    function getPortalId(address targetContract) external view returns (uint256 id) {
-        id = uint256(_getSlot(bytes32(PORTAL_ID_PREFIX | uint160(targetContract))));
+    function getPortalId(
+        address targetContract
+    ) external view returns (uint256 id) {
+        id = uint256(
+            _getSlot(bytes32(PORTAL_ID_PREFIX | uint160(targetContract)))
+        );
     }
 
     /**
@@ -1326,8 +1354,12 @@ contract InfinityVerse_Main_Gb_1 {
      * @param founder Адрес кошелька создателя
      * @return portalId ID созданного портала (или 0, если еще не открывал портал)
      */
-    function getPortalByFounder(address founder) external view returns (uint256 portalId) {
-        portalId = uint256(_getSlot(bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(founder))));
+    function getPortalByFounder(
+        address founder
+    ) external view returns (uint256 portalId) {
+        portalId = uint256(
+            _getSlot(bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(founder)))
+        );
     }
 
     /**
@@ -1356,12 +1388,20 @@ contract InfinityVerse_Main_Gb_1 {
         for (uint256 i = 0; i < resultLen; ) {
             uint256 id = offset + i + 1;
             list[i].id = id;
-            list[i].targetContract = address(uint160(uint256(_getSlot(bytes32(PORTAL_LIST_PREFIX + id)))));
-            list[i].parentContract = address(uint160(uint256(_getSlot(bytes32(PORTAL_PARENT_PREFIX + id)))));
-            list[i].founder = address(uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + id)))));
+            list[i].targetContract = address(
+                uint160(uint256(_getSlot(bytes32(PORTAL_LIST_PREFIX + id))))
+            );
+            list[i].parentContract = address(
+                uint160(uint256(_getSlot(bytes32(PORTAL_PARENT_PREFIX + id))))
+            );
+            list[i].founder = address(
+                uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + id))))
+            );
             list[i].founderName = _getSlot(bytes32(PORTAL_FOUNDER_PREFIX + id));
             list[i].worldName = _getSlot(bytes32(PORTAL_WORLD_PREFIX + id));
-            list[i].createdAt = uint256(_getSlot(bytes32(PORTAL_TIME_PREFIX + id)));
+            list[i].createdAt = uint256(
+                _getSlot(bytes32(PORTAL_TIME_PREFIX + id))
+            );
             unchecked {
                 ++i;
             }
