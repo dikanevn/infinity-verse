@@ -1,5 +1,6 @@
 param(
-    [string]$Msg = "auto sync infinity-verse and private submodules"
+    [string]$Msg = "auto sync infinity-verse and private submodules",
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,19 +39,35 @@ if (Test-Path ".private") {
         git -C .private add -A
         git -C .private commit -m $Msg
         if ($token) {
-            git -C .private push "https://${token}@github.com/dikanevn/infinity-verse-private.git" main
+            if ($Force) {
+                git -C .private push --force "https://${token}@github.com/dikanevn/infinity-verse-private.git" main
+            } else {
+                git -C .private push "https://${token}@github.com/dikanevn/infinity-verse-private.git" main
+            }
         } else {
-            git -C .private push origin main
+            if ($Force) {
+                git -C .private push --force origin main
+            } else {
+                git -C .private push origin main
+            }
         }
     } else {
         # Если незакоммиченных нет, но есть неотправленные коммиты
         $ahead = git -C .private rev-list --count origin/main..main 2>$null
-        if ($ahead -and [int]$ahead -gt 0) {
+        if (($ahead -and [int]$ahead -gt 0) -or $Force) {
             Write-Host "--- Pushing unpushed commits in .private ($ahead ahead) ---" -ForegroundColor Cyan
             if ($token) {
-                git -C .private push "https://${token}@github.com/dikanevn/infinity-verse-private.git" main
+                if ($Force) {
+                    git -C .private push --force "https://${token}@github.com/dikanevn/infinity-verse-private.git" HEAD:refs/heads/main
+                } else {
+                    git -C .private push "https://${token}@github.com/dikanevn/infinity-verse-private.git" HEAD:refs/heads/main
+                }
             } else {
-                git -C .private push origin main
+                if ($Force) {
+                    git -C .private push --force origin HEAD:refs/heads/main
+                } else {
+                    git -C .private push origin HEAD:refs/heads/main
+                }
             }
         } else {
             Write-Host "--- .private repository is up to date ---" -ForegroundColor Green
@@ -65,18 +82,34 @@ if ($mainStatus) {
     git add -A
     git commit -m $Msg
     if ($token) {
-        git push "https://${token}@github.com/dikanevn/infinity-verse.git" main
+        if ($Force) {
+            git push --force "https://${token}@github.com/dikanevn/infinity-verse.git" main
+        } else {
+            git push "https://${token}@github.com/dikanevn/infinity-verse.git" main
+        }
     } else {
-        git push origin main
+        if ($Force) {
+            git push --force origin main
+        } else {
+            git push origin main
+        }
     }
 } else {
     $ahead = git rev-list --count origin/main..main 2>$null
-    if ($ahead -and [int]$ahead -gt 0) {
-        Write-Host "--- Pushing unpushed commits in main ($ahead ahead) ---" -ForegroundColor Cyan
+    if (($ahead -and [int]$ahead -gt 0) -or $Force) {
+        Write-Host "--- Pushing commits in main ($ahead ahead) ---" -ForegroundColor Cyan
         if ($token) {
-            git push "https://${token}@github.com/dikanevn/infinity-verse.git" HEAD:refs/heads/main
+            if ($Force) {
+                git push --force "https://${token}@github.com/dikanevn/infinity-verse.git" HEAD:refs/heads/main
+            } else {
+                git push "https://${token}@github.com/dikanevn/infinity-verse.git" HEAD:refs/heads/main
+            }
         } else {
-            git push origin HEAD:refs/heads/main
+            if ($Force) {
+                git push --force origin HEAD:refs/heads/main
+            } else {
+                git push origin HEAD:refs/heads/main
+            }
         }
     } else {
         Write-Host "--- Main repository is up to date ---" -ForegroundColor Green
