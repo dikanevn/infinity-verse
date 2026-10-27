@@ -368,7 +368,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                 marginTop: '10px'
               }}
             >
-              {actionLoading ? 'Создание мультивселенной в Monad...' : '🌀 Создать свою бесконечную мультивселенную'}
+              {actionLoading ? 'Создание мультивселенной в Monad...' : '🌀 Поставить портал в свою мультивселенную'}
             </button>
           </form>
         )}
