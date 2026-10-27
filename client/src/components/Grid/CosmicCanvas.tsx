@@ -26,30 +26,34 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
     let startTime = performance.now();
 
-    // Внешние порядки (от 10^1 до 10^9)
+    // Внешние макро-порядки площади (10^2 .. 10^18)
+    // 10x10 = 10^2 (100 кл)
+    // 100x100 = 10^4 (10 000 кл)
+    // ...
+    // 10^9 x 10^9 = 10^18 (Граница мира / 2^64)
     const macroOrders = [
-      { order: 1, name: '10' },
-      { order: 2, name: '100' },
-      { order: 3, name: '1 000' },
-      { order: 4, name: '10 000' },
-      { order: 5, name: '100 000' },
-      { order: 6, name: '1 млн' },
-      { order: 7, name: '10 млн' },
-      { order: 8, name: '100 млн' },
-      { order: 9, name: 'Граница мира' }
+      { exp: 1, side: 10, power: 2, label: '10^2 (100 кл)' },
+      { exp: 2, side: 100, power: 4, label: '10^4 (10 000 кл)' },
+      { exp: 3, side: 1000, power: 6, label: '10^6 (1 млн кл)' },
+      { exp: 4, side: 10000, power: 8, label: '10^8 (100 млн кл)' },
+      { exp: 5, side: 100000, power: 10, label: '10^10 (10 млрд кл)' },
+      { exp: 6, side: 1000000, power: 12, label: '10^12 (1 трлн кл)' },
+      { exp: 7, side: 10000000, power: 14, label: '10^14' },
+      { exp: 8, side: 100000000, power: 16, label: '10^16' },
+      { exp: 9, side: 1000000000, power: 18, label: '10^18 (Граница мира)' }
     ];
 
-    // Внутренние микро-порядки внутрь клетки (от 10^-1 до 10^-9)
+    // Внутренние микро-порядки внутрь клетки
     const microOrders = [
-      { order: -1, name: '0.1' },
-      { order: -2, name: '0.01' },
-      { order: -3, name: '0.001' },
-      { order: -4, name: '10^-4' },
-      { order: -5, name: '10^-5' },
-      { order: -6, name: '10^-6 (Микро)' },
-      { order: -7, name: '10^-7' },
-      { order: -8, name: '10^-8' },
-      { order: -9, name: 'Квантовое ядро' }
+      { exp: -1, fraction: 0.1, power: -2, label: '10^-2' },
+      { exp: -2, fraction: 0.01, power: -4, label: '10^-4' },
+      { exp: -3, fraction: 0.001, power: -6, label: '10^-6' },
+      { exp: -4, fraction: 0.0001, power: -8, label: '10^-8' },
+      { exp: -5, fraction: 0.00001, power: -10, label: '10^-10' },
+      { exp: -6, fraction: 0.000001, power: -12, label: '10^-12' },
+      { exp: -7, fraction: 0.0000001, power: -14, label: '10^-14' },
+      { exp: -8, fraction: 0.00000001, power: -16, label: '10^-16' },
+      { exp: -9, fraction: 0.000000001, power: -18, label: '10^-18 (Квантовое ядро)' }
     ];
 
     const render = (time: number) => {
@@ -61,11 +65,11 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       const t = (time - startTime) / 1000;
       const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
 
-      // 1. ВНЕШНИЕ РАМКИ (10^1 .. 10^9)
+      // 1. ВНЕШНИЕ РАМКИ
       for (let i = 0; i < macroOrders.length; i++) {
         const item = macroOrders[i];
-        const isOuterMost = i === macroOrders.length - 1; // 10^9
-        const radius = Math.floor(Math.pow(10, item.order) / 2);
+        const isOuterMost = i === macroOrders.length - 1; // 10^18 Граница мира
+        const radius = Math.floor(item.side / 2);
 
         const worldLeft = -radius * cellPitch - 31;
         const worldRight = radius * cellPitch + 31;
@@ -106,7 +110,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.font = 'bold 12px monospace';
           ctx.shadowColor = '#a855f7';
           ctx.shadowBlur = 8;
-          ctx.fillText(`10^${item.order} (${item.name})`, screenLeft + 8, screenTop + 16);
+          ctx.fillText(item.label, screenLeft + 8, screenTop + 16);
         } else {
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
           ctx.lineWidth = 1.5;
@@ -118,18 +122,16 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.font = 'bold 11px monospace';
           ctx.shadowColor = '#000000';
           ctx.shadowBlur = 4;
-          ctx.fillText(`10^${item.order} (${item.name} кл)`, screenLeft + 6, screenTop + 14);
+          ctx.fillText(item.label, screenLeft + 6, screenTop + 14);
         }
         ctx.restore();
       }
 
-      // 2. ВНУТРЕННИЕ МИКРО-РАМКИ ВГЛУБЬ КЛЕТКИ (10^-1 .. 10^-9)
-      // Рассчитываются от центра клетки (0, 0), размер: 62px * 10^order
+      // 2. ВНУТРЕННИЕ МИКРО-РАМКИ ВГЛУБЬ КЛЕТКИ
       for (let i = 0; i < microOrders.length; i++) {
         const item = microOrders[i];
-        const isCore = i === microOrders.length - 1; // 10^-9
-        const fraction = Math.pow(10, item.order); // 0.1, 0.01, ...
-        const halfWorldSize = (62 * fraction) / 2;
+        const isCore = i === microOrders.length - 1; // 10^-18
+        const halfWorldSize = (62 * item.fraction) / 2;
 
         const screenLeft = originX - halfWorldSize * scale;
         const screenTop = originY - halfWorldSize * scale;
@@ -140,16 +142,15 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
         ctx.save();
         if (isCore) {
-          // Внутреннее квантовое ядро 10^-9: неоновый лазурно-фиолетовый пульсирующий свет
           const grad = ctx.createLinearGradient(
             screenLeft,
             screenTop,
             screenLeft + screenWidth,
             screenTop + screenHeight
           );
-          grad.addColorStop(0, `hsl(${190}, 100%, ${65 + pulse * 20}%)`);
-          grad.addColorStop(0.5, `hsl(${280}, 100%, ${70 + pulse * 15}%)`);
-          grad.addColorStop(1, `hsl(${220}, 100%, ${75 + pulse * 15}%)`);
+          grad.addColorStop(0, `hsl(190, 100%, ${65 + pulse * 20}%)`);
+          grad.addColorStop(0.5, `hsl(280, 100%, ${70 + pulse * 15}%)`);
+          grad.addColorStop(1, `hsl(220, 100%, ${75 + pulse * 15}%)`);
 
           ctx.strokeStyle = grad;
           ctx.lineWidth = 2.5 + pulse * 1.5;
@@ -161,9 +162,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.font = 'bold 12px monospace';
           ctx.shadowColor = '#0284c7';
           ctx.shadowBlur = 8;
-          ctx.fillText(`10^${item.order} (${item.name})`, screenLeft + 8, screenTop + 16);
+          ctx.fillText(item.label, screenLeft + 8, screenTop + 16);
         } else {
-          // Белые рамки микро-порядков
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
           ctx.lineWidth = 1.5;
           ctx.shadowColor = '#000000';
@@ -174,7 +174,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.font = 'bold 11px monospace';
           ctx.shadowColor = '#000000';
           ctx.shadowBlur = 4;
-          ctx.fillText(`10^${item.order} (${item.name})`, screenLeft + 6, screenTop + 14);
+          ctx.fillText(item.label, screenLeft + 6, screenTop + 14);
         }
         ctx.restore();
       }
