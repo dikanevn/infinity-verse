@@ -345,11 +345,11 @@ function App() {
           gap: '12px',
           padding: '2px 0'
         }}>
-          <span style={{ color: '#c084fc', fontWeight: 700 }}>Gb_Main_1</span>
+          <span style={{ color: '#64748b', fontWeight: 600 }}>Gb_Main_1</span>
           <div style={{ color: '#334155' }}>|</div>
-          <span style={{ color: '#a855f7', fontWeight: 700 }}>{contractVersion}</span>
+          <span style={{ color: '#64748b', fontWeight: 600 }}>{contractVersion}</span>
           <div style={{ color: '#334155' }}>|</div>
-          <span style={{ color: '#38bdf8', fontWeight: 700 }}>v{CLIENT_VERSION}</span>
+          <span style={{ color: '#64748b', fontWeight: 600 }}>v{CLIENT_VERSION}</span>
         </div>
 
       </div>
