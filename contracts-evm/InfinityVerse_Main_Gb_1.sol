@@ -19,8 +19,13 @@ interface IInfinityVerse_PrevMain {
  * Тут наверно много галлюцинаций от ИИ если чё
  *
  * СуперАдмин должен каждые 5 дней а лучше каждый день нажимать IAmHere. Так задумано пока активная разработка.
- * 
- *  * @notice Главный контракт и вечный универсальный ончейн-накопитель мультивселенной Infinity-Verse.
+ *
+ * Админы со вторым уровнем доступа могут переписать весь маппинг, так и задумано.
+ *
+ * Events специально нету в каждом пуке для экономии газа.
+ *
+ * Новые Эпохи создаются CREATE2 методом через специальные контракты-прокси стандартные, соль-адрес суперАдмина, для детерменированного nextMain
+ * @notice Главный контракт и вечный универсальный ончейн-накопитель мультивселенной Infinity-Verse.
  * Создан на основе манифеста PurplePaper: создание вселенных, бесконечных во времени.
  *
  * ФИЛОСОФИЯ И МАТЕМАТИКА ПАМЯТИ (PurplePaper):
@@ -38,9 +43,8 @@ interface IInfinityVerse_PrevMain {
  *
  * АРХИТЕКТУРА ХРАНИЛИЩА (3 независимых блока + управление):
  * 1. БЛОК 1: RAW DISK (Сырые 32-байтные секторы bytes32 => bytes32).
- * 2. БЛОК 2: ETERNAL STORAGE (Универсальное типизированное хранилище и BLOB'ы).
- * 3. БЛОК 3: LOW-LEVEL SLOTS (Прямой доступ к физическим слотам памяти EVM через Yul).
- * 4. БЛОК 4: РЕЕСТР ЖИТЕЛЕЙ, АДМИНИСТРИРОВАНИЕ И НАСЛЕДОВАНИЕ (Dead Man's Switch, Археологический ревайв, Золотой Канон).
+ * 2. БЛОК 2: LOW-LEVEL SLOTS (Прямой доступ к физическим слотам памяти EVM через Yul).
+ * 3. БЛОК 3: РЕЕСТР ЖИТЕЛЕЙ, АДМИНИСТРИРОВАНИЕ И НАСЛЕДОВАНИЕ (Dead Man's Switch, Археологический ревайв, Золотой Канон).
  *
  * Полный регламент эволюции и правила наследования описаны в:
  * contracts-evm/правила наследования.md
@@ -52,6 +56,7 @@ interface IInfinityVerse_PrevMain {
  *   в течение всей жизни контракта на миллионы лет.
  */
 contract InfinityVerse_Main_Gb_1 {
+    string public constant CREATOR = "Nikolai Dikanev (dikanevn)";
     string public constant VERSION = "0.0.0.0.1-MAIN-Gb-1";
     string public constant ATTEMPT = "Gb";
     string public constant REPOSITORY =
@@ -97,8 +102,8 @@ contract InfinityVerse_Main_Gb_1 {
 
     // Битовые маски прав доступа (младшие 8 бит слота администратора)
     uint8 public constant CLEARANCE_NONE = 0; // 00000000: Нет допуска
-    uint8 public constant CLEARANCE_1 = 1 << 0; // 00000001 (1): Допуск Уровня 1: Raw Disk (Блок 1) и Eternal Storage (Блок 2)
-    uint8 public constant CLEARANCE_2 = 1 << 1; // 00000010 (2): Допуск Уровня 2: Low-Level Yul Slots (Блок 3)
+    uint8 public constant CLEARANCE_1 = 1 << 0; // 00000001 (1): Допуск Уровня 1: Raw Disk (Блок 1)
+    uint8 public constant CLEARANCE_2 = 1 << 1; // 00000010 (2): Допуск Уровня 2: Low-Level Yul Slots (Блок 2)
     uint8 public constant CLEARANCE_MOD = 1 << 2; // 00000100 (4): Роль модератора / оператора
     uint8 public constant PERM_A = 1 << 3; // 00001000 (8): Модульное право A (резерв под внешние модули)
     uint8 public constant PERM_B = 1 << 4; // 00010000 (16): Модульное право B (резерв под внешние модули)
@@ -151,6 +156,7 @@ contract InfinityVerse_Main_Gb_1 {
     error TransferFailed();
     error InactivityPeriodNotElapsed();
     error ReentrancyDetected();
+    error InvalidNextMain();
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
@@ -236,7 +242,7 @@ contract InfinityVerse_Main_Gb_1 {
 
     /**
      * @notice Базовый модификатор для обычных администраторов и логических модулей.
-     * @dev Требует допуск Уровня 1: CLEARANCE_1 (Блок 1 Raw Disk и Блок 2 Eternal Storage).
+     * @dev Требует допуск Уровня 1: CLEARANCE_1 (Блок 1 Raw Disk).
      */
     modifier onlyAdmins() {
         _checkAdmin(msg.sender, CLEARANCE_1);
@@ -245,7 +251,7 @@ contract InfinityVerse_Main_Gb_1 {
 
     /**
      * @notice Модификатор для администраторов с доступом к физическим слотам памяти EVM.
-     * @dev Требует допуск Уровня 2: CLEARANCE_2 (Блок 3 Low-Level Yul Slots).
+     * @dev Требует допуск Уровня 2: CLEARANCE_2 (Блок 2 Low-Level Yul Slots).
      */
     modifier onlySlotAdmins() {
         _checkAdmin(msg.sender, CLEARANCE_2);
@@ -312,33 +318,42 @@ contract InfinityVerse_Main_Gb_1 {
 
     /**
      * @notice Конструктор нового поколения InfinityVerse.
-     * @dev АРХИТЕКТУРНОЕ РЕШЕНИЕ «КУРИЦЫ И ЯЙЦА» (CHICKEN-AND-EGG RESOLUTION BY DESIGN):
+     * @dev АРХИТЕКТУРНОЕ РЕШЕНИЕ «КУРИЦЫ И ЯЙЦА» (CHICKEN-AND-EGG RESOLUTION BY DESIGN ЧЕРЕЗ CREATE2):
      * Аудиторы часто спрашивают: как деплоить новое поколение (Gen N+1), если в constructor
      * проверяется, что старое поколение (Gen N) уже установило nextMain == newContract?
-     * В Ethereum адрес контракта детерминирован и вычисляется ДО отправки транзакции:
-     *   predictedAddress = address(keccak256(rlp([superAdminAddress, nonce])))
-     *   (либо через CREATE2: keccak256(0xff ++ superAdmin ++ salt ++ keccak256(bytecode)))
+     * В EVM адрес нового контракта детерминирован и рассчитывается ДО развертывания через CREATE2:
+     *   predictedAddress = address(keccak256(0xff ++ factoryAddress ++ salt ++ keccak256(initCode)))
+     * где salt = keccak256(abi.encodePacked(superAdmin, targetGeneration)).
      *
-     * Идеальный порядок миграции поколений спроектирован намеренно:
-     * 1. Владелец заранее рассчитывает адрес будущего контракта (predictedAddress) по своему nonce.
+     * Это полностью исключает риск зависания нонса:
+     * 1. Владелец заранее рассчитывает predictedAddress нового контракта через CREATE2 солью своего адреса.
      * 2. В старом поколении (Gen N) вызывает setNextMain(predictedAddress).
      * 3. В старом поколении отзывает всех внешних админов/модулей (disallowAdmin).
      * 4. Запускает 48-часовой таймлок на сжигание: requestSuperAdminChange(0xdEaD).
      * 5. По истечении 48 часов сжигает старое поколение: executeSuperAdminBurn().
      *    Теперь в Gen N: superAdmin == 0xdEaD, allowedAdminsCount == 0, nextMain == predictedAddress.
-     * 6. Отправляет транзакцию создания Gen N+1 со своего адреса с тем самым nonce:
-     *    адрес контракта совпадает с predictedAddress, проверки в constructor сходятся,
-     *    а вся священная летопись поколений (1 .. N) переносится в новый контракт автоматически!
-     * Никакого тупика нет: детерминизм EVM гарантирует математически точную и строгую смену эпох!
+     * 6. Развертывает Gen N+1 через стандартный CREATE2 прокси-деплоер. Адрес совпадает строго с
+     *    predictedAddress, проверки в constructor сходятся, а священная летопись (1 .. N) переносится!
+     * 7. Никакого тупика или риска зависания транзакции нет: адрес не зависит от nonce кошелька!
      */
-    constructor(address _prevMain, address _backupSuperAdmin) {
+    constructor(
+        address _superAdmin,
+        address _prevMain,
+        address _backupSuperAdmin
+    ) {
+        if (
+            _superAdmin == address(0) ||
+            _superAdmin == 0x000000000000000000000000000000000000dEaD
+        ) {
+            revert ZeroAddress();
+        }
         if (
             _backupSuperAdmin == address(0) ||
             _backupSuperAdmin == 0x000000000000000000000000000000000000dEaD
         ) {
             revert ZeroAddress();
         }
-        if (_backupSuperAdmin == msg.sender) {
+        if (_backupSuperAdmin == _superAdmin) {
             revert SuperAdminConflict();
         }
 
@@ -383,22 +398,22 @@ contract InfinityVerse_Main_Gb_1 {
             ) {
                 totalPlayers = prevPlayers;
             } catch {
-                totalPlayers = 0;
+                revert MigrationLocked();
             }
         }
 
-        superAdmin = msg.sender;
+        superAdmin = _superAdmin;
         backupSuperAdmin = _backupSuperAdmin;
         emit BackupSuperAdminSet(_backupSuperAdmin);
         lastSuperAdminActiveAt = block.timestamp;
         prevMain = _prevMain;
 
         // Предоставляем супер-администратору прямые права в персональный слот с рождения хранилища
-        uint256 slot = ADMIN_SLOT_PREFIX | uint160(superAdmin);
+        uint256 slot = ADMIN_SLOT_PREFIX | uint160(_superAdmin);
         // Добавляем superAdmin как первого элемента списка по прямому адресу ADMIN_LIST_PREFIX + 0
         _setSlot(
             bytes32(ADMIN_LIST_PREFIX),
-            bytes32(uint256(uint160(superAdmin)))
+            bytes32(uint256(uint160(_superAdmin)))
         );
         allowedAdminsCount = 1;
 
@@ -408,7 +423,7 @@ contract InfinityVerse_Main_Gb_1 {
         assembly {
             sstore(slot, packed)
         }
-        emit AdminAllowed(superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
+        emit AdminAllowed(_superAdmin, CLEARANCE_1 | CLEARANCE_2, 0);
 
         // Навечно запечатываем текущий контракт в священной Хронике Мультивселенной
         _setSlot(
@@ -593,243 +608,8 @@ contract InfinityVerse_Main_Gb_1 {
 
     // ========================================================================
     // ========================================================================
-    // === БЛОК 2: ETERNAL STORAGE (УНИВЕРСАЛЬНЫЕ ТИПЫ И BLOB'Ы)           ===
     // ========================================================================
-    // ========================================================================
-
-    // 2.1. Маппинги типов данных
-    mapping(bytes32 => uint8) private u8s;
-    mapping(bytes32 => uint16) private u16s;
-    mapping(bytes32 => uint32) private u32s;
-    mapping(bytes32 => uint64) private u64s;
-    mapping(bytes32 => uint128) private u128s;
-    mapping(bytes32 => uint256) private u256s;
-
-    mapping(bytes32 => int8) private i8s;
-    mapping(bytes32 => int16) private i16s;
-    mapping(bytes32 => int32) private i32s;
-    mapping(bytes32 => int64) private i64s;
-    mapping(bytes32 => int128) private i128s;
-    mapping(bytes32 => int256) private i256s;
-
-    mapping(bytes32 => bool) private bools;
-    mapping(bytes32 => address) private addrs;
-    mapping(bytes32 => bytes1) private b1s;
-    mapping(bytes32 => bytes4) private b4s;
-    mapping(bytes32 => bytes8) private b8s;
-    mapping(bytes32 => bytes16) private b16s;
-
-    mapping(bytes32 => string) private strings;
-    mapping(bytes32 => bytes) private blobs;
-
-    // 2.3. Методы чтения, записи и очистки: Беззнаковые целые (uint8 ... uint256)
-    function getUint8(bytes32 key) external view returns (uint8) {
-        return u8s[key];
-    }
-    function setUint8(bytes32 key, uint8 val) external onlyAdmins {
-        u8s[key] = val;
-    }
-    function trimUint8(bytes32 key) external onlyAdmins {
-        delete u8s[key];
-    }
-
-    function getUint16(bytes32 key) external view returns (uint16) {
-        return u16s[key];
-    }
-    function setUint16(bytes32 key, uint16 val) external onlyAdmins {
-        u16s[key] = val;
-    }
-    function trimUint16(bytes32 key) external onlyAdmins {
-        delete u16s[key];
-    }
-
-    function getUint32(bytes32 key) external view returns (uint32) {
-        return u32s[key];
-    }
-    function setUint32(bytes32 key, uint32 val) external onlyAdmins {
-        u32s[key] = val;
-    }
-    function trimUint32(bytes32 key) external onlyAdmins {
-        delete u32s[key];
-    }
-
-    function getUint64(bytes32 key) external view returns (uint64) {
-        return u64s[key];
-    }
-    function setUint64(bytes32 key, uint64 val) external onlyAdmins {
-        u64s[key] = val;
-    }
-    function trimUint64(bytes32 key) external onlyAdmins {
-        delete u64s[key];
-    }
-
-    function getUint128(bytes32 key) external view returns (uint128) {
-        return u128s[key];
-    }
-    function setUint128(bytes32 key, uint128 val) external onlyAdmins {
-        u128s[key] = val;
-    }
-    function trimUint128(bytes32 key) external onlyAdmins {
-        delete u128s[key];
-    }
-
-    function getUint256(bytes32 key) external view returns (uint256) {
-        return u256s[key];
-    }
-    function setUint256(bytes32 key, uint256 val) external onlyAdmins {
-        u256s[key] = val;
-    }
-    function trimUint256(bytes32 key) external onlyAdmins {
-        delete u256s[key];
-    }
-
-    // 2.4. Методы чтения, записи и очистки: Знаковые целые (int8 ... int256)
-    function getInt8(bytes32 key) external view returns (int8) {
-        return i8s[key];
-    }
-    function setInt8(bytes32 key, int8 val) external onlyAdmins {
-        i8s[key] = val;
-    }
-    function trimInt8(bytes32 key) external onlyAdmins {
-        delete i8s[key];
-    }
-
-    function getInt16(bytes32 key) external view returns (int16) {
-        return i16s[key];
-    }
-    function setInt16(bytes32 key, int16 val) external onlyAdmins {
-        i16s[key] = val;
-    }
-    function trimInt16(bytes32 key) external onlyAdmins {
-        delete i16s[key];
-    }
-
-    function getInt32(bytes32 key) external view returns (int32) {
-        return i32s[key];
-    }
-    function setInt32(bytes32 key, int32 val) external onlyAdmins {
-        i32s[key] = val;
-    }
-    function trimInt32(bytes32 key) external onlyAdmins {
-        delete i32s[key];
-    }
-
-    function getInt64(bytes32 key) external view returns (int64) {
-        return i64s[key];
-    }
-    function setInt64(bytes32 key, int64 val) external onlyAdmins {
-        i64s[key] = val;
-    }
-    function trimInt64(bytes32 key) external onlyAdmins {
-        delete i64s[key];
-    }
-
-    function getInt128(bytes32 key) external view returns (int128) {
-        return i128s[key];
-    }
-    function setInt128(bytes32 key, int128 val) external onlyAdmins {
-        i128s[key] = val;
-    }
-    function trimInt128(bytes32 key) external onlyAdmins {
-        delete i128s[key];
-    }
-
-    function getInt256(bytes32 key) external view returns (int256) {
-        return i256s[key];
-    }
-    function setInt256(bytes32 key, int256 val) external onlyAdmins {
-        i256s[key] = val;
-    }
-    function trimInt256(bytes32 key) external onlyAdmins {
-        delete i256s[key];
-    }
-
-    // 2.5. Методы чтения, записи и очистки: Булевы значения и адреса
-    function getBool(bytes32 key) external view returns (bool) {
-        return bools[key];
-    }
-    function setBool(bytes32 key, bool val) external onlyAdmins {
-        bools[key] = val;
-    }
-    function trimBool(bytes32 key) external onlyAdmins {
-        delete bools[key];
-    }
-
-    function getAddress(bytes32 key) external view returns (address) {
-        return addrs[key];
-    }
-    function setAddress(bytes32 key, address val) external onlyAdmins {
-        addrs[key] = val;
-    }
-    function trimAddress(bytes32 key) external onlyAdmins {
-        delete addrs[key];
-    }
-
-    // 2.6. Методы чтения, записи и очистки: Фиксированные байты
-    function getBytes1(bytes32 key) external view returns (bytes1) {
-        return b1s[key];
-    }
-    function setBytes1(bytes32 key, bytes1 val) external onlyAdmins {
-        b1s[key] = val;
-    }
-    function trimBytes1(bytes32 key) external onlyAdmins {
-        delete b1s[key];
-    }
-
-    function getBytes4(bytes32 key) external view returns (bytes4) {
-        return b4s[key];
-    }
-    function setBytes4(bytes32 key, bytes4 val) external onlyAdmins {
-        b4s[key] = val;
-    }
-    function trimBytes4(bytes32 key) external onlyAdmins {
-        delete b4s[key];
-    }
-
-    function getBytes8(bytes32 key) external view returns (bytes8) {
-        return b8s[key];
-    }
-    function setBytes8(bytes32 key, bytes8 val) external onlyAdmins {
-        b8s[key] = val;
-    }
-    function trimBytes8(bytes32 key) external onlyAdmins {
-        delete b8s[key];
-    }
-
-    function getBytes16(bytes32 key) external view returns (bytes16) {
-        return b16s[key];
-    }
-    function setBytes16(bytes32 key, bytes16 val) external onlyAdmins {
-        b16s[key] = val;
-    }
-    function trimBytes16(bytes32 key) external onlyAdmins {
-        delete b16s[key];
-    }
-
-    // 2.7. Методы чтения, записи и очистки: Динамические строки и произвольные байты (BLOBs)
-    function getString(bytes32 key) external view returns (string memory) {
-        return strings[key];
-    }
-    function setString(bytes32 key, string calldata val) external onlyAdmins {
-        strings[key] = val;
-    }
-    function trimString(bytes32 key) external onlyAdmins {
-        delete strings[key];
-    }
-
-    function getBlob(bytes32 key) external view returns (bytes memory) {
-        return blobs[key];
-    }
-    function setBlob(bytes32 key, bytes calldata val) external onlyAdmins {
-        blobs[key] = val;
-    }
-    function trimBlob(bytes32 key) external onlyAdmins {
-        delete blobs[key];
-    }
-
-    // ========================================================================
-    // ========================================================================
-    // === БЛОК 3: LOW-LEVEL SLOTS (ВЛОЖЕННЫЕ ВСЕЛЕННЫЕ И ASSEMBLY YUL)     ===
+    // === БЛОК 2: LOW-LEVEL SLOTS (ВЛОЖЕННЫЕ ВСЕЛЕННЫЕ И ASSEMBLY YUL)     ===
     // ========================================================================
     // ========================================================================
     // Архитектурное примечание по памяти и безопасности (PurplePaper):
@@ -1189,7 +969,13 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function setNextMain(address _nextMain) external onlySuperAdmin {
         if (pendingSuperAdmin != address(0)) revert TimelockActive();
-        if (_nextMain == address(0)) revert ZeroAddress();
+        if (
+            _nextMain == address(0) ||
+            _nextMain == 0x000000000000000000000000000000000000dEaD ||
+            _nextMain == address(this)
+        ) {
+            revert InvalidNextMain();
+        }
         nextMain = _nextMain;
         emit NextMainSet(_nextMain);
     }
@@ -1762,6 +1548,7 @@ contract InfinityVerse_Main_Gb_1 {
      * @param token Адрес смарт-контракта ERC-20 токена
      * @param to Адрес законного получателя
      * @param amount Количество токенов для вывода
+     * @dev функция сырая, желательно сначала отправить копеечку и проверить дошла ли.
      */
     function rescueERC20(
         address token,
