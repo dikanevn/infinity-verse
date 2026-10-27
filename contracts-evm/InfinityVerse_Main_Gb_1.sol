@@ -66,7 +66,6 @@ interface IInfinityVerse_PrevMain {
  */
 contract InfinityVerse_Main_Gb_1 {
     string public constant CREATOR = "Nikolai Dikanev (dikanevn)";
-    string public constant VERSION = "0.0.0.0.1-MAIN-Gb-1";
     string public constant REPOSITORY =
         "https://github.com/dikanevn/infinity-verse";
 
