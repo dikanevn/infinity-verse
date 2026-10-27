@@ -550,6 +550,33 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </div>
       )}
 
+      {/* Подсказка при упоре бегунка вниз (на границе мира) */}
+      {currentSliderValue <= -8.4 && (
+        <div style={{
+          position: 'absolute',
+          top: '12px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          maxWidth: 'calc(100% - 100px)',
+          width: 'max-content',
+          zIndex: 15,
+          backgroundColor: 'rgba(15, 23, 42, 0.92)',
+          border: '1px solid #c084fc',
+          borderRadius: '12px',
+          padding: '6px 12px',
+          color: '#f5d0fe',
+          fontSize: '0.68rem',
+          fontFamily: 'monospace',
+          lineHeight: '1.25',
+          pointerEvents: 'none',
+          boxShadow: '0 4px 16px rgba(168, 85, 247, 0.4)',
+          textAlign: 'center',
+          backdropFilter: 'blur(6px)'
+        }}>
+          У мультивселенной есть внешняя граница, но внутрь она умеет разворачиваться бесконечно
+        </div>
+      )}
+
       {/* Легковесный 2D Canvas для космических рамок масштаба */}
       <CosmicCanvas
         scale={scale}
