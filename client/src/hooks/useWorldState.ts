@@ -9,7 +9,7 @@ export function useWorldState(
   focusPoints: { x: number; y: number }[]
 ) {
   const [cells, setCells] = useState<CellData[]>([]);
-  const [contractVersion, setContractVersion] = useState<string>('0.0.0.0.1-GB-MAIN-1');
+  const [contractVersion, setContractVersion] = useState<string>('Gb_Main_1');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
@@ -80,7 +80,11 @@ export function useWorldState(
       address: AAA_CONTRACT_ADDRESS,
       abi: AAA_ABI,
       functionName: 'VERSION',
-    }).then(ver => setContractVersion(ver)).catch(console.error);
+    }).then(ver => {
+      // Убираем устаревший префикс '0.0.0.0.1-' из ончейн-версии
+      const cleanVer = ver.replace(/^0\.0\.0\.0\.\d+-?/, '');
+      setContractVersion(cleanVer || ver);
+    }).catch(console.error);
   }, []);
 
   useEffect(() => {
