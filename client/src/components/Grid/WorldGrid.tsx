@@ -1,3 +1,4 @@
+import { CosmicCanvas } from './CosmicCanvas';
 import React, { useState, useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { CellView } from './CellView';
@@ -105,6 +106,21 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   }, [player?.x, player?.y, player?.exists]);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [containerDimensions, setContainerDimensions] = useState<{ width: number; height: number }>({ width: 400, height: 380 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerDimensions({
+          width: Math.floor(entry.contentRect.width),
+          height: Math.floor(entry.contentRect.height)
+        });
+      }
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
   const isDraggingRef = useRef<boolean>(false);
   const isPinchingRef = useRef<boolean>(false);
   const hasMovedRef = useRef<boolean>(false);
@@ -461,6 +477,15 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </button>
       </div>
 
+      {/* Легковесный 2D Canvas для космических рамок масштаба */}
+      <CosmicCanvas
+        scale={scale}
+        position={position}
+        cellPitch={CELL_PITCH}
+        width={containerDimensions.width}
+        height={containerDimensions.height}
+      />
+
       {/* Интерактивный слой мира (отрисовывает активные клетки на абсолютных координатах мира) */}
       <div
         onClick={(e) => e.stopPropagation()}
@@ -474,46 +499,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         }}
       >
         
-        {/* Космические рамки порядков масштаба (белые квадраты на каждом 10^N) */}
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((order) => {
-          const sizeCells = Math.pow(10, order);
-          const sizePx = sizeCells * CELL_PITCH;
-          const halfPx = sizePx / 2;
-          const label = `10^${order} (${sizeCells >= 1e6 ? (sizeCells/1e6).toLocaleString() + ' млн' : sizeCells.toLocaleString()} кл)`;
-          return (
-            <div
-              key={'order-' + order}
-              style={{
-                position: 'absolute',
-                left: `${-halfPx}px`,
-                top: `${-halfPx}px`,
-                width: `${sizePx}px`,
-                height: `${sizePx}px`,
-                border: '1.5px solid rgba(255, 255, 255, 0.75)',
-                boxShadow: '0 0 10px rgba(255, 255, 255, 0.25)',
-                pointerEvents: 'none',
-                boxSizing: 'border-box'
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                top: '4px',
-                left: '8px',
-                color: '#ffffff',
-                fontSize: `${Math.max(12, 14 / scale)}px`,
-                fontWeight: 800,
-                letterSpacing: '1px',
-                textShadow: '0 0 8px #000, 0 0 4px #000',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none'
-              }}>
-                ◽ ${label}
-              </div>
-            </div>
-          );
-        })}
-
-        {coordsToRender.map((coord) => {
+        {(scale >= 0.02 ? coordsToRender : []).map((coord) => {
           const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
           const isSelected = selectedCoord.x === coord.x && selectedCoord.y === coord.y;
 
