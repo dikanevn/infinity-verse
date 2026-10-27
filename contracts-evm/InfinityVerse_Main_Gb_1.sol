@@ -99,6 +99,16 @@ contract InfinityVerse_Main_Gb_1 {
     uint256 private constant PLAYER_LIST_PREFIX = 4 << 160;
     uint256 private constant PLAYER_ID_PREFIX = 5 << 160;
 
+    // --- Префиксы бесконечных вложенных порталов Мультивселенной ---
+    uint256 private constant PORTAL_LIST_PREFIX   = 6 << 160; // ID -> targetContract (адрес вложенного мира)
+    uint256 private constant PORTAL_ID_PREFIX     = 7 << 160; // targetContract -> ID
+    uint256 private constant PORTAL_FOUNDER_PREFIX = 8 << 160; // ID -> имя основателя (bytes32 founderName)
+    uint256 private constant PORTAL_WORLD_PREFIX   = 9 << 160; // ID -> название мира (bytes32 worldName)
+    uint256 private constant PORTAL_OWNER_PREFIX  = 10 << 160; // ID -> адрес создателя (founder)
+    uint256 private constant PORTAL_PARENT_PREFIX = 11 << 160; // ID -> контракт-источник (parentContract)
+    uint256 private constant PORTAL_TIME_PREFIX   = 12 << 160; // ID -> время открытия (createdAt)
+    uint256 private constant PORTAL_FOUNDER_PORTAL_PREFIX = 13 << 160; // founderAddress -> portalId (1 портал на человека)
+
     // 64-битная маска для распаковки индексов и очистки слотов
     uint256 private constant MASK_64 = 0xFFFFFFFFFFFFFFFF;
 
@@ -129,6 +139,19 @@ contract InfinityVerse_Main_Gb_1 {
         uint32 paramD; // Пользовательский модульный параметр D
     }
 
+    /**
+     * @notice Структура описания Врат/Портала во вложенную вселенную
+     */
+    struct PortalInfo {
+        uint256 id;              // Порядковый номер портала
+        address parentContract;  // Контракт-источник, из которого ведут врата (мир 0-го уровня или текущий мир)
+        address targetContract;  // Адрес вложенного контракта-вселенной
+        address founder;         // Кошелек основателя (msg.sender)
+        bytes32 founderName;     // Имя основателя
+        bytes32 worldName;       // Название вложенного мира
+        uint256 createdAt;       // Таймстамп открытия портала
+    }
+
     // Количество администраторов в реестре (сами адреса лежат в защищенной зоне ADMIN_LIST_PREFIX + i)
     uint256 public allowedAdminsCount;
 
@@ -139,6 +162,9 @@ contract InfinityVerse_Main_Gb_1 {
     // Общее количество зарегистрированных игроков (жителей Вселенной)
     // Сами адреса лежат в защищенной зоне PLAYER_LIST_PREFIX + id, а ID игрока в PLAYER_ID_PREFIX | uint160(account)
     uint256 public totalPlayers;
+
+    // Общее количество открытых врат-порталов во вложенные миры
+    uint256 public totalPortals;
 
     // 4-байтные ошибки (Custom Errors) для экономии газа и размера байткода
     error Unauthorized();
@@ -159,6 +185,23 @@ contract InfinityVerse_Main_Gb_1 {
     error InactivityPeriodNotElapsed();
     error ReentrancyDetected();
     error InvalidNextMain();
+    error PortalAlreadyExists();
+    error InvalidPortalAddress();
+    error EmptyFounderName();
+    error EmptyWorldName();
+    error PortalNotFound();
+    error FounderAlreadyHasPortal();
+
+    // Событие открытия новых Врат Мультивселенной
+    event PortalCreated(
+        uint256 indexed portalId,
+        address indexed parentContract,
+        address indexed targetContract,
+        address founder,
+        bytes32 founderName,
+        bytes32 worldName,
+        uint256 createdAt
+    );
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
@@ -1196,6 +1239,144 @@ contract InfinityVerse_Main_Gb_1 {
                     )
                 )
             );
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    // ========================================================================
+    // === БЕСКОНЕЧНЫЕ ВЛОЖЕННЫЕ ПОРТАЛЫ МУЛЬТИВСЕЛЕННОЙ (ФРАКТАЛЬНЫЕ МИРЫ)  ===
+    // ========================================================================
+
+    /**
+     * @notice Открытие новых Врат во вложенную вселенную (создание портала).
+     * @dev Правило: строго 1 портал на создателя!
+     * Записывает адрес родительского мира address(this), целевой контракт, создателя и имена.
+     * Все данные фиксируются в защищенной зоне памяти за O(1).
+     * @param targetContract Адрес смарт-контракта вложенного мира
+     * @param founderName Имя основателя (до 32 байт UTF-8)
+     * @param worldName Название вложенного мира (до 32 байт UTF-8)
+     * @return portalId Уникальный сквозной номер созданного портала
+     */
+    function createPortal(
+        address targetContract,
+        bytes32 founderName,
+        bytes32 worldName
+    ) external returns (uint256 portalId) {
+        if (targetContract == address(0) || targetContract == address(this)) {
+            revert InvalidPortalAddress();
+        }
+        if (founderName == bytes32(0)) revert EmptyFounderName();
+        if (worldName == bytes32(0)) revert EmptyWorldName();
+
+        // Проверка: один портал на одного человека
+        uint256 founderSlot = PORTAL_FOUNDER_PORTAL_PREFIX | uint160(msg.sender);
+        if (uint256(_getSlot(bytes32(founderSlot))) != 0) {
+            revert FounderAlreadyHasPortal();
+        }
+
+        uint256 idSlot = PORTAL_ID_PREFIX | uint160(targetContract);
+        if (uint256(_getSlot(bytes32(idSlot))) != 0) {
+            revert PortalAlreadyExists();
+        }
+
+        portalId = ++totalPortals;
+
+        // Фиксация в защищенных слотах памяти O(1):
+        _setSlot(bytes32(PORTAL_LIST_PREFIX + portalId), bytes32(uint256(uint160(targetContract))));
+        _setSlot(bytes32(idSlot), bytes32(portalId));
+        _setSlot(bytes32(founderSlot), bytes32(portalId));
+        _setSlot(bytes32(PORTAL_FOUNDER_PREFIX + portalId), founderName);
+        _setSlot(bytes32(PORTAL_WORLD_PREFIX + portalId), worldName);
+        _setSlot(bytes32(PORTAL_OWNER_PREFIX + portalId), bytes32(uint256(uint160(msg.sender))));
+        _setSlot(bytes32(PORTAL_PARENT_PREFIX + portalId), bytes32(uint256(uint160(address(this)))));
+        _setSlot(bytes32(PORTAL_TIME_PREFIX + portalId), bytes32(block.timestamp));
+
+        emit PortalCreated(
+            portalId,
+            address(this),
+            targetContract,
+            msg.sender,
+            founderName,
+            worldName,
+            block.timestamp
+        );
+    }
+
+    /**
+     * @notice Получение полной информации о портале по его ID за O(1)
+     * @param id Порядковый номер портала (1 .. totalPortals)
+     */
+    function getPortal(uint256 id) external view returns (PortalInfo memory info) {
+        if (id == 0 || id > totalPortals) {
+            return info;
+        }
+
+        address target = address(uint160(uint256(_getSlot(bytes32(PORTAL_LIST_PREFIX + id)))));
+        if (target == address(0)) {
+            return info;
+        }
+
+        info.id = id;
+        info.targetContract = target;
+        info.parentContract = address(uint160(uint256(_getSlot(bytes32(PORTAL_PARENT_PREFIX + id)))));
+        info.founder = address(uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + id)))));
+        info.founderName = _getSlot(bytes32(PORTAL_FOUNDER_PREFIX + id));
+        info.worldName = _getSlot(bytes32(PORTAL_WORLD_PREFIX + id));
+        info.createdAt = uint256(_getSlot(bytes32(PORTAL_TIME_PREFIX + id)));
+    }
+
+    /**
+     * @notice Получение ID портала по адресу вложенного смарт-контракта за O(1)
+     * @param targetContract Адрес смарт-контракта вложенного мира
+     * @return id Порядковый номер портала (0, если не существует)
+     */
+    function getPortalId(address targetContract) external view returns (uint256 id) {
+        id = uint256(_getSlot(bytes32(PORTAL_ID_PREFIX | uint160(targetContract))));
+    }
+
+    /**
+     * @notice Получение ID портала, созданного указанным основателем (1 портал на создателя)
+     * @param founder Адрес кошелька создателя
+     * @return portalId ID созданного портала (или 0, если еще не открывал портал)
+     */
+    function getPortalByFounder(address founder) external view returns (uint256 portalId) {
+        portalId = uint256(_getSlot(bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(founder))));
+    }
+
+    /**
+     * @notice Последовательное чтение списка порталов пачками для фронтенда и навигации.
+     * @param offset Начальный индекс (0-indexed смещение: 0 соответствует id=1)
+     * @param count Количество возвращаемых порталов
+     * @return list Массив структур PortalInfo
+     */
+    function getPortalsSequential(
+        uint256 offset,
+        uint256 count
+    ) external view returns (PortalInfo[] memory list) {
+        uint256 total = totalPortals;
+        if (offset >= total || count == 0) {
+            return new PortalInfo[](0);
+        }
+
+        uint256 end = offset + count;
+        if (end > total) {
+            end = total;
+        }
+
+        uint256 resultLen = end - offset;
+        list = new PortalInfo[](resultLen);
+
+        for (uint256 i = 0; i < resultLen; ) {
+            uint256 id = offset + i + 1;
+            list[i].id = id;
+            list[i].targetContract = address(uint160(uint256(_getSlot(bytes32(PORTAL_LIST_PREFIX + id)))));
+            list[i].parentContract = address(uint160(uint256(_getSlot(bytes32(PORTAL_PARENT_PREFIX + id)))));
+            list[i].founder = address(uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + id)))));
+            list[i].founderName = _getSlot(bytes32(PORTAL_FOUNDER_PREFIX + id));
+            list[i].worldName = _getSlot(bytes32(PORTAL_WORLD_PREFIX + id));
+            list[i].createdAt = uint256(_getSlot(bytes32(PORTAL_TIME_PREFIX + id)));
             unchecked {
                 ++i;
             }
