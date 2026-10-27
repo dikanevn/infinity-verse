@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { PlayerData, AuthMode } from '../../types';
 
 interface PlayerControlsProps {
@@ -30,6 +30,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onSpawn,
   onMove
 }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAddress = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!connectedAddress) return;
+    navigator.clipboard.writeText(connectedAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   return (
     <div style={{
       display: 'flex',
@@ -109,11 +118,29 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           border: `1px solid ${isMetaMaskMode ? '#f59e0b' : isDirectSignerMode ? '#38bdf8' : '#a855f7'}`,
           padding: '6px 12px'
         }}>
-          <span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             {isMetaMaskMode ? '🦊' : isDirectSignerMode ? '⚡' : '🌐'}{' '}
-            <span style={{ color: '#94a3b8', fontSize: '0.62rem' }}>
+            <span style={{ color: '#94a3b8', fontSize: '0.62rem', fontFamily: 'monospace' }}>
               {connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}
             </span>
+            <button
+              onClick={handleCopyAddress}
+              title={copied ? "Скопировано!" : "Скопировать полный адрес"}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '1px 3px',
+                fontSize: '0.75rem',
+                lineHeight: 1,
+                color: copied ? '#4ade80' : '#64748b',
+                display: 'inline-flex',
+                alignItems: 'center',
+                transition: 'color 0.15s'
+              }}
+            >
+              {copied ? '✓' : '📋'}
+            </button>
             : <b>({player.x}, {player.y})</b>
           </span>
 
