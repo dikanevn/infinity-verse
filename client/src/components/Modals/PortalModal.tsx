@@ -169,7 +169,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.4rem' }}>🌀</span>
             <span style={{ fontWeight: 800, color: '#c084fc', fontSize: '1rem' }}>
-              {portalInfo ? `ВРАТА МУЛЬТИВСЕЛЕННОЙ #${portalInfo.id}` : `МАТЕРИАЛИЗАЦИЯ ВРАТ (${portalX}, ${portalY})`}
+              {portalInfo ? `ВРАТА МУЛЬТИВСЕЛЕННОЙ #${portalInfo.id}` : `СОЗДАНИЕ БЕСКОНЕЧНОЙ МУЛЬТИВСЕЛЕННОЙ (${portalX}, ${portalY})`}
             </span>
           </div>
           <button
@@ -368,7 +368,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                 marginTop: '10px'
               }}
             >
-              {actionLoading ? 'Материализация в Monad...' : '🌀 Открыть Врата Мультивселенной'}
+              {actionLoading ? 'Создание мультивселенной в Monad...' : '🌀 Создать свою бесконечную мультивселенную'}
             </button>
           </form>
         )}

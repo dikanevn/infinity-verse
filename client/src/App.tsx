@@ -328,7 +328,7 @@ function App() {
                 }}
               >
                 <span>🌀</span>
-                <span>Открыть Врата на ({curCell.x}, {curCell.y})</span>
+                <span>Создать свою бесконечную мультивселенную на ({curCell.x}, {curCell.y})</span>
               </button>
             )}
           </div>
