@@ -1124,7 +1124,7 @@ contract InfinityVerse_Main_Gb_1 {
     }
 
     /**
-     * @notice Получение адреса игрока по его порядковому ID за O(1) со сквозным поиском в предках.
+     * @notice Получение адреса игрока по его порядковому ID за O(1) из локального диска хранилища.
      * @param id Порядковый номер участника (1 .. totalPlayers)
      * @return account Адрес кошелька игрока (или address(0), если не зарегистрирован)
      */
@@ -1137,21 +1137,15 @@ contract InfinityVerse_Main_Gb_1 {
         account = address(
             uint160(uint256(_getSlot(bytes32(PLAYER_LIST_PREFIX + id))))
         );
-        if (account == address(0) && prevMain != address(0)) {
-            return IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id);
-        }
     }
 
     /**
-     * @notice Получение постоянного ID игрока по его адресу кошелька за O(1) со сквозным поиском в предках.
+     * @notice Получение постоянного ID игрока по его адресу кошелька за O(1) из локального диска хранилища.
      * @param account Адрес кошелька игрока
      * @return id Порядковый номер участника (0, если игрок еще ни разу не регистрировался)
      */
     function getPlayerId(address account) external view returns (uint256 id) {
         id = uint256(_getSlot(bytes32(PLAYER_ID_PREFIX | uint160(account))));
-        if (id == 0 && prevMain != address(0)) {
-            return IInfinityVerse_PrevMain(prevMain).getPlayerId(account);
-        }
     }
 
     /**
@@ -1319,27 +1313,21 @@ contract InfinityVerse_Main_Gb_1 {
     }
 
     /**
-     * @notice Получение ID портала по адресу вложенного смарт-контракта за O(1) со сквозным поиском в предках.
+     * @notice Получение ID портала по адресу вложенного смарт-контракта за O(1) из локального диска хранилища.
      * @param targetContract Адрес смарт-контракта вложенного мира
      * @return id Порядковый номер портала (0, если не существует)
      */
     function getPortalId(address targetContract) external view returns (uint256 id) {
         id = uint256(_getSlot(bytes32(PORTAL_ID_PREFIX | uint160(targetContract))));
-        if (id == 0 && prevMain != address(0)) {
-            return IInfinityVerse_PrevMain(prevMain).getPortalId(targetContract);
-        }
     }
 
     /**
-     * @notice Получение ID портала, созданного указанным основателем (1 портал на создателя) со сквозным поиском в предках.
+     * @notice Получение ID портала, созданного указанным основателем (1 портал на создателя) из локального диска хранилища.
      * @param founder Адрес кошелька создателя
      * @return portalId ID созданного портала (или 0, если еще не открывал портал)
      */
     function getPortalByFounder(address founder) external view returns (uint256 portalId) {
         portalId = uint256(_getSlot(bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(founder))));
-        if (portalId == 0 && prevMain != address(0)) {
-            return IInfinityVerse_PrevMain(prevMain).getPortalByFounder(founder);
-        }
     }
 
     /**
