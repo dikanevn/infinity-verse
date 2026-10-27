@@ -1,14 +1,14 @@
 import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 
 // ============================================================================
-// === АКТУАЛЬНЫЕ КОНТРАКТЫ ЭПОХИ GA (MONAD TESTNET) ===
+// === АКТУАЛЬНЫЕ КОНТРАКТЫ ЭПОХИ GB (MONAD TESTNET) ===
 // ============================================================================
-// Постоянное универсальное хранилище мира (Main Ga-1):
-export const MAIN_CONTRACT_ADDRESS = '0xf32bd8705ee1c7682d9a5f2d00b18815929d4482';
-// Исполнительная логика и игровой интерфейс (Ga_AAA_2 Module с поддержкой Звёзд, 5x5 и TTT):
-export const AAA_CONTRACT_ADDRESS = '0xb98c6aef0ef851ffc53b94560ab43f90ae68b123';
+// Постоянное универсальное хранилище мира (Main Gb-1):
+export const MAIN_CONTRACT_ADDRESS = '0x8c796f775052c5ed91e4f6a7eafe521b815c2325';
+// Исполнительная логика и игровой интерфейс (Gb_AAA_1 Module с поддержкой Порталов, Звёзд, 5x5 и TTT):
+export const AAA_CONTRACT_ADDRESS = '0x79fc69a9af44ce5748ce0488c8c5d27e9aa5dacc';
 // Токен Звёзд (Infinity Star ERC-20):
-export const STAR_TOKEN_ADDRESS = '0xe4bc53bb392f6c96a4a6d6b7a72263731f599686';
+export const STAR_TOKEN_ADDRESS = '0x7148b8602f4cd15face43fba6b149e3797e6dc3e';
 
 export const DEFAULT_RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const getActiveRpcUrl = (): string => {
@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2710260401';
+export const CLIENT_VERSION = '2710261358';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({

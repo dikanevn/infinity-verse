@@ -3,8 +3,8 @@ main = "src/index.js"
 compatibility_date = "2026-10-24"
 
 [vars]
-MAIN_CONTRACT_ADDRESS = "0xf32bd8705ee1c7682d9a5f2d00b18815929d4482"
-AAA_CONTRACT_ADDRESS = "0xb98c6aef0ef851ffc53b94560ab43f90ae68b123"
+MAIN_CONTRACT_ADDRESS = "0x8c796f775052c5ed91e4f6a7eafe521b815c2325"
+AAA_CONTRACT_ADDRESS = "0x79fc69a9af44ce5748ce0488c8c5d27e9aa5dacc"
 RPC_URL = "https://testnet-rpc.monad.xyz"
 CHAIN_ID = 10143
 GOOGLE_CLIENT_ID = "302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com"
