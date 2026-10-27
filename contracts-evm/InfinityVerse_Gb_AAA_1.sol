@@ -10,6 +10,9 @@ interface IInfinityVerse_Main_Gb_1 {
     function writeSector(bytes32 sector, bytes32 data) external;
     function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external;
     function registerPlayer(address account) external returns (uint256);
+    function getPlayerId(address account) external view returns (uint256);
+    function getPlayerAddress(uint256 id) external view returns (address);
+    function totalPlayers() external view returns (uint256);
 }
 
 /**
@@ -216,6 +219,27 @@ contract InfinityVerse_Gb_AAA_1 {
         }
     }
 
+    /**
+     * @notice Получение постоянного ID жителя Мультивселенной за O(1)
+     */
+    function getPlayerId(address player) external view returns (uint256) {
+        return mainContract.getPlayerId(player);
+    }
+
+    /**
+     * @notice Получение адреса жителя по его порядковому ID за O(1)
+     */
+    function getPlayerAddress(uint256 id) external view returns (address) {
+        return mainContract.getPlayerAddress(id);
+    }
+
+    /**
+     * @notice Общее количество зарегистрированных жителей во Вселенной
+     */
+    function totalPlayers() external view returns (uint256) {
+        return mainContract.totalPlayers();
+    }
+
     function getCellsBatch(int32[] calldata xs, int32[] calldata ys) external view returns (Cell[] memory cells) {
         if (xs.length != ys.length) revert ArrayLengthMismatch();
         uint256 len = xs.length;
@@ -406,6 +430,9 @@ contract InfinityVerse_Gb_AAA_1 {
         }
 
         mainContract.writeSector(posKey, packed);
+
+        // Священная регистрация жителя во Вселенной (O(1) ончейн-запись или подтягивание древнего ID)
+        mainContract.registerPlayer(player);
     }
 
     function _validateAndExecuteMove(address player, int32 targetX, int32 targetY) internal {
