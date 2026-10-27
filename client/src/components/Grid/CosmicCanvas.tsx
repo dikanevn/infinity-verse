@@ -25,8 +25,9 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
     ctx.clearRect(0, 0, width, height);
 
-    const centerX = width / 2 + position.x;
-    const centerY = height / 2 + position.y;
+    // Центр сетки (0, 0) на экране:
+    const originX = width / 2 + position.x;
+    const originY = height / 2 + position.y;
 
     const orders = [
       { order: 1, name: '10' },
@@ -34,34 +35,46 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       { order: 3, name: '1 000' },
       { order: 4, name: '10 000' },
       { order: 5, name: '100 000' },
-      { order: 6, name: '1 000 000 (1 млн)' },
+      { order: 6, name: '1 млн' },
       { order: 7, name: '10 млн' },
       { order: 8, name: '100 млн' },
-      { order: 9, name: '1 млрд (2^31 предел int32)' }
+      { order: 9, name: '1 млрд' }
     ];
 
     for (const item of orders) {
-      const cellCount = Math.pow(10, item.order);
-      const halfSizePx = (cellCount * cellPitch / 2) * scale;
-      const screenHalf = halfSizePx;
+      const radius = Math.floor(Math.pow(10, item.order) / 2); // например для 10: от -5 до +5
 
-      if (screenHalf < 2) continue;
-      if (screenHalf > Math.max(width, height) * 6) continue;
+      // Координаты углов в мировых пикселях:
+      // Клетка (x, y) имеет левый край: x * pitch - 31, правый край: x * pitch + 31
+      // Верхний край: -y * pitch - 31, нижний край: -y * pitch + 31
+      const worldLeft = -radius * cellPitch - 31;
+      const worldRight = radius * cellPitch + 31;
+      const worldTop = -radius * cellPitch - 31;
+      const worldBottom = radius * cellPitch + 31;
 
-      const left = centerX - screenHalf;
-      const top = centerY - screenHalf;
-      const size = screenHalf * 2;
+      // Перевод в экранные пиксели:
+      const screenLeft = originX + worldLeft * scale;
+      const screenRight = originX + worldRight * scale;
+      const screenTop = originY + worldTop * scale;
+      const screenBottom = originY + worldBottom * scale;
+
+      const screenWidth = screenRight - screenLeft;
+      const screenHeight = screenBottom - screenTop;
+
+      // Если рамка слишком маленькая (< 3px) или гигантская за экраном — пропускаем
+      if (screenWidth < 3) continue;
+      if (screenWidth > Math.max(width, height) * 6) continue;
 
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(left, top, size, size);
+      ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px monospace';
+      ctx.font = 'bold 11px monospace';
       ctx.shadowColor = '#000000';
       ctx.shadowBlur = 4;
-      ctx.fillText(`◽ 10^${item.order} (${item.name} кл)`, left + 6, top + 16);
+      ctx.fillText(`◽ 10^${item.order} (${item.name} кл)`, screenLeft + 6, screenTop + 14);
       ctx.restore();
     }
   }, [scale, position, cellPitch, width, height]);
@@ -78,7 +91,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         width: `${width}px`,
         height: `${height}px`,
         pointerEvents: 'none',
-        zIndex: 1
+        zIndex: 5
       }}
     />
   );
