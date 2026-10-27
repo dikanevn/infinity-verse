@@ -122,7 +122,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Масштабирование по кнопкам относительно центра экрана
   const handleZoomIn = () => {
     const curScale = scaleRef.current;
-    const newScale = Math.min(2.5, curScale + 0.15);
+    const newScale = Math.min(5.0, curScale * 1.5);
     const scaleMultiplier = newScale / curScale;
     setScale(newScale);
     setPosition(prev => {
@@ -137,7 +137,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   const handleZoomOut = () => {
     const curScale = scaleRef.current;
-    const newScale = Math.max(0.08, curScale - 0.15);
+    const newScale = Math.max(0.0000000001, curScale * 0.5);
     const scaleMultiplier = newScale / curScale;
     setScale(newScale);
     setPosition(prev => {
@@ -261,7 +261,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         const t2 = e.touches[1];
         const curDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
         const distRatio = curDist / pinchStartDistRef.current;
-        const newScale = Math.min(2.5, Math.max(0.08, pinchStartScaleRef.current * distRatio));
+        const newScale = Math.min(5.0, Math.max(0.0000000001, pinchStartScaleRef.current * distRatio));
 
         const curMidX = (t1.clientX + t2.clientX) / 2;
         const curMidY = (t1.clientY + t2.clientY) / 2;
@@ -313,7 +313,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
     const curScale = scaleRef.current;
-    const newScale = Math.min(2.5, Math.max(0.08, curScale * zoomFactor));
+    const newScale = Math.min(5.0, Math.max(0.0000000001, curScale * zoomFactor));
 
     const scaleMultiplier = newScale / curScale;
     setScale(newScale);
@@ -473,6 +473,46 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           height: '0px'
         }}
       >
+        
+        {/* Космические рамки порядков масштаба (белые квадраты на каждом 10^N) */}
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((order) => {
+          const sizeCells = Math.pow(10, order);
+          const sizePx = sizeCells * CELL_PITCH;
+          const halfPx = sizePx / 2;
+          const label = `10^${order} (${sizeCells >= 1e6 ? (sizeCells/1e6).toLocaleString() + ' млн' : sizeCells.toLocaleString()} кл)`;
+          return (
+            <div
+              key={'order-' + order}
+              style={{
+                position: 'absolute',
+                left: `${-halfPx}px`,
+                top: `${-halfPx}px`,
+                width: `${sizePx}px`,
+                height: `${sizePx}px`,
+                border: '1.5px solid rgba(255, 255, 255, 0.75)',
+                boxShadow: '0 0 10px rgba(255, 255, 255, 0.25)',
+                pointerEvents: 'none',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                top: '4px',
+                left: '8px',
+                color: '#ffffff',
+                fontSize: `${Math.max(12, 14 / scale)}px`,
+                fontWeight: 800,
+                letterSpacing: '1px',
+                textShadow: '0 0 8px #000, 0 0 4px #000',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none'
+              }}>
+                ◽ ${label}
+              </div>
+            </div>
+          );
+        })}
+
         {coordsToRender.map((coord) => {
           const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
           const isSelected = selectedCoord.x === coord.x && selectedCoord.y === coord.y;
