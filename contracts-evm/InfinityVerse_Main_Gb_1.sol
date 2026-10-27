@@ -196,6 +196,8 @@ contract InfinityVerse_Main_Gb_1 {
     error EmptyWorldName();
     error PortalNotFound();
     error FounderAlreadyHasPortal();
+    error NotPortalOwner();
+    error InvalidNewOwner();
 
     // Событие открытия новых Врат Мультивселенной
     event PortalCreated(
@@ -206,6 +208,16 @@ contract InfinityVerse_Main_Gb_1 {
         bytes32 founderName,
         bytes32 worldName,
         uint256 createdAt
+    );
+    event PortalOwnershipTransferred(
+        uint256 indexed portalId,
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+    event PortalDestroyed(
+        uint256 indexed portalId,
+        address indexed targetContract,
+        address indexed owner
     );
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
@@ -1248,9 +1260,11 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function createPortal(
         address targetContract,
+        address founder,
         bytes32 founderName,
         bytes32 worldName
     ) external returns (uint256 portalId) {
+        if (founder == address(0)) founder = msg.sender;
         if (targetContract == address(0) || targetContract == address(this)) {
             revert InvalidPortalAddress();
         }
@@ -1259,7 +1273,7 @@ contract InfinityVerse_Main_Gb_1 {
 
         // Проверка: один портал на одного человека
         uint256 founderSlot = PORTAL_FOUNDER_PORTAL_PREFIX |
-            uint160(msg.sender);
+            uint160(founder);
         if (uint256(_getSlot(bytes32(founderSlot))) != 0) {
             revert FounderAlreadyHasPortal();
         }
@@ -1282,7 +1296,7 @@ contract InfinityVerse_Main_Gb_1 {
         _setSlot(bytes32(PORTAL_WORLD_PREFIX + portalId), worldName);
         _setSlot(
             bytes32(PORTAL_OWNER_PREFIX + portalId),
-            bytes32(uint256(uint160(msg.sender)))
+            bytes32(uint256(uint160(founder)))
         );
         _setSlot(
             bytes32(PORTAL_PARENT_PREFIX + portalId),
@@ -1297,11 +1311,94 @@ contract InfinityVerse_Main_Gb_1 {
             portalId,
             address(this),
             targetContract,
-            msg.sender,
+            founder,
             founderName,
             worldName,
             block.timestamp
         );
+    }
+
+    /**
+     * @notice Передача прав владения порталом другому игроку.
+     * @dev Вызывается строго текущим владельцем портала.
+     * @param portalId ID существующего портала
+     * @param newOwner Новый адрес владельца портала
+     */
+    function transferPortalOwnership(
+        uint256 portalId,
+        address newOwner
+    ) external {
+        if (portalId == 0 || portalId > totalPortals) revert PortalNotFound();
+        if (newOwner == address(0) || newOwner == address(this)) revert InvalidNewOwner();
+
+        address currentOwner = address(
+            uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + portalId))))
+        );
+        if (currentOwner == address(0)) revert PortalNotFound();
+        if (msg.sender != currentOwner && !isAdmin(msg.sender)) revert NotPortalOwner();
+        if (newOwner == currentOwner) revert InvalidNewOwner();
+
+        // Правило: 1 активный портал на адрес
+        uint256 existingPortalOfNewOwner = uint256(
+            _getSlot(bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(newOwner)))
+        );
+        if (existingPortalOfNewOwner != 0) revert FounderAlreadyHasPortal();
+
+        // 1. Освобождаем квоту старого владельца
+        _setSlot(
+            bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(currentOwner)),
+            bytes32(0)
+        );
+
+        // 2. Назначаем нового владельца портала
+        _setSlot(
+            bytes32(PORTAL_OWNER_PREFIX + portalId),
+            bytes32(uint256(uint160(newOwner)))
+        );
+
+        // 3. Фиксируем квоту за новым владельцем
+        _setSlot(
+            bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(newOwner)),
+            bytes32(portalId)
+        );
+
+        emit PortalOwnershipTransferred(portalId, currentOwner, newOwner);
+    }
+
+    /**
+     * @notice Уничтожение портала Мультивселенной с очисткой слотов памяти.
+     * @dev Вызывается строго владельцем портала. Освобождает квоту владельцу и стирает целевой адрес.
+     * @param portalId ID уничтожаемого портала
+     */
+    function destroyPortal(uint256 portalId) external {
+        if (portalId == 0 || portalId > totalPortals) revert PortalNotFound();
+
+        address target = address(
+            uint160(uint256(_getSlot(bytes32(PORTAL_LIST_PREFIX + portalId))))
+        );
+        if (target == address(0)) revert PortalNotFound();
+
+        address owner = address(
+            uint160(uint256(_getSlot(bytes32(PORTAL_OWNER_PREFIX + portalId))))
+        );
+        if (msg.sender != owner && !isAdmin(msg.sender)) revert NotPortalOwner();
+
+        // 1. Очищаем привязку адреса контракта к ID
+        _setSlot(bytes32(PORTAL_ID_PREFIX | uint160(target)), bytes32(0));
+
+        // 2. Освобождаем квоту основателя
+        if (owner != address(0)) {
+            _setSlot(
+                bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(owner)),
+                bytes32(0)
+            );
+        }
+
+        // 3. Помечаем портал как закрытый (target = 0, owner = 0)
+        _setSlot(bytes32(PORTAL_LIST_PREFIX + portalId), bytes32(0));
+        _setSlot(bytes32(PORTAL_OWNER_PREFIX + portalId), bytes32(0));
+
+        emit PortalDestroyed(portalId, target, owner);
     }
 
     /**

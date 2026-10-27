@@ -11,6 +11,7 @@ import { CellInspector } from './components/Inspector/CellInspector';
 import { WalletModal } from './components/Modals/WalletModal';
 import { PkModal } from './components/Modals/PkModal';
 import { NetworkModal } from './components/Modals/NetworkModal';
+import { PortalModal } from './components/Modals/PortalModal';
 
 function App() {
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -19,6 +20,9 @@ function App() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState<boolean>(false);
   const [showPkInputModal, setShowPkInputModal] = useState<boolean>(false);
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
+  // Модальное окно управления / создания Портала
+  const [isPortalModalOpen, setIsPortalModalOpen] = useState<boolean>(false);
+
   const [pkInput, setPkInput] = useState<string>('');
   const [inferBalance, setInferBalance] = useState<number | null>(null);
 
@@ -96,6 +100,9 @@ function App() {
     handleSpawn,
     handleMove,
     handleDiscoverBatch,
+    handleCreatePortal,
+    handleTransferPortal,
+    handleDestroyPortal,
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
 
@@ -280,6 +287,54 @@ function App() {
 
         {/* 64-битный инспектор выбранной клетки */}
         <CellInspector curCell={curCell} />
+        {/* Кнопка Врат Мультивселенной */}
+        {connectedAddress && curCell && (
+          <div style={{ margin: '4px auto 8px auto', display: 'flex', gap: '8px' }}>
+            {curCell.object === 4 ? (
+              <button
+                type="button"
+                onClick={() => setIsPortalModalOpen(true)}
+                style={{
+                  backgroundColor: '#8b5cf6',
+                  color: '#fff',
+                  border: '1px solid #c084fc',
+                  padding: '6px 14px',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🌀</span>
+                <span>ИНСПЕКТОР ВРАТ (ID #{curCell.state})</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsPortalModalOpen(true)}
+                style={{
+                  backgroundColor: '#1e1b4b',
+                  color: '#c084fc',
+                  border: '1px solid #6366f1',
+                  padding: '6px 14px',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🌀</span>
+                <span>Открыть Врата на ({curCell.x}, {curCell.y})</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Футер */}
         <div style={{
@@ -339,6 +394,20 @@ function App() {
         onSelectRpc={() => {
           window.location.reload();
         }}
+      />
+      {/* Модальное окно Врат Мультивселенной */}
+      <PortalModal
+        isOpen={isPortalModalOpen}
+        onClose={() => setIsPortalModalOpen(false)}
+        portalId={curCell && curCell.object === 4 ? curCell.state : 0}
+        portalX={curCell ? curCell.x : 0}
+        portalY={curCell ? curCell.y : 0}
+        connectedAddress={connectedAddress}
+        isDirectSigner={isDirectSignerMode}
+        onRefresh={fetchState}
+        onCreatePortal={handleCreatePortal}
+        onTransferPortal={handleTransferPortal}
+        onDestroyPortal={handleDestroyPortal}
       />
     </div>
   );

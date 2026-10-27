@@ -4,11 +4,11 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 // === АКТУАЛЬНЫЕ КОНТРАКТЫ ЭПОХИ GB (MONAD TESTNET) ===
 // ============================================================================
 // Постоянное универсальное хранилище мира (Main Gb-1):
-export const MAIN_CONTRACT_ADDRESS = '0x8c796f775052c5ed91e4f6a7eafe521b815c2325';
+export const MAIN_CONTRACT_ADDRESS = '0xa524a7e5ddba429c227fd095bb9f5131526136f1';
 // Исполнительная логика и игровой интерфейс (Gb_AAA_1 Module с поддержкой Порталов, Звёзд, 5x5 и TTT):
-export const AAA_CONTRACT_ADDRESS = '0x79fc69a9af44ce5748ce0488c8c5d27e9aa5dacc';
+export const AAA_CONTRACT_ADDRESS = '0x2459a68d1da04291a2fb59da26457a26c7b02b76';
 // Токен Звёзд (Infinity Star ERC-20):
-export const STAR_TOKEN_ADDRESS = '0x7148b8602f4cd15face43fba6b149e3797e6dc3e';
+export const STAR_TOKEN_ADDRESS = '0x91d8e6749bf9018545fc7ef80c30306611c87033';
 
 export const DEFAULT_RPC_URL = 'https://testnet-rpc.monad.xyz';
 export const getActiveRpcUrl = (): string => {
@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2710261358';
+export const CLIENT_VERSION = '2710261645';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -49,7 +49,14 @@ export const MAIN_ABI = parseAbi([
   'function totalGenerations() view returns (uint256)',
   'function getAllGenerations() view returns (address[])',
   'function readSector(bytes32 sector) view returns (bytes32)',
-  'function readSectorBatch(bytes32[] sectors) view returns (bytes32[])'
+  'function readSectorBatch(bytes32[] sectors) view returns (bytes32[])',
+  'function totalPortals() view returns (uint256)',
+  'function getPortal(uint256 id) view returns ((uint256 id, address parentContract, address targetContract, address founder, bytes32 founderName, bytes32 worldName, uint256 createdAt))',
+  'function getPortalsSequential(uint256 offset, uint256 count) view returns ((uint256 id, address parentContract, address targetContract, address founder, bytes32 founderName, bytes32 worldName, uint256 createdAt)[])',
+  'function getPortalId(address targetContract) view returns (uint256)',
+  'function getPortalByFounder(address founder) view returns (uint256)',
+  'function transferPortalOwnership(uint256 portalId, address newOwner)',
+  'function destroyPortal(uint256 portalId)'
 ]);
 
 // ============================================================================
@@ -78,7 +85,11 @@ export const AAA_ABI = parseAbi([
   'function discoverCellGasless(address player, int32 targetX, int32 targetY, bytes sig)',
   'function discoverCellsBatchGasless(address player, int32[] xs, int32[] ys, bytes sig)',
   'function authorizeSessionGasless(address player, address sessionKey, uint256 expiry, bytes sig)',
-  'function revokeSessionGasless(address player, bytes sig)'
+  'function revokeSessionGasless(address player, bytes sig)',
+  // Управление порталами Мультивселенной
+  'function createPortalDirect(address targetContract, bytes32 founderName, bytes32 worldName, int32 portalX, int32 portalY) returns (uint256)',
+  'function transferPortalDirect(uint256 portalId, address newOwner)',
+  'function destroyPortalDirect(uint256 portalId, int32 portalX, int32 portalY)'
 ]);
 
 

@@ -23,6 +23,7 @@ interface IInfinityVerse_Main_Gb_1 {
     function totalPlayers() external view returns (uint256);
     function createPortal(
         address targetContract,
+        address founder,
         bytes32 founderName,
         bytes32 worldName
     ) external returns (uint256);
@@ -38,6 +39,8 @@ interface IInfinityVerse_Main_Gb_1 {
     );
     function getPortalId(address targetContract) external view returns (uint256);
     function getPortalByFounder(address founder) external view returns (uint256);
+    function transferPortalOwnership(uint256 portalId, address newOwner) external;
+    function destroyPortal(uint256 portalId) external;
 }
 
 /**
@@ -109,6 +112,8 @@ contract InfinityVerse_Gb_AAA_1 {
     error InvalidCoordinates();
     error InvalidBatchLength();
     error ArrayLengthMismatch();
+    error SacredZoneProtected();
+    error CellNotPortal();
 
     // Структура клетки (для фронтенда)
     struct Cell {
@@ -135,6 +140,12 @@ contract InfinityVerse_Gb_AAA_1 {
         int32 indexed x,
         int32 indexed y,
         uint256 portalId
+    );
+    event PortalDirectDestroyed(
+        address indexed player,
+        uint256 indexed portalId,
+        int32 x,
+        int32 y
     );
 
     modifier onlySuperAdmin() {
@@ -424,6 +435,11 @@ contract InfinityVerse_Gb_AAA_1 {
         int32 portalX,
         int32 portalY
     ) external returns (uint256 portalId) {
+        // Защита священной зоны 5x5 вокруг Обелиска (0, 0)
+        if (portalX >= -2 && portalX <= 2 && portalY >= -2 && portalY <= 2) {
+            revert SacredZoneProtected();
+        }
+
         // 1. Проверяем, что игрок уже родился/существует в этом мире
         bytes32 posKey = getPlayerPosKey(msg.sender);
         bytes32 currentPos = mainContract.readSector(posKey);
@@ -434,7 +450,7 @@ contract InfinityVerse_Gb_AAA_1 {
         if (!exists) revert PlayerNotSpawned();
 
         // 2. Регистрируем портал в священном хранилище Main_Gb_1 (проверка 1 на человека, O(1) слоты)
-        portalId = mainContract.createPortal(targetContract, founderName, worldName);
+        portalId = mainContract.createPortal(targetContract, msg.sender, founderName, worldName);
 
         // 3. Материализуем Врата на указанной клетке карты
         bytes32 cellKey = getCellKey(portalX, portalY);
@@ -455,6 +471,60 @@ contract InfinityVerse_Gb_AAA_1 {
             )
         }
         mainContract.writeSector(cellKey, portalCell);
+    }
+
+    /**
+     * @notice Передача прав владения порталом другому игроку через игровой модуль.
+     * @param portalId ID существующего портала
+     * @param newOwner Новый адрес владельца портала
+     */
+    function transferPortalDirect(
+        uint256 portalId,
+        address newOwner
+    ) external {
+        (, , , address founder, , , ) = mainContract.getPortal(portalId);
+        if (msg.sender != founder) revert Unauthorized();
+        mainContract.transferPortalOwnership(portalId, newOwner);
+    }
+
+    /**
+     * @notice Уничтожение портала с одновременным сносом тайла Врат на карте!
+     * @param portalId ID уничтожаемого портала
+     * @param portalX Координата X тайла портала на карте
+     * @param portalY Координата Y тайла портала на карте
+     */
+    function destroyPortalDirect(
+        uint256 portalId,
+        int32 portalX,
+        int32 portalY
+    ) external {
+        // 0. Проверяем, что вызывающий - владелец портала
+        (, , , address founder, , , ) = mainContract.getPortal(portalId);
+        if (msg.sender != founder) revert Unauthorized();
+
+        // 1. Уничтожаем портал в священном хранилище Main_Gb_1
+        mainContract.destroyPortal(portalId);
+
+        // 2. Проверяем тайл на карте и сносим объект Врат
+        bytes32 cellKey = getCellKey(portalX, portalY);
+        bytes32 currentCell = mainContract.readSector(cellKey);
+        uint8 obj;
+        uint8 terr;
+        assembly {
+            terr := byte(0, currentCell)
+            obj := byte(1, currentCell)
+        }
+        if (obj != OBJECT_PORTAL) revert CellNotPortal();
+
+        uint8 terrainType = terr == 0 ? 1 : terr;
+        bytes32 clearedCell;
+        assembly {
+            // [terrainType: 1B][OBJECT_EMPTY(0): 1B][state: 0][reserved: 0]
+            clearedCell := shl(248, terrainType)
+        }
+        mainContract.writeSector(cellKey, clearedCell);
+
+        emit PortalDirectDestroyed(msg.sender, portalId, portalX, portalY);
     }
 
     // ========================================================================
