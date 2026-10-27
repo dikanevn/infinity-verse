@@ -151,7 +151,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           padding: '6px 12px'
         }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            {isMetaMaskMode ? '🦊' : isDirectSignerMode ? '⚡' : '🌐'}{' '}
+            
             <span style={{ color: '#94a3b8', fontSize: '0.62rem', fontFamily: 'monospace' }}>
               {connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}
             </span>
@@ -178,7 +178,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                  <span>OK</span>
+                  <span>скопировано</span>
                 </>
               ) : (
                 <>
