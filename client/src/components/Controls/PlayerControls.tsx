@@ -96,7 +96,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             : isMetaMaskMode
             ? '🦊 РОДИТЬСЯ (METAMASK DIRECT)'
             : isDirectSignerMode
-            ? '⚡ РОДИТЬСЯ (RAM DIRECT)'
+            ? '⚡ РОДИТЬСЯ (DIRECT)'
             : '✨ РОДИТЬСЯ (GOOGLE GASLESS)'}
         </button>
       ) : (
@@ -118,15 +118,17 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           </span>
 
           {/* Режим кошелька */}
-          <span style={{
-            fontSize: '0.58rem',
-            padding: '2px 5px',
-            backgroundColor: isMetaMaskMode ? '#78350f' : isDirectSignerMode ? '#0c4a6e' : '#581c87',
-            color: '#f8fafc',
-            fontWeight: 700
-          }}>
-            {isMetaMaskMode ? 'METAMASK' : isDirectSignerMode ? 'RAM' : 'GOOGLE'}
-          </span>
+          {isMetaMaskMode && (
+            <span style={{
+              fontSize: '0.58rem',
+              padding: '2px 5px',
+              backgroundColor: '#78350f',
+              color: '#f8fafc',
+              fontWeight: 700
+            }}>
+              METAMASK
+            </span>
+          )}
 
           {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
           {(() => {

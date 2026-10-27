@@ -7,7 +7,6 @@ import { usePlayerState } from './hooks/usePlayerState';
 import { TopBar } from './components/Header/TopBar';
 import { WorldGrid } from './components/Grid/WorldGrid';
 import { PlayerControls } from './components/Controls/PlayerControls';
-import { CellInspector } from './components/Inspector/CellInspector';
 import { WalletModal } from './components/Modals/WalletModal';
 import { PkModal } from './components/Modals/PkModal';
 import { NetworkModal } from './components/Modals/NetworkModal';
@@ -286,7 +285,6 @@ function App() {
         />
 
         {/* 64-битный инспектор выбранной клетки */}
-        <CellInspector curCell={curCell} />
         {/* Кнопка Врат Мультивселенной */}
         {connectedAddress && curCell && (
           <div style={{ margin: '4px auto 8px auto', display: 'flex', gap: '8px' }}>
