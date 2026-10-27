@@ -146,7 +146,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   // Изменение зума через бегунок со строгим центрированием на Обелиске (0, 0)
   const handleSliderZoom = (sliderValue: number) => {
-    // sliderValue: от -10 (граница мира 10^18) до +5 (микро-зум 10^-10)
+    // sliderValue: от -8 (граница мира 10^18) до +5 (микро-зум 10^-10)
     // scale = 0.85 * 10^(sliderValue)
     const newScale = 0.85 * Math.pow(10, sliderValue);
     setScale(newScale);
@@ -158,7 +158,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   };
 
   // Текущее значение слайдера: log10(scale / 0.85)
-  const currentSliderValue = Math.min(5, Math.max(-10, Math.round(Math.log10(scale / 0.85) * 10) / 10));
+  const currentSliderValue = Math.min(5, Math.max(-8, Math.round(Math.log10(scale / 0.85) * 10) / 10));
 
   // Клик по бесконечному туману (контейнеру) пересчитывает координаты и переносит фокус
   const handleBackgroundClick = (e: React.MouseEvent) => {
@@ -449,7 +449,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           +
         </button>
 
-        {/* Вертикальный бегунок масштаба от -10 (граница мира 10^18) до +5 (микромир 10^-10) */}
+        {/* Вертикальный бегунок масштаба от -8 (граница мира 10^18) до +5 (микромир 10^-10) */}
         <div style={{
           position: 'relative',
           display: 'flex',
@@ -460,7 +460,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         }}>
           <input
             type="range"
-            min="-10"
+            min="-8"
             max="5"
             step="0.1"
             value={currentSliderValue}
