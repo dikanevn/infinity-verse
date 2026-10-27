@@ -490,7 +490,8 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          transform: `translate(${position.x}px, ${position.y}px) scale(${Math.min(8, Math.max(0.01, scale))})`,
+          display: scale > 8 || scale < 0.02 ? 'none' : 'block',
           transformOrigin: 'center center',
           transition: isInteracting ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           position: 'relative',
@@ -499,7 +500,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         }}
       >
         
-        {(scale >= 0.02 ? coordsToRender : []).map((coord) => {
+        {(scale >= 0.02 && scale <= 8 ? coordsToRender : []).map((coord) => {
           const cell = cells.find(c => c.x === coord.x && c.y === coord.y);
           const isSelected = selectedCoord.x === coord.x && selectedCoord.y === coord.y;
 
@@ -530,7 +531,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         })}
 
         {/* Червь из Дюны (Шаи-Хулуд) на месте игрока с плавной кинематикой и анимацией атаки */}
-        {player?.exists && (
+        {player?.exists && scale <= 8 && (
           <Sandworm
             x={player.x}
             y={player.y}
