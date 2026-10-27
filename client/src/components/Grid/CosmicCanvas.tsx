@@ -1,4 +1,12 @@
 import React, { useRef, useEffect } from 'react';
+import type { CellData, PlayerData } from '../../types';
+import {
+  SAND_PIXELS_8X8,
+  STAR_PIXELS_8X8,
+  OBELISK_PIXELS_8X8,
+  PORTAL_PIXELS_8X8,
+  type PixelMatrix
+} from '../../config/pixelTextures';
 
 interface CosmicCanvasProps {
   scale: number;
@@ -6,6 +14,9 @@ interface CosmicCanvasProps {
   cellPitch: number;
   width: number;
   height: number;
+  cells: CellData[];
+  player: PlayerData | null;
+  selectedCoord: { x: number; y: number };
 }
 
 export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
@@ -13,7 +24,10 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
   position,
   cellPitch,
   width,
-  height
+  height,
+  cells,
+  player,
+  selectedCoord
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -24,9 +38,11 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Включаем идеальный пиксельный рендеринг без размытия
+    ctx.imageSmoothingEnabled = false;
+
     let startTime = performance.now();
 
-    // 1. ВНЕШНИЕ МАКРО-ПОРЯДКИ (10^2 .. 10^18)
     const macroOrders = [
       { exp: 1, side: 10, label: '10^2 (100 кл)' },
       { exp: 2, side: 100, label: '10^4 (10 000 кл)' },
@@ -39,6 +55,36 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       { exp: 9, side: 1000000000, label: '10^18 (Граница мира)' }
     ];
 
+    const drawMatrix = (
+      matrix: PixelMatrix,
+      startX: number,
+      startY: number,
+      cellSizePx: number
+    ) => {
+      const subPx = cellSizePx / matrix.width;
+      for (let r = 0; r < matrix.height; r++) {
+        for (let c = 0; c < matrix.width; c++) {
+          const colorIdx = matrix.data[r * matrix.width + c];
+          const color = matrix.palette[colorIdx];
+          if (color === 'transparent') continue;
+
+          const pxLeft = startX + c * subPx;
+          const pxTop = startY + r * subPx;
+
+          // Рисуем чистый цветной пиксель
+          ctx.fillStyle = color;
+          ctx.fillRect(pxLeft, pxTop, subPx, subPx);
+
+          // При супер-приближении (когда пиксель > 16px) показываем суб-сетку пикселей
+          if (subPx >= 16) {
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(pxLeft, pxTop, subPx, subPx);
+          }
+        }
+      }
+    };
+
     const render = (time: number) => {
       ctx.clearRect(0, 0, width, height);
 
@@ -48,7 +94,65 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       const t = (time - startTime) / 1000;
       const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
 
-      // 1. ВНЕШНИЕ РАМКИ ПРИ ОТДАЛЕНИИ (scale < 1.5)
+      // ============================================================
+      // 1. ПИКСЕЛЬНЫЙ РЕНДЕР КЛЕТОК МИРА (ЧЕСТНЫЕ ДИСКРЕТНЫЕ ПИКСЕЛИ)
+      // ============================================================
+      const cellSizePx = 62 * scale;
+
+      // Если клетки видны на экране
+      if (cellSizePx >= 1.5) {
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells[i];
+          const worldLeft = cell.x * cellPitch - 31;
+          const worldTop = -cell.y * cellPitch - 31;
+
+          const screenLeft = originX + worldLeft * scale;
+          const screenTop = originY + worldTop * scale;
+
+          // Culling: отсекаем то, что за экраном
+          if (
+            screenLeft + cellSizePx < 0 ||
+            screenLeft > width ||
+            screenTop + cellSizePx < 0 ||
+            screenTop > height
+          ) {
+            continue;
+          }
+
+          // А. Отрисовка ландшафта (Terrain)
+          if (cell.terrain === 1) {
+            // Песок: 8x8 пиксельная матрица
+            drawMatrix(SAND_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+          } else if (cell.terrain === 0) {
+            // Хаос: темная космическая клетка
+            ctx.fillStyle = '#06080f';
+            ctx.fillRect(screenLeft, screenTop, cellSizePx, cellSizePx);
+          } else {
+            ctx.fillStyle = '#14291e';
+            ctx.fillRect(screenLeft, screenTop, cellSizePx, cellSizePx);
+          }
+
+          // Б. Отрисовка объектов (Objects)
+          if (cell.object === 1 || cell.object === 9) {
+            drawMatrix(OBELISK_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+          } else if (cell.object === 3) {
+            drawMatrix(STAR_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+          } else if (cell.object === 4) {
+            drawMatrix(PORTAL_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+          }
+
+          // В. Граница выбранной клетки
+          if (selectedCoord.x === cell.x && selectedCoord.y === cell.y) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = Math.min(4, Math.max(1.5, 2 * scale));
+            ctx.strokeRect(screenLeft, screenTop, cellSizePx, cellSizePx);
+          }
+        }
+      }
+
+      // ============================================================
+      // 2. ВНЕШНИЕ РАМКИ ПРИ ОТДАЛЕНИИ (10^2 .. 10^18)
+      // ============================================================
       for (let i = 0; i < macroOrders.length; i++) {
         const item = macroOrders[i];
         const isOuterMost = i === macroOrders.length - 1; // 10^18
@@ -110,19 +214,16 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         ctx.restore();
       }
 
-      // 2. ВНУТРЕННИЕ МИКРО-РАМКИ ВГЛУБЬ КЛЕТКИ ПРИ ПРИБЛИЖЕНИИ
-      // При scale > 1 размер центральной клетки на экране = 62 * scale пикселей.
-      // Порядок величины центрального экрана: centerExp = Math.floor(Math.log10(scale))
+      // ============================================================
+      // 3. БЕСКОНЕЧНЫЕ МИКРО-РАМКИ ПРИ ПРИБЛИЖЕНИИ (ВГЛУБЬ ПИКСЕЛЯ)
+      // ============================================================
       if (scale > 1.2) {
         const curExp = Math.floor(Math.log10(scale));
-        // Рисуем рамки в окне видимости экрана: от curExp - 2 до curExp + 3
         const minExp = Math.max(1, curExp - 2);
         const maxExp = curExp + 3;
 
         for (let exp = minExp; exp <= maxExp; exp++) {
           const power = exp * 2;
-          // Экранный размер рамки порядка 10^-power:
-          // При scale = 10^exp рамка 10^-power занимает базовые 62px
           const screenWidth = 62 * Math.pow(10, -exp) * scale;
 
           if (screenWidth < 3 || screenWidth > Math.max(width, height) * 6) continue;
@@ -157,7 +258,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [scale, position, cellPitch, width, height]);
+  }, [scale, position, cellPitch, width, height, cells, player, selectedCoord]);
 
   return (
     <canvas
@@ -171,7 +272,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         width: `${width}px`,
         height: `${height}px`,
         pointerEvents: 'none',
-        zIndex: 5
+        zIndex: 5,
+        imageRendering: 'pixelated'
       }}
     />
   );

@@ -484,6 +484,9 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         cellPitch={CELL_PITCH}
         width={containerDimensions.width}
         height={containerDimensions.height}
+        cells={cells}
+        player={player}
+        selectedCoord={selectedCoord}
       />
 
       {/* Интерактивный слой мира (отрисовывает активные клетки на абсолютных координатах мира) */}
