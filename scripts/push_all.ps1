@@ -74,9 +74,9 @@ if ($mainStatus) {
     if ($ahead -and [int]$ahead -gt 0) {
         Write-Host "--- Pushing unpushed commits in main ($ahead ahead) ---" -ForegroundColor Cyan
         if ($token) {
-            git push "https://${token}@github.com/dikanevn/infinity-verse.git" main
+            git push "https://${token}@github.com/dikanevn/infinity-verse.git" HEAD:refs/heads/main
         } else {
-            git push origin main
+            git push origin HEAD:refs/heads/main
         }
     } else {
         Write-Host "--- Main repository is up to date ---" -ForegroundColor Green
