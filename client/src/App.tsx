@@ -345,7 +345,9 @@ function App() {
           gap: '12px',
           padding: '2px 0'
         }}>
-          <div>Контракт: <span style={{ color: '#c084fc', fontWeight: 700 }}>v{contractVersion}</span></div>
+          <div>Main: <span style={{ color: '#c084fc', fontWeight: 700 }}>v0.0.0.0.1-GB-MAIN-1</span></div>
+          <div style={{ color: '#334155' }}>|</div>
+          <div>AAA: <span style={{ color: '#a855f7', fontWeight: 700 }}>v{contractVersion}</span></div>
           <div style={{ color: '#334155' }}>|</div>
           <div>Клиент: <span style={{ color: '#38bdf8', fontWeight: 700 }}>v{CLIENT_VERSION}</span></div>
         </div>
