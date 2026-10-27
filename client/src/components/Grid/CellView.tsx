@@ -20,6 +20,8 @@ export const CellView: React.FC<CellViewProps> = ({
   onSelect,
   onQuickMove
 }) => {
+  const [showTooltip, setShowTooltip] = React.useState<boolean>(false);
+
   // Туман войны — только если клетка вообще не прочитана из блокчейна (!cell)
   const isFog = !cell;
 
@@ -57,11 +59,21 @@ export const CellView: React.FC<CellViewProps> = ({
     }
   };
 
+  const handleClick = () => {
+    onSelect(coord);
+    if (isChaos) {
+      setShowTooltip(prev => !prev);
+    }
+  };
+
   return (
     <button
-      onClick={() => onSelect(coord)}
+      onClick={handleClick}
+      onMouseEnter={() => { if (isChaos) setShowTooltip(true); }}
+      onMouseLeave={() => { if (isChaos) setShowTooltip(false); }}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
+      title={isChaos ? 'Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.' : undefined}
       style={{
         boxSizing: 'border-box',
         width: '62px',
@@ -87,9 +99,58 @@ export const CellView: React.FC<CellViewProps> = ({
           : isFog 
           ? 'inset 0 0 16px rgba(15, 23, 42, 0.9), 0 0 8px rgba(100, 116, 139, 0.2)' 
           : 'none',
-        overflow: 'hidden'
+        overflow: 'visible'
       }}
     >
+      {/* Всплывающая подсказка про наблюдателя для Квантового Хаоса */}
+      {isChaos && (showTooltip || isSelected) && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowTooltip(false);
+          }}
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%) translateY(-6px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.96)',
+            color: '#e2e8f0',
+            border: '1px solid #8b5cf6',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.8), 0 0 10px rgba(139, 92, 246, 0.4)',
+            borderRadius: '4px',
+            padding: '6px 8px',
+            fontSize: '0.62rem',
+            lineHeight: 1.35,
+            width: '180px',
+            textAlign: 'center',
+            zIndex: 99,
+            pointerEvents: 'auto',
+            backdropFilter: 'blur(8px)',
+            cursor: 'default'
+          }}
+        >
+          <div style={{ color: '#c084fc', fontWeight: 700, marginBottom: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+            <span>🌀</span>
+            <span>Квантовый хаос</span>
+          </div>
+          <div style={{ color: '#94a3b8' }}>
+            Для декогеренции необходим наблюдатель поблизости.
+          </div>
+          {/* Треугольная стрелка внизу подсказки */}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '5px solid transparent',
+            borderRight: '5px solid transparent',
+            borderTop: '5px solid #8b5cf6'
+          }} />
+        </div>
+      )}
       {/* Слой пелены плотного полупрозрачного тумана над неизведанной клеткой */}
       {isFog && (
         <div
