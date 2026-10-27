@@ -26,6 +26,9 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   onQuickMove
 }) => {
   const [scale, setScale] = useState<number>(0.85);
+  const [microDepth, setMicroDepth] = useState<number>(0);
+  const microDepthRef = useRef<number>(0);
+  microDepthRef.current = microDepth;
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isInteracting, setIsInteracting] = useState<boolean>(false);
 
@@ -138,20 +141,31 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   // Масштабирование по кнопкам относительно центра экрана
   const handleZoomIn = () => {
     const curScale = scaleRef.current;
-    const newScale = Math.min(1e100, curScale * 1.5);
-    const scaleMultiplier = newScale / curScale;
-    setScale(newScale);
-    setPosition(prev => {
-      const nextPos = {
-        x: prev.x * scaleMultiplier,
-        y: prev.y * scaleMultiplier
-      };
-      positionRef.current = nextPos;
-      return nextPos;
-    });
+    if (curScale < 5.0) {
+      const newScale = Math.min(5.0, curScale * 1.5);
+      const scaleMultiplier = newScale / curScale;
+      setScale(newScale);
+      setPosition(prev => {
+        const nextPos = {
+          x: prev.x * scaleMultiplier,
+          y: prev.y * scaleMultiplier
+        };
+        positionRef.current = nextPos;
+        return nextPos;
+      });
+    } else {
+      // Бесконечное логарифмическое погружение вглубь клетки
+      const step = microDepthRef.current < 20 ? 0.35 : (microDepthRef.current < 100 ? 1.0 : (microDepthRef.current < 1000 ? 5.0 : 25.0));
+      setMicroDepth(prev => prev + step);
+    }
   };
 
   const handleZoomOut = () => {
+    if (microDepthRef.current > 0) {
+      const step = microDepthRef.current < 20 ? 0.35 : (microDepthRef.current < 100 ? 1.0 : (microDepthRef.current < 1000 ? 5.0 : 25.0));
+      setMicroDepth(prev => Math.max(0, prev - step));
+      return;
+    }
     const curScale = scaleRef.current;
     const newScale = Math.max(0.0000000001, curScale * 0.5);
     const scaleMultiplier = newScale / curScale;
@@ -167,6 +181,8 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   };
 
   const handleResetToPlayer = () => {
+    setMicroDepth(0);
+    microDepthRef.current = 0;
     const defaultScale = 0.85;
     setScale(defaultScale);
     let nextPos = { x: 0, y: 0 };
@@ -327,20 +343,37 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-    const curScale = scaleRef.current;
-    const newScale = Math.min(1e100, Math.max(0.0000000001, curScale * zoomFactor));
-
-    const scaleMultiplier = newScale / curScale;
-    setScale(newScale);
-    setPosition(prev => {
-      const nextPos = {
-        x: prev.x * scaleMultiplier,
-        y: prev.y * scaleMultiplier
-      };
-      positionRef.current = nextPos;
-      return nextPos;
-    });
+    if (e.deltaY < 0) {
+      // Zoom IN
+      if (scaleRef.current < 5.0) {
+        const newScale = Math.min(5.0, scaleRef.current * 1.12);
+        const mult = newScale / scaleRef.current;
+        setScale(newScale);
+        setPosition(prev => {
+          const next = { x: prev.x * mult, y: prev.y * mult };
+          positionRef.current = next;
+          return next;
+        });
+      } else {
+        const step = microDepthRef.current < 20 ? 0.2 : (microDepthRef.current < 100 ? 0.8 : (microDepthRef.current < 1000 ? 4.0 : 20.0));
+        setMicroDepth(prev => prev + step);
+      }
+    } else {
+      // Zoom OUT
+      if (microDepthRef.current > 0) {
+        const step = microDepthRef.current < 20 ? 0.2 : (microDepthRef.current < 100 ? 0.8 : (microDepthRef.current < 1000 ? 4.0 : 20.0));
+        setMicroDepth(prev => Math.max(0, prev - step));
+      } else {
+        const newScale = Math.max(0.0000000001, scaleRef.current * 0.89);
+        const mult = newScale / scaleRef.current;
+        setScale(newScale);
+        setPosition(prev => {
+          const next = { x: prev.x * mult, y: prev.y * mult };
+          positionRef.current = next;
+          return next;
+        });
+      }
+    }
   };
 
   return (
@@ -480,6 +513,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
       {/* Легковесный 2D Canvas для космических рамок масштаба */}
       <CosmicCanvas
         scale={scale}
+        microDepth={microDepth}
         position={position}
         cellPitch={CELL_PITCH}
         width={containerDimensions.width}

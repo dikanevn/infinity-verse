@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 
 interface CosmicCanvasProps {
   scale: number;
+  microDepth: number;
   position: { x: number; y: number };
   cellPitch: number;
   width: number;
@@ -10,6 +11,7 @@ interface CosmicCanvasProps {
 
 export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
   scale,
+  microDepth,
   position,
   cellPitch,
   width,
@@ -49,81 +51,88 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
 
       // 1. ОТРИСОВКА ВНЕШНИХ РАМОК (10^2 .. 10^18)
-      for (let i = 0; i < macroOrders.length; i++) {
-        const item = macroOrders[i];
-        const isOuterMost = i === macroOrders.length - 1; // 10^18 Граница мира
-        const radius = Math.floor(item.side / 2);
+      if (microDepth === 0) {
+        for (let i = 0; i < macroOrders.length; i++) {
+          const item = macroOrders[i];
+          const isOuterMost = i === macroOrders.length - 1; // 10^18 Граница мира
+          const radius = Math.floor(item.side / 2);
 
-        const worldLeft = -radius * cellPitch - 31;
-        const worldRight = radius * cellPitch + 31;
-        const worldTop = -radius * cellPitch - 31;
-        const worldBottom = radius * cellPitch + 31;
+          const worldLeft = -radius * cellPitch - 31;
+          const worldRight = radius * cellPitch + 31;
+          const worldTop = -radius * cellPitch - 31;
+          const worldBottom = radius * cellPitch + 31;
 
-        const screenLeft = originX + worldLeft * scale;
-        const screenRight = originX + worldRight * scale;
-        const screenTop = originY + worldTop * scale;
-        const screenBottom = originY + worldBottom * scale;
+          const screenLeft = originX + worldLeft * scale;
+          const screenRight = originX + worldRight * scale;
+          const screenTop = originY + worldTop * scale;
+          const screenBottom = originY + worldBottom * scale;
 
-        const screenWidth = screenRight - screenLeft;
-        const screenHeight = screenBottom - screenTop;
+          const screenWidth = screenRight - screenLeft;
+          const screenHeight = screenBottom - screenTop;
 
-        if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
+          if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
 
-        ctx.save();
-        if (isOuterMost) {
-          const grad = ctx.createLinearGradient(
-            screenLeft,
-            screenTop,
-            screenLeft + screenWidth,
-            screenTop + screenHeight
-          );
-          const hueShift = Math.sin(t * 1.5) * 20;
-          grad.addColorStop(0, `hsl(${270 + hueShift}, 100%, ${65 + pulse * 20}%)`);
-          grad.addColorStop(0.35, `hsl(${300 + hueShift}, 100%, ${70 + pulse * 15}%)`);
-          grad.addColorStop(0.7, `hsl(${260 + hueShift}, 100%, ${60 + pulse * 25}%)`);
-          grad.addColorStop(1, `hsl(${285 + hueShift}, 100%, ${75 + pulse * 15}%)`);
+          ctx.save();
+          if (isOuterMost) {
+            const grad = ctx.createLinearGradient(
+              screenLeft,
+              screenTop,
+              screenLeft + screenWidth,
+              screenTop + screenHeight
+            );
+            const hueShift = Math.sin(t * 1.5) * 20;
+            grad.addColorStop(0, `hsl(${270 + hueShift}, 100%, ${65 + pulse * 20}%)`);
+            grad.addColorStop(0.35, `hsl(${300 + hueShift}, 100%, ${70 + pulse * 15}%)`);
+            grad.addColorStop(0.7, `hsl(${260 + hueShift}, 100%, ${60 + pulse * 25}%)`);
+            grad.addColorStop(1, `hsl(${285 + hueShift}, 100%, ${75 + pulse * 15}%)`);
 
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = 2.5 + pulse * 1.5;
-          ctx.shadowColor = 'rgba(192, 132, 252, 0.9)';
-          ctx.shadowBlur = 12 + pulse * 10;
-          ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 2.5 + pulse * 1.5;
+            ctx.shadowColor = 'rgba(192, 132, 252, 0.9)';
+            ctx.shadowBlur = 12 + pulse * 10;
+            ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
 
-          ctx.fillStyle = '#f5d0fe';
-          ctx.font = 'bold 12px monospace';
-          ctx.shadowColor = '#a855f7';
-          ctx.shadowBlur = 8;
-          ctx.fillText(item.label, screenLeft + 8, screenTop + 16);
-        } else {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-          ctx.lineWidth = 1.5;
-          ctx.shadowColor = '#000000';
-          ctx.shadowBlur = 3;
-          ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
+            ctx.fillStyle = '#f5d0fe';
+            ctx.font = 'bold 12px monospace';
+            ctx.shadowColor = '#a855f7';
+            ctx.shadowBlur = 8;
+            ctx.fillText(item.label, screenLeft + 8, screenTop + 16);
+          } else {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = '#000000';
+            ctx.shadowBlur = 3;
+            ctx.strokeRect(screenLeft, screenTop, screenWidth, screenHeight);
 
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 11px monospace';
-          ctx.shadowColor = '#000000';
-          ctx.shadowBlur = 4;
-          ctx.fillText(item.label, screenLeft + 6, screenTop + 14);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px monospace';
+            ctx.shadowColor = '#000000';
+            ctx.shadowBlur = 4;
+            ctx.fillText(item.label, screenLeft + 6, screenTop + 14);
+          }
+          ctx.restore();
         }
-        ctx.restore();
       }
 
-      // 2. ДИНАМИЧЕСКИЙ БЕСКОНЕЧНЫЙ МИКРО-ЗУМ (ПОЛНОСТЬЮ БЕЗ ОГРАНИЧЕНИЙ)
-      // Находим текущий порядок масштаба на экране через Math.log10
-      // Размер клетки 62px * scale. Когда scale огромен, мы находим диапазон видимых порядков:
-      if (scale > 1) {
-        const centerOrder = Math.floor(Math.log10(scale * 62 / 100)); // порядок рамки размером ~100px
-        const minExp = Math.max(1, centerOrder - 3);
-        const maxExp = centerOrder + 3;
+      // 2. БЕСКОНЕЧНЫЙ ЛОГАРИФМИЧЕСКИЙ МИКРО-ЗУМ (ХОТЬ ДО 10^-1000000000)
+      // microDepth = 0..бесконечность.
+      // Эффективный порядок масштаба: effectiveOrder = microDepth
+      const effectiveOrder = microDepth;
+
+      if (effectiveOrder > 0 || scale >= 2.0) {
+        // Базовый порядок в центре экрана
+        const centerExp = Math.floor(effectiveOrder);
+        const minExp = Math.max(1, centerExp - 2);
+        const maxExp = centerExp + 4;
 
         for (let exp = minExp; exp <= maxExp; exp++) {
           const power = exp * 2;
-          const fraction = Math.pow(10, -exp);
-          const screenWidth = 62 * fraction * scale;
+          // Относительная экспонента размера рамки на экране
+          // Когда effectiveOrder == exp, рамка имеет размер базового окна ~120px
+          const expDiff = effectiveOrder - exp; // от -3 до +3
+          const screenWidth = 120 * Math.pow(10, expDiff);
 
-          if (screenWidth < 3 || screenWidth > Math.max(width, height) * 8) continue;
+          if (screenWidth < 3 || screenWidth > Math.max(width, height) * 6) continue;
 
           const half = screenWidth / 2;
           const screenLeft = originX - half;
@@ -140,7 +149,10 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           ctx.font = 'bold 11px monospace';
           ctx.shadowColor = '#000000';
           ctx.shadowBlur = 4;
-          ctx.fillText(`10^-${power}`, screenLeft + 6, screenTop + 14);
+
+          // Красивое форматирование сверхбольших чисел: 10^-300, 10^-1 000 000, 10^-1 млрд
+          const formattedPower = power >= 1e6 ? (power / 1e6).toLocaleString() + ' млн' : power.toLocaleString();
+          ctx.fillText(`10^-${formattedPower}`, screenLeft + 6, screenTop + 14);
           ctx.restore();
         }
       }
@@ -155,7 +167,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [scale, position, cellPitch, width, height]);
+  }, [scale, microDepth, position, cellPitch, width, height]);
 
   return (
     <canvas
