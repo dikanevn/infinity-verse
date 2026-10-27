@@ -35,9 +35,41 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   const handleCopyAddress = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!connectedAddress) return;
-    navigator.clipboard.writeText(connectedAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(connectedAddress)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(() => {
+          fallbackCopy(connectedAddress);
+        });
+      return;
+    }
+    fallbackCopy(connectedAddress);
+  };
+
+  const fallbackCopy = (text: string) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (successful) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error('Ошибка копирования адреса:', err);
+    }
   };
   return (
     <div style={{
@@ -125,21 +157,38 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             </span>
             <button
               onClick={handleCopyAddress}
-              title={copied ? "Скопировано!" : "Скопировать полный адрес"}
+              title={copied ? "Скопировано в буфер!" : "Скопировать полный адрес"}
               style={{
-                background: 'transparent',
-                border: 'none',
+                background: copied ? 'rgba(34, 197, 94, 0.2)' : 'rgba(51, 65, 85, 0.5)',
+                border: `1px solid ${copied ? '#22c55e' : '#475569'}`,
+                borderRadius: '3px',
                 cursor: 'pointer',
-                padding: '1px 3px',
-                fontSize: '0.75rem',
-                lineHeight: 1,
-                color: copied ? '#4ade80' : '#64748b',
+                padding: '1px 5px',
+                fontSize: '0.62rem',
+                lineHeight: 1.2,
+                color: copied ? '#4ade80' : '#cbd5e1',
                 display: 'inline-flex',
                 alignItems: 'center',
-                transition: 'color 0.15s'
+                gap: '3px',
+                transition: 'all 0.15s'
               }}
             >
-              {copied ? '✓' : '📋'}
+              {copied ? (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>OK</span>
+                </>
+              ) : (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>копия</span>
+                </>
+              )}
             </button>
             : <b>({player.x}, {player.y})</b>
           </span>
