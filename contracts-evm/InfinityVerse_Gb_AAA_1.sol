@@ -52,6 +52,7 @@ contract InfinityVerse_Gb_AAA_1 {
     uint8 public constant OBJECT_OBELISK = 1;
     uint8 public constant OBJECT_WALL    = 2;
     uint8 public constant OBJECT_STAR    = 3; // Упавшая Звезда
+    uint8 public constant OBJECT_PORTAL  = 4; // Врата во вложенную вселенную
 
     // Базовая награда за подобранную звезду (1 токен STAR = 1e18 wei)
     uint256 public starRewardAmount = 1 ether;
@@ -88,6 +89,7 @@ contract InfinityVerse_Gb_AAA_1 {
 
     event StarCollected(address indexed player, int32 x, int32 y, uint256 reward);
     event StarDropped(int32 indexed x, int32 indexed y, uint8 weight);
+    event PortalEntered(address indexed player, int32 indexed x, int32 indexed y, uint256 portalId);
 
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
@@ -483,6 +485,15 @@ contract InfinityVerse_Gb_AAA_1 {
         if (objectType == OBJECT_OBELISK) revert ObstacleObelisk();
         if (objectType == OBJECT_WALL) revert ObstacleWall();
 
+        // Если наступили на Врата/Портал во вложенный мир — считываем portalId и эмитим событие входа
+        if (objectType == OBJECT_PORTAL) {
+            uint16 portalId;
+            assembly {
+                portalId := shr(240, shl(16, cellVal))
+            }
+            emit PortalEntered(player, targetX, targetY, uint256(portalId));
+        }
+
         // Если наступили на Звезду — считываем её вес (state: байт 2) и минтим weight * 1 ether токенов
         if (objectType == OBJECT_STAR) {
             uint8 starWeight;
@@ -511,7 +522,7 @@ contract InfinityVerse_Gb_AAA_1 {
      * - Выбирает случайное смещение dx, dy в радиусе [-2..2] в зоне 5x5 вокруг целевой позиции игрока
      * - Если звезда падает прямо червю на голову (dx == 0 && dy == 0), он сразу её съедает и получает токены!
      * - Случайный вес звезды: 1 или 2 токена
-     * - Не перезаписывает препятствия (обелиски/стены)
+     * - Не перезаписывает препятствия (обелиски/стены) и порталы
      */
     function _maybeDropStar(address player, int32 targetX, int32 targetY) internal {
         bytes32 rand = keccak256(abi.encodePacked(block.prevrandao, block.timestamp, player, targetX, targetY));
@@ -549,8 +560,8 @@ contract InfinityVerse_Gb_AAA_1 {
             obj  := byte(1, cellVal)
         }
 
-        // Не падаем на обелиски (1) или стены (2)
-        if (obj == OBJECT_OBELISK || obj == OBJECT_WALL) return;
+        // Не падаем на обелиски (1), стены (2) и порталы (4)
+        if (obj == OBJECT_OBELISK || obj == OBJECT_WALL || obj == OBJECT_PORTAL) return;
 
         // Если клетки еще нет (terr == 0), генерируем песок (1)
         uint8 terrainType = terr == 0 ? 1 : terr;
