@@ -144,6 +144,22 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     onCenterPlayer();
   };
 
+  // Изменение зума через бегунок со строгим центрированием на Обелиске (0, 0)
+  const handleSliderZoom = (sliderValue: number) => {
+    // sliderValue: от -9 (граница мира 10^18) до +5 (микро-зум 10^-10)
+    // scale = 0.85 * 10^(sliderValue)
+    const newScale = 0.85 * Math.pow(10, sliderValue);
+    setScale(newScale);
+    scaleRef.current = newScale;
+    // Центрирование мира строго на Обелиск (0, 0)
+    const centerPos = { x: 0, y: 0 };
+    setPosition(centerPos);
+    positionRef.current = centerPos;
+  };
+
+  // Текущее значение слайдера: log10(scale / 0.85)
+  const currentSliderValue = Math.min(5, Math.max(-9, Math.round(Math.log10(scale / 0.85) * 10) / 10));
+
   // Клик по бесконечному туману (контейнеру) пересчитывает координаты и переносит фокус
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if (hasMovedRef.current || !containerRef.current) return;
@@ -371,7 +387,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         </div>
       </div>
 
-      {/* Кнопки зума (+, -) и центрирования (🎯) */}
+      {/* Кнопки зума (+, -), бегунок масштабирования и центрирования (🎯) */}
       <div style={{
         position: 'absolute',
         top: '8px',
@@ -379,19 +395,26 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         zIndex: 10,
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px'
+        alignItems: 'center',
+        gap: '6px',
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        padding: '6px 4px',
+        borderRadius: '8px',
+        border: '1px solid rgba(71, 85, 105, 0.7)',
+        backdropFilter: 'blur(4px)'
       }}>
         <button
           onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
           title="Приблизить"
           style={{
-            width: '32px',
-            height: '32px',
+            width: '28px',
+            height: '28px',
             backgroundColor: '#1e293b',
             border: '1px solid #475569',
+            borderRadius: '4px',
             color: '#f8fafc',
             fontWeight: 800,
-            fontSize: '1.1rem',
+            fontSize: '1rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -400,17 +423,50 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         >
           +
         </button>
+
+        {/* Вертикальный бегунок масштаба от -9 (граница мира 10^18) до +5 (микромир 10^-10) */}
+        <div style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '4px 0',
+          height: '110px'
+        }}>
+          <input
+            type="range"
+            min="-9"
+            max="5"
+            step="0.1"
+            value={currentSliderValue}
+            onChange={(e) => {
+              e.stopPropagation();
+              handleSliderZoom(parseFloat(e.target.value));
+            }}
+            title="Бегунок масштаба: от Границы Мира (10^18) до микромира (10^-10). Центрирует на Обелиск."
+            style={{
+              writingMode: 'vertical-lr',
+              direction: 'rtl',
+              width: '18px',
+              height: '100px',
+              cursor: 'ns-resize',
+              accentColor: '#a855f7'
+            }}
+          />
+        </div>
+
         <button
           onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
           title="Отдалить"
           style={{
-            width: '32px',
-            height: '32px',
+            width: '28px',
+            height: '28px',
             backgroundColor: '#1e293b',
             border: '1px solid #475569',
+            borderRadius: '4px',
             color: '#f8fafc',
             fontWeight: 800,
-            fontSize: '1.1rem',
+            fontSize: '1rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -419,17 +475,19 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         >
           -
         </button>
+
         <button
           onClick={(e) => { e.stopPropagation(); handleResetToPlayer(); }}
           title="Центрировать на игроке"
           style={{
-            width: '32px',
-            height: '32px',
+            width: '28px',
+            height: '28px',
             backgroundColor: '#1e293b',
             border: '1px solid #8b5cf6',
+            borderRadius: '4px',
             color: '#c084fc',
             fontWeight: 800,
-            fontSize: '0.85rem',
+            fontSize: '0.8rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
