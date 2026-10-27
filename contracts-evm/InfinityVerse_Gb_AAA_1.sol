@@ -3,16 +3,41 @@ pragma solidity 0.8.20;
 
 /**
  * @notice Минимальный интерфейс взаимодействия с постоянным хранилищем InfinityVerse_Main_Gb_1
+ 
+ Этот контракт в отличии от main вообще мало проверялся на логику и безопасность, так как защищенные слоты он не сможет повредить (но это не точно).
+ 
  */
 interface IInfinityVerse_Main_Gb_1 {
     function readSector(bytes32 sector) external view returns (bytes32);
-    function readSectorBatch(bytes32[] calldata sectors) external view returns (bytes32[] memory);
+    function readSectorBatch(
+        bytes32[] calldata sectors
+    ) external view returns (bytes32[] memory);
     function writeSector(bytes32 sector, bytes32 data) external;
-    function writeSectorBatch(bytes32[] calldata sectors, bytes32[] calldata data) external;
+    function writeSectorBatch(
+        bytes32[] calldata sectors,
+        bytes32[] calldata data
+    ) external;
     function registerPlayer(address account) external returns (uint256);
     function getPlayerId(address account) external view returns (uint256);
     function getPlayerAddress(uint256 id) external view returns (address);
     function totalPlayers() external view returns (uint256);
+    function createPortal(
+        address targetContract,
+        bytes32 founderName,
+        bytes32 worldName
+    ) external returns (uint256);
+    function totalPortals() external view returns (uint256);
+    function getPortal(uint256 id) external view returns (
+        uint256 idOut,
+        address parentContract,
+        address targetContract,
+        address founder,
+        bytes32 founderName,
+        bytes32 worldName,
+        uint256 createdAt
+    );
+    function getPortalId(address targetContract) external view returns (uint256);
+    function getPortalByFounder(address founder) external view returns (uint256);
 }
 
 /**
@@ -20,14 +45,24 @@ interface IInfinityVerse_Main_Gb_1 {
  */
 interface IInfinityVerse_Ga_TTT {
     function mint(address to, uint256 amount) external returns (bool);
-    function mintBatch(address[] calldata recipients, uint256[] calldata amounts) external returns (bool);
+    function mintBatch(
+        address[] calldata recipients,
+        uint256[] calldata amounts
+    ) external returns (bool);
     function forceBurn(address from, uint256 amount) external returns (bool);
-    function forceTransfer(address from, address to, uint256 amount) external returns (bool);
+    function forceTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
     function setPaused(bool _paused) external;
     function setFrozenAccount(address target, bool freeze) external;
     function setAllowedMinter(address minter, bool allowed) external;
     function transferSuperAdminDirect(address newAdmin) external;
-    function setNameAndSymbol(string memory _name, string memory _symbol) external;
+    function setNameAndSymbol(
+        string memory _name,
+        string memory _symbol
+    ) external;
 }
 
 /**
@@ -40,19 +75,20 @@ interface IInfinityVerse_Ga_TTT {
 contract InfinityVerse_Gb_AAA_1 {
     string public constant CREATOR = "Nikolai Dikanev (dikanevn)";
     string public constant VERSION = "0.0.0.0.1-GB-AAA-1";
-    string public constant REPOSITORY = "https://github.com/dikanevn/infinity-verse";
+    string public constant REPOSITORY =
+        "https://github.com/dikanevn/infinity-verse";
 
     // Префиксы секторов в Main_Gb_1
     bytes4 private constant PREFIX_CELL = 0x43454c4c; // "CELL"
-    bytes4 private constant PREFIX_POS  = 0x504f535f; // "POS_"
+    bytes4 private constant PREFIX_POS = 0x504f535f; // "POS_"
     bytes4 private constant PREFIX_AUTH = 0x41555448; // "AUTH"
 
     // Игровые идентификаторы объектов
-    uint8 public constant OBJECT_NONE    = 0;
+    uint8 public constant OBJECT_NONE = 0;
     uint8 public constant OBJECT_OBELISK = 1;
-    uint8 public constant OBJECT_WALL    = 2;
-    uint8 public constant OBJECT_STAR    = 3; // Упавшая Звезда
-    uint8 public constant OBJECT_PORTAL  = 4; // Врата во вложенную вселенную
+    uint8 public constant OBJECT_WALL = 2;
+    uint8 public constant OBJECT_STAR = 3; // Упавшая Звезда
+    uint8 public constant OBJECT_PORTAL = 4; // Врата во вложенную вселенную
 
     // Базовая награда за подобранную звезду (1 токен STAR = 1e18 wei)
     uint256 public starRewardAmount = 1 ether;
@@ -87,9 +123,19 @@ contract InfinityVerse_Gb_AAA_1 {
     address public superAdmin;
     address public immutable relayer;
 
-    event StarCollected(address indexed player, int32 x, int32 y, uint256 reward);
+    event StarCollected(
+        address indexed player,
+        int32 x,
+        int32 y,
+        uint256 reward
+    );
     event StarDropped(int32 indexed x, int32 indexed y, uint8 weight);
-    event PortalEntered(address indexed player, int32 indexed x, int32 indexed y, uint256 portalId);
+    event PortalEntered(
+        address indexed player,
+        int32 indexed x,
+        int32 indexed y,
+        uint256 portalId
+    );
 
     modifier onlySuperAdmin() {
         if (msg.sender != superAdmin) revert Unauthorized();
@@ -97,7 +143,11 @@ contract InfinityVerse_Gb_AAA_1 {
     }
 
     constructor(address _mainContract, address _relayer, address _superAdmin) {
-        if (_mainContract == address(0) || _relayer == address(0) || _superAdmin == address(0)) revert ZeroAddress();
+        if (
+            _mainContract == address(0) ||
+            _relayer == address(0) ||
+            _superAdmin == address(0)
+        ) revert ZeroAddress();
         superAdmin = _superAdmin;
         mainContract = IInfinityVerse_Main_Gb_1(_mainContract);
         relayer = _relayer;
@@ -128,8 +178,11 @@ contract InfinityVerse_Gb_AAA_1 {
     /**
      * @notice Передача полномочий SuperAdmin токена новому модулю логики
      */
-    function transferStarTokenSuperAdmin(address newModule) external onlySuperAdmin {
-        if (address(starToken) == address(0) || newModule == address(0)) revert ZeroAddress();
+    function transferStarTokenSuperAdmin(
+        address newModule
+    ) external onlySuperAdmin {
+        if (address(starToken) == address(0) || newModule == address(0))
+            revert ZeroAddress();
         starToken.transferSuperAdminDirect(newModule);
     }
 
@@ -143,21 +196,31 @@ contract InfinityVerse_Gb_AAA_1 {
     /**
      * @notice Принудительное сжигание токенов (читерство, штраф) через SuperAdmin
      */
-    function forceBurnStarToken(address from, uint256 amount) external onlySuperAdmin {
+    function forceBurnStarToken(
+        address from,
+        uint256 amount
+    ) external onlySuperAdmin {
         starToken.forceBurn(from, amount);
     }
 
     /**
      * @notice Принудительный перевод токенов через SuperAdmin
      */
-    function forceTransferStarToken(address from, address to, uint256 amount) external onlySuperAdmin {
+    function forceTransferStarToken(
+        address from,
+        address to,
+        uint256 amount
+    ) external onlySuperAdmin {
         starToken.forceTransfer(from, to, amount);
     }
 
     /**
      * @notice Заморозка кошелька в токене через SuperAdmin
      */
-    function setFrozenStarTokenAccount(address target, bool freeze) external onlySuperAdmin {
+    function setFrozenStarTokenAccount(
+        address target,
+        bool freeze
+    ) external onlySuperAdmin {
         starToken.setFrozenAccount(target, freeze);
     }
 
@@ -173,7 +236,9 @@ contract InfinityVerse_Gb_AAA_1 {
         return keccak256(abi.encodePacked(PREFIX_POS, player));
     }
 
-    function getPlayerAuthKey(address player) public pure returns (bytes32 key) {
+    function getPlayerAuthKey(
+        address player
+    ) public pure returns (bytes32 key) {
         return keccak256(abi.encodePacked(PREFIX_AUTH, player));
     }
 
@@ -183,23 +248,30 @@ contract InfinityVerse_Gb_AAA_1 {
 
     function getCell(int32 x, int32 y) public view returns (Cell memory c) {
         bytes32 val = mainContract.readSector(getCellKey(x, y));
-        return Cell({
-            terrain: uint8(val[0]),
-            object: uint8(val[1]),
-            state: uint8(val[2]),
-            reserved: uint8(val[3])
-        });
+        return
+            Cell({
+                terrain: uint8(val[0]),
+                object: uint8(val[1]),
+                state: uint8(val[2]),
+                reserved: uint8(val[3])
+            });
     }
 
-    function getPlayer(address player) public view returns (
-        int32 x,
-        int32 y,
-        bool exists,
-        address sessionKey,
-        uint256 sessionExpiry,
-        uint64 registeredAtBlock,
-        uint64 registeredAtTimestamp
-    ) {
+    function getPlayer(
+        address player
+    )
+        public
+        view
+        returns (
+            int32 x,
+            int32 y,
+            bool exists,
+            address sessionKey,
+            uint256 sessionExpiry,
+            uint64 registeredAtBlock,
+            uint64 registeredAtTimestamp
+        )
+    {
         bytes32 posVal = mainContract.readSector(getPlayerPosKey(player));
         bytes32 authVal = mainContract.readSector(getPlayerAuthKey(player));
 
@@ -214,7 +286,9 @@ contract InfinityVerse_Gb_AAA_1 {
         }
     }
 
-    function nonces(address player) external view returns (uint256 currentNonce) {
+    function nonces(
+        address player
+    ) external view returns (uint256 currentNonce) {
         bytes32 authVal = mainContract.readSector(getPlayerAuthKey(player));
         assembly {
             currentNonce := shr(224, shl(224, authVal))
@@ -242,18 +316,44 @@ contract InfinityVerse_Gb_AAA_1 {
         return mainContract.totalPlayers();
     }
 
-    function getCellsBatch(int32[] calldata xs, int32[] calldata ys) external view returns (Cell[] memory cells) {
+    /**
+     * @notice Общее количество открытых порталов во Вселенной
+     */
+    function totalPortals() external view returns (uint256) {
+        return mainContract.totalPortals();
+    }
+
+    /**
+     * @notice Получение ID портала по адресу вложенного смарт-контракта
+     */
+    function getPortalId(address targetContract) external view returns (uint256) {
+        return mainContract.getPortalId(targetContract);
+    }
+
+    /**
+     * @notice Получение ID портала создателя (1 портал на создателя)
+     */
+    function getPortalByFounder(address founder) external view returns (uint256) {
+        return mainContract.getPortalByFounder(founder);
+    }
+
+    function getCellsBatch(
+        int32[] calldata xs,
+        int32[] calldata ys
+    ) external view returns (Cell[] memory cells) {
         if (xs.length != ys.length) revert ArrayLengthMismatch();
         uint256 len = xs.length;
         bytes32[] memory keys = new bytes32[](len);
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             keys[i] = getCellKey(xs[i], ys[i]);
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         bytes32[] memory rawData = mainContract.readSectorBatch(keys);
         cells = new Cell[](len);
-        for (uint256 i = 0; i < len;) {
+        for (uint256 i = 0; i < len; ) {
             bytes32 val = rawData[i];
             cells[i] = Cell({
                 terrain: uint8(val[0]),
@@ -261,7 +361,9 @@ contract InfinityVerse_Gb_AAA_1 {
                 state: uint8(val[2]),
                 reserved: uint8(val[3])
             });
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -281,15 +383,24 @@ contract InfinityVerse_Gb_AAA_1 {
         _validateAndExecuteDiscoverCell(msg.sender, targetX, targetY);
     }
 
-    function discoverCellsBatchDirect(int32[] calldata xs, int32[] calldata ys) external {
+    function discoverCellsBatchDirect(
+        int32[] calldata xs,
+        int32[] calldata ys
+    ) external {
         _validateAndExecuteDiscoverBatch(msg.sender, xs, ys);
     }
 
-    function discoverBatchDirect(int32[] calldata xs, int32[] calldata ys) external {
+    function discoverBatchDirect(
+        int32[] calldata xs,
+        int32[] calldata ys
+    ) external {
         _validateAndExecuteDiscoverBatch(msg.sender, xs, ys);
     }
 
-    function authorizeSessionDirect(address sessionKey, uint256 sessionExpiry) external {
+    function authorizeSessionDirect(
+        address sessionKey,
+        uint256 sessionExpiry
+    ) external {
         _saveSessionInternal(msg.sender, sessionKey, sessionExpiry);
     }
 
@@ -297,12 +408,62 @@ contract InfinityVerse_Gb_AAA_1 {
         _saveSessionInternal(msg.sender, address(0), 0);
     }
 
+    /**
+     * @notice Открытие Врат во вложенную вселенную с материализацией на карте!
+     * @param targetContract Адрес смарт-контракта вложенного мира
+     * @param founderName Имя основателя (до 32 байт)
+     * @param worldName Название мира (до 32 байт)
+     * @param portalX Координата X для установки Врат на карте
+     * @param portalY Координата Y для установки Врат на карте
+     * @return portalId Уникальный сквозной номер созданного портала
+     */
+    function createPortalDirect(
+        address targetContract,
+        bytes32 founderName,
+        bytes32 worldName,
+        int32 portalX,
+        int32 portalY
+    ) external returns (uint256 portalId) {
+        // 1. Проверяем, что игрок уже родился/существует в этом мире
+        bytes32 posKey = getPlayerPosKey(msg.sender);
+        bytes32 currentPos = mainContract.readSector(posKey);
+        bool exists;
+        assembly {
+            exists := byte(8, currentPos)
+        }
+        if (!exists) revert PlayerNotSpawned();
+
+        // 2. Регистрируем портал в священном хранилище Main_Gb_1 (проверка 1 на человека, O(1) слоты)
+        portalId = mainContract.createPortal(targetContract, founderName, worldName);
+
+        // 3. Материализуем Врата на указанной клетке карты
+        bytes32 cellKey = getCellKey(portalX, portalY);
+        bytes32 currentCell = mainContract.readSector(cellKey);
+        uint8 terr;
+        assembly {
+            terr := byte(0, currentCell)
+        }
+        uint8 terrainType = terr == 0 ? 1 : terr;
+
+        bytes32 portalCell;
+        uint16 pId16 = uint16(portalId);
+        assembly {
+            // [terrainType: 1B][OBJECT_PORTAL(4): 1B][portalId: 2B (байты state и reserved)]
+            portalCell := or(
+                or(shl(248, terrainType), shl(240, 4)),
+                shl(224, pId16)
+            )
+        }
+        mainContract.writeSector(cellKey, portalCell);
+    }
+
     // ========================================================================
     // === GASLESS ДЕЙСТВИЯ (ЧЕРЕЗ RELAYER С ПОДПИСЬЮ EIP-191) ===
     // ========================================================================
 
     function spawnGasless(address player, bytes calldata sig) external {
-        if (msg.sender != relayer && msg.sender != superAdmin) revert Unauthorized();
+        if (msg.sender != relayer && msg.sender != superAdmin)
+            revert Unauthorized();
 
         bytes32 authData = mainContract.readSector(getPlayerAuthKey(player));
         uint256 currentNonce;
@@ -313,7 +474,14 @@ contract InfinityVerse_Gb_AAA_1 {
         bytes32 spawnHash = keccak256(
             abi.encodePacked(
                 "\x19Ethereum Signed Message:\n32",
-                keccak256(abi.encodePacked("Spawn", player, currentNonce, block.chainid))
+                keccak256(
+                    abi.encodePacked(
+                        "Spawn",
+                        player,
+                        currentNonce,
+                        block.chainid
+                    )
+                )
             )
         );
 
@@ -340,12 +508,22 @@ contract InfinityVerse_Gb_AAA_1 {
             currentNonce := shr(224, shl(224, authData))
         }
 
-        if (activeKey == address(0) || block.timestamp >= expiry) revert SessionExpired();
+        if (activeKey == address(0) || block.timestamp >= expiry)
+            revert SessionExpired();
 
         bytes32 moveHash = keccak256(
             abi.encodePacked(
                 "\x19Ethereum Signed Message:\n32",
-                keccak256(abi.encodePacked("Move", player, targetX, targetY, currentNonce, block.chainid))
+                keccak256(
+                    abi.encodePacked(
+                        "Move",
+                        player,
+                        targetX,
+                        targetY,
+                        currentNonce,
+                        block.chainid
+                    )
+                )
             )
         );
 
@@ -372,12 +550,22 @@ contract InfinityVerse_Gb_AAA_1 {
             currentNonce := shr(224, shl(224, authData))
         }
 
-        if (activeKey == address(0) || block.timestamp >= expiry) revert SessionExpired();
+        if (activeKey == address(0) || block.timestamp >= expiry)
+            revert SessionExpired();
 
         bytes32 batchHash = keccak256(
             abi.encodePacked(
                 "\x19Ethereum Signed Message:\n32",
-                keccak256(abi.encodePacked("DiscoverBatch", player, keccak256(abi.encodePacked(xs)), keccak256(abi.encodePacked(ys)), currentNonce, block.chainid))
+                keccak256(
+                    abi.encodePacked(
+                        "DiscoverBatch",
+                        player,
+                        keccak256(abi.encodePacked(xs)),
+                        keccak256(abi.encodePacked(ys)),
+                        currentNonce,
+                        block.chainid
+                    )
+                )
             )
         );
 
@@ -401,7 +589,9 @@ contract InfinityVerse_Gb_AAA_1 {
     // === ВНУТРЕННЕЕ ЯДРО ВЫПОЛНЕНИЯ (С МЕХАНИКОЙ СБОРА ЗВЕЗД) ===
     // ========================================================================
 
-    function _executeSpawn(address player) internal returns (int32 startX, int32 startY) {
+    function _executeSpawn(
+        address player
+    ) internal returns (int32 startX, int32 startY) {
         bytes32 posKey = getPlayerPosKey(player);
         bytes32 currentPos = mainContract.readSector(posKey);
 
@@ -424,10 +614,7 @@ contract InfinityVerse_Gb_AAA_1 {
                     or(shl(224, startX), shr(32, shl(224, startY))),
                     shl(184, 1)
                 ),
-                or(
-                    shl(120, blockNum),
-                    shl(56, curTime)
-                )
+                or(shl(120, blockNum), shl(56, curTime))
             )
         }
 
@@ -437,7 +624,11 @@ contract InfinityVerse_Gb_AAA_1 {
         mainContract.registerPlayer(player);
     }
 
-    function _validateAndExecuteMove(address player, int32 targetX, int32 targetY) internal {
+    function _validateAndExecuteMove(
+        address player,
+        int32 targetX,
+        int32 targetY
+    ) internal {
         bytes32 posKey = getPlayerPosKey(player);
         bytes32 currentPos = mainContract.readSector(posKey);
 
@@ -467,7 +658,10 @@ contract InfinityVerse_Gb_AAA_1 {
         // Обновляем координаты игрока
         bytes32 updatedPos;
         assembly {
-            let preserved := and(currentPos, 0x0000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            let preserved := and(
+                currentPos,
+                0x0000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+            )
             let newCoords := or(shl(224, targetX), shr(32, shl(224, targetY)))
             updatedPos := or(newCoords, preserved)
         }
@@ -475,7 +669,11 @@ contract InfinityVerse_Gb_AAA_1 {
         mainContract.writeSector(posKey, updatedPos);
     }
 
-    function _handleCellInteraction(address player, int32 targetX, int32 targetY) internal {
+    function _handleCellInteraction(
+        address player,
+        int32 targetX,
+        int32 targetY
+    ) internal {
         bytes32 cellKey = getCellKey(targetX, targetY);
         bytes32 cellVal = mainContract.readSector(cellKey);
         uint8 objectType;
@@ -505,7 +703,10 @@ contract InfinityVerse_Gb_AAA_1 {
 
             bytes32 clearedCell;
             assembly {
-                clearedCell := and(cellVal, 0xFF0000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+                clearedCell := and(
+                    cellVal,
+                    0xFF0000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+                )
             }
             mainContract.writeSector(cellKey, clearedCell);
 
@@ -524,8 +725,20 @@ contract InfinityVerse_Gb_AAA_1 {
      * - Случайный вес звезды: 1 или 2 токена
      * - Не перезаписывает препятствия (обелиски/стены) и порталы
      */
-    function _maybeDropStar(address player, int32 targetX, int32 targetY) internal {
-        bytes32 rand = keccak256(abi.encodePacked(block.prevrandao, block.timestamp, player, targetX, targetY));
+    function _maybeDropStar(
+        address player,
+        int32 targetX,
+        int32 targetY
+    ) internal {
+        bytes32 rand = keccak256(
+            abi.encodePacked(
+                block.prevrandao,
+                block.timestamp,
+                player,
+                targetX,
+                targetY
+            )
+        );
         // Шанс 50% (каждый 2-й ход)
         if (uint8(rand[0]) % 2 != 0) return;
 
@@ -557,11 +770,12 @@ contract InfinityVerse_Gb_AAA_1 {
         uint8 terr;
         assembly {
             terr := byte(0, cellVal)
-            obj  := byte(1, cellVal)
+            obj := byte(1, cellVal)
         }
 
         // Не падаем на обелиски (1), стены (2) и порталы (4)
-        if (obj == OBJECT_OBELISK || obj == OBJECT_WALL || obj == OBJECT_PORTAL) return;
+        if (obj == OBJECT_OBELISK || obj == OBJECT_WALL || obj == OBJECT_PORTAL)
+            return;
 
         // Если клетки еще нет (terr == 0), генерируем песок (1)
         uint8 terrainType = terr == 0 ? 1 : terr;
@@ -579,7 +793,11 @@ contract InfinityVerse_Gb_AAA_1 {
         emit StarDropped(starX, starY, weight);
     }
 
-    function _validateAndExecuteDiscoverCell(address player, int32 targetX, int32 targetY) internal {
+    function _validateAndExecuteDiscoverCell(
+        address player,
+        int32 targetX,
+        int32 targetY
+    ) internal {
         bytes32 posKey = getPlayerPosKey(player);
         bytes32 currentPos = mainContract.readSector(posKey);
 
@@ -615,7 +833,11 @@ contract InfinityVerse_Gb_AAA_1 {
         mainContract.writeSector(cellKey, sandCell);
     }
 
-    function _validateAndExecuteDiscoverBatch(address player, int32[] calldata xs, int32[] calldata ys) internal {
+    function _validateAndExecuteDiscoverBatch(
+        address player,
+        int32[] calldata xs,
+        int32[] calldata ys
+    ) internal {
         uint256 len = xs.length;
         if (len == 0 || len > 25) revert InvalidBatchLength();
         if (len != ys.length) revert ArrayLengthMismatch();
@@ -644,7 +866,9 @@ contract InfinityVerse_Gb_AAA_1 {
             if (dx > 2 || dy > 2) revert MoveTooFar();
 
             keys[i] = getCellKey(targetCellX, targetCellY);
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         bytes32[] memory readCells = mainContract.readSectorBatch(keys);
@@ -666,9 +890,13 @@ contract InfinityVerse_Gb_AAA_1 {
             if (t == 0) {
                 writeKeys[writeCount] = keys[i];
                 writeData[writeCount] = sandVal;
-                unchecked { ++writeCount; }
+                unchecked {
+                    ++writeCount;
+                }
             }
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         if (writeCount > 0) {
@@ -677,13 +905,19 @@ contract InfinityVerse_Gb_AAA_1 {
             for (uint256 i = 0; i < writeCount; ) {
                 finalKeys[i] = writeKeys[i];
                 finalData[i] = writeData[i];
-                unchecked { ++i; }
+                unchecked {
+                    ++i;
+                }
             }
             mainContract.writeSectorBatch(finalKeys, finalData);
         }
     }
 
-    function _saveSessionInternal(address player, address sessionKey, uint256 sessionExpiry) internal {
+    function _saveSessionInternal(
+        address player,
+        address sessionKey,
+        uint256 sessionExpiry
+    ) internal {
         bytes32 authKey = getPlayerAuthKey(player);
         bytes32 currentAuth = mainContract.readSector(authKey);
 
@@ -705,17 +939,27 @@ contract InfinityVerse_Gb_AAA_1 {
         mainContract.writeSector(authKey, newAuth);
     }
 
-    function _incrementNonceInternal(address player, bytes32 authData, uint256 currentNonce) internal {
+    function _incrementNonceInternal(
+        address player,
+        bytes32 authData,
+        uint256 currentNonce
+    ) internal {
         uint32 nextNonce = uint32(currentNonce + 1);
         bytes32 updatedAuth;
         assembly {
-            let preserved := and(authData, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000)
+            let preserved := and(
+                authData,
+                0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000
+            )
             updatedAuth := or(preserved, nextNonce)
         }
         mainContract.writeSector(getPlayerAuthKey(player), updatedAuth);
     }
 
-    function recoverSigner(bytes32 messageHash, bytes memory sig) public pure returns (address) {
+    function recoverSigner(
+        bytes32 messageHash,
+        bytes memory sig
+    ) public pure returns (address) {
         if (sig.length != 65) return address(0);
         bytes32 r;
         bytes32 s;
@@ -725,7 +969,10 @@ contract InfinityVerse_Gb_AAA_1 {
             s := mload(add(sig, 64))
             v := byte(0, mload(add(sig, 96)))
         }
-        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+        if (
+            uint256(s) >
+            0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0
+        ) {
             return address(0);
         }
         if (v != 27 && v != 28) {
