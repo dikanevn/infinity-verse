@@ -1096,10 +1096,7 @@ contract InfinityVerse_Main_Gb_1 {
         }
 
         // Если контракт является наследником, проверяем: не был ли игрок рожден в предыдущих мирах
-        if (
-            prevMain != address(0) &&
-            prevMain != 0x000000000000000000000000000000000000dEaD
-        ) {
+        if (prevMain != address(0)) {
             uint256 ancestorId = IInfinityVerse_PrevMain(prevMain).getPlayerId(account);
             if (ancestorId != 0) {
                 // Сохраняем древний ID в локальном реестре для мгновенного O(1) доступа
@@ -1140,11 +1137,7 @@ contract InfinityVerse_Main_Gb_1 {
         account = address(
             uint160(uint256(_getSlot(bytes32(PLAYER_LIST_PREFIX + id))))
         );
-        if (
-            account == address(0) &&
-            prevMain != address(0) &&
-            prevMain != 0x000000000000000000000000000000000000dEaD
-        ) {
+        if (account == address(0) && prevMain != address(0)) {
             return IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id);
         }
     }
@@ -1156,11 +1149,7 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function getPlayerId(address account) external view returns (uint256 id) {
         id = uint256(_getSlot(bytes32(PLAYER_ID_PREFIX | uint160(account))));
-        if (
-            id == 0 &&
-            prevMain != address(0) &&
-            prevMain != 0x000000000000000000000000000000000000dEaD
-        ) {
+        if (id == 0 && prevMain != address(0)) {
             return IInfinityVerse_PrevMain(prevMain).getPlayerId(account);
         }
     }
@@ -1175,11 +1164,7 @@ contract InfinityVerse_Main_Gb_1 {
         uint256 startId,
         uint256 count
     ) external onlyAdmins returns (uint256 syncedCount) {
-        if (
-            startId == 0 ||
-            prevMain == address(0) ||
-            prevMain == 0x000000000000000000000000000000000000dEaD
-        ) {
+        if (startId == 0 || prevMain == address(0)) {
             return 0;
         }
 
@@ -1340,11 +1325,7 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function getPortalId(address targetContract) external view returns (uint256 id) {
         id = uint256(_getSlot(bytes32(PORTAL_ID_PREFIX | uint160(targetContract))));
-        if (
-            id == 0 &&
-            prevMain != address(0) &&
-            prevMain != 0x000000000000000000000000000000000000dEaD
-        ) {
+        if (id == 0 && prevMain != address(0)) {
             return IInfinityVerse_PrevMain(prevMain).getPortalId(targetContract);
         }
     }
@@ -1356,11 +1337,7 @@ contract InfinityVerse_Main_Gb_1 {
      */
     function getPortalByFounder(address founder) external view returns (uint256 portalId) {
         portalId = uint256(_getSlot(bytes32(PORTAL_FOUNDER_PORTAL_PREFIX | uint160(founder))));
-        if (
-            portalId == 0 &&
-            prevMain != address(0) &&
-            prevMain != 0x000000000000000000000000000000000000dEaD
-        ) {
+        if (portalId == 0 && prevMain != address(0)) {
             return IInfinityVerse_PrevMain(prevMain).getPortalByFounder(founder);
         }
     }
