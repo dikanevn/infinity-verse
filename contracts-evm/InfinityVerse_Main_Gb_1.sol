@@ -10,6 +10,10 @@ interface IInfinityVerse_PrevMain {
     function totalPlayers() external view returns (uint256);
     function getPlayerAddress(uint256 id) external view returns (address);
     function getPlayerId(address account) external view returns (uint256);
+    function totalPortals() external view returns (uint256);
+    function getPortalIdByCoord(int32 x, int32 y) external view returns (uint256);
+    function getPortalTarget(uint256 id) external view returns (address targetUniverse, uint256 createdAt);
+    function getPortalData(uint256 id) external view returns (address creator, int32 x, int32 y);
 }
 
 /**
@@ -97,6 +101,14 @@ contract InfinityVerse_Main_Gb_1 {
     uint256 private constant PLAYER_LIST_PREFIX = 4 << 160;
     uint256 private constant PLAYER_ID_PREFIX = 5 << 160;
 
+    // Реестр суверенных порталов в защищенной зоне (< 2^180):
+    // 6 << 160: данные портала (создатель, x, y) по portalId
+    uint256 private constant PORTAL_DATA_PREFIX = 6 << 160;
+    // 7 << 160: целевой контракт вселенной и время создания по portalId
+    uint256 private constant PORTAL_TARGET_PREFIX = 7 << 160;
+    // 8 << 160: привязка координат клетки (x, y) => portalId
+    uint256 private constant PORTAL_COORD_PREFIX = 8 << 160;
+
     // 64-битная маска для распаковки индексов и очистки слотов
     uint256 private constant MASK_64 = 0xFFFFFFFFFFFFFFFF;
 
@@ -138,6 +150,9 @@ contract InfinityVerse_Main_Gb_1 {
     // Сами адреса лежат в защищенной зоне PLAYER_LIST_PREFIX + id, а ID игрока в PLAYER_ID_PREFIX | uint160(account)
     uint256 public totalPlayers;
 
+    // Общее количество созданных суверенных порталов в подвселенные
+    uint256 public totalPortals;
+
     // 4-байтные ошибки (Custom Errors) для экономии газа и размера байткода
     error Unauthorized();
     error RightsNotActive();
@@ -157,6 +172,9 @@ contract InfinityVerse_Main_Gb_1 {
     error InactivityPeriodNotElapsed();
     error ReentrancyDetected();
     error InvalidNextMain();
+    error PortalAlreadyExists();
+    error PortalNotFound();
+    error NotPortalOwner();
 
     event AdminAllowed(address indexed adminAddress, uint8 perms, uint8 role);
     event AdminDisallowed(address indexed adminAddress);
@@ -190,6 +208,17 @@ contract InfinityVerse_Main_Gb_1 {
         address indexed contractAddress
     );
     event PlayerRegistered(address indexed account, uint256 indexed playerId);
+    event PortalCreated(
+        uint256 indexed portalId,
+        address indexed creator,
+        address indexed targetUniverse,
+        int32 x,
+        int32 y
+    );
+    event PortalTargetUpdated(
+        uint256 indexed portalId,
+        address indexed newTarget
+    );
     event TokensRescued(
         address indexed token,
         address indexed to,
@@ -392,14 +421,9 @@ contract InfinityVerse_Main_Gb_1 {
             }
             currentGen = prevGenerations + 1;
 
-            // Наследование общего количества зарегистрированных жителей Мультивселенной
-            try IInfinityVerse_PrevMain(_prevMain).totalPlayers() returns (
-                uint256 prevPlayers
-            ) {
-                totalPlayers = prevPlayers;
-            } catch {
-                revert MigrationLocked();
-            }
+            // Прямое каноническое наследование счетчиков без try/catch
+            totalPlayers = IInfinityVerse_PrevMain(_prevMain).totalPlayers();
+            totalPortals = IInfinityVerse_PrevMain(_prevMain).totalPortals();
         }
 
         superAdmin = _superAdmin;
@@ -1055,19 +1079,16 @@ contract InfinityVerse_Main_Gb_1 {
             prevMain != address(0) &&
             prevMain != 0x000000000000000000000000000000000000dEaD
         ) {
-            try IInfinityVerse_PrevMain(prevMain).getPlayerId(account) returns (
-                uint256 ancestorId
-            ) {
-                if (ancestorId != 0) {
-                    // Сохраняем древний ID в локальном реестре для мгновенного O(1) доступа
-                    _setSlot(bytes32(idSlot), bytes32(ancestorId));
-                    _setSlot(
-                        bytes32(PLAYER_LIST_PREFIX + ancestorId),
-                        bytes32(uint256(uint160(account)))
-                    );
-                    return ancestorId;
-                }
-            } catch {}
+            uint256 ancestorId = IInfinityVerse_PrevMain(prevMain).getPlayerId(account);
+            if (ancestorId != 0) {
+                // Сохраняем древний ID в локальном реестре для мгновенного O(1) доступа
+                _setSlot(bytes32(idSlot), bytes32(ancestorId));
+                _setSlot(
+                    bytes32(PLAYER_LIST_PREFIX + ancestorId),
+                    bytes32(uint256(uint160(account)))
+                );
+                return ancestorId;
+            }
         }
 
         uint256 newId = totalPlayers + 1;
@@ -1103,11 +1124,7 @@ contract InfinityVerse_Main_Gb_1 {
             prevMain != address(0) &&
             prevMain != 0x000000000000000000000000000000000000dEaD
         ) {
-            try IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id) returns (
-                address prevAccount
-            ) {
-                return prevAccount;
-            } catch {}
+            return IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id);
         }
     }
 
@@ -1123,11 +1140,7 @@ contract InfinityVerse_Main_Gb_1 {
             prevMain != address(0) &&
             prevMain != 0x000000000000000000000000000000000000dEaD
         ) {
-            try IInfinityVerse_PrevMain(prevMain).getPlayerId(account) returns (
-                uint256 prevId
-            ) {
-                return prevId;
-            } catch {}
+            return IInfinityVerse_PrevMain(prevMain).getPlayerId(account);
         }
     }
 
@@ -1160,23 +1173,20 @@ contract InfinityVerse_Main_Gb_1 {
             bytes32 listSlot = bytes32(PLAYER_LIST_PREFIX + id);
             address localAddr = address(uint160(uint256(_getSlot(listSlot))));
             if (localAddr == address(0)) {
-                try
-                    IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id)
-                returns (address ancestorAddr) {
-                    if (ancestorAddr != address(0)) {
-                        _setSlot(
-                            listSlot,
-                            bytes32(uint256(uint160(ancestorAddr)))
-                        );
-                        _setSlot(
-                            bytes32(PLAYER_ID_PREFIX | uint160(ancestorAddr)),
-                            bytes32(id)
-                        );
-                        unchecked {
-                            ++syncedCount;
-                        }
+                address ancestorAddr = IInfinityVerse_PrevMain(prevMain).getPlayerAddress(id);
+                if (ancestorAddr != address(0)) {
+                    _setSlot(
+                        listSlot,
+                        bytes32(uint256(uint160(ancestorAddr)))
+                    );
+                    _setSlot(
+                        bytes32(PLAYER_ID_PREFIX | uint160(ancestorAddr)),
+                        bytes32(id)
+                    );
+                    unchecked {
+                        ++syncedCount;
                     }
-                } catch {}
+                }
             }
             unchecked {
                 ++id;
@@ -1214,6 +1224,230 @@ contract InfinityVerse_Main_Gb_1 {
                     )
                 )
             );
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    // ========================================================================
+    // ========================================================================
+    // === РЕЕСТР СУВЕРЕННЫХ ПОРТАЛОВ В ПОДВСЕЛЕННЫЕ (PORTALS REGISTRY)    ===
+    // ========================================================================
+    // ========================================================================
+
+    /**
+     * @notice Структура распакованных данных портала для RPC и UI
+     */
+    struct PortalView {
+        uint256 id;
+        int32 x;
+        int32 y;
+        address creator;
+        address targetUniverse;
+        uint256 createdAt;
+    }
+
+    /**
+     * @notice Создание суверенного портала в подвселенную в координатах (x, y).
+     * @dev Записывается в защищенную зону слотов (< 2^180). Никакой администратор не может
+     * отобрать или стереть этот портал.
+     * @param x Координата X на карте
+     * @param y Координата Y на карте
+     * @param targetUniverse Адрес контракта подвселенной
+     * @return portalId Присвоенный порядковый номер портала (1, 2, 3...)
+     */
+    function createPortal(
+        int32 x,
+        int32 y,
+        address targetUniverse
+    ) external returns (uint256 portalId) {
+        if (targetUniverse == address(0)) revert ZeroAddress();
+
+        // Координаты (x, y) упаковываются напрямую в 64 бита без хешей и коллизий
+        uint256 coordKey = (uint256(uint32(x)) << 32) | uint256(uint32(y));
+        uint256 coordSlot = PORTAL_COORD_PREFIX | coordKey;
+
+        // Проверяем занятость клетки порталом в текущем мире
+        if (uint256(_getSlot(bytes32(coordSlot))) != 0) {
+            revert PortalAlreadyExists();
+        }
+
+        // Проверяем предка, если это контракт-наследник
+        if (
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            if (IInfinityVerse_PrevMain(prevMain).getPortalIdByCoord(x, y) != 0) {
+                revert PortalAlreadyExists();
+            }
+        }
+
+        portalId = totalPortals + 1;
+        totalPortals = portalId;
+
+        // Связываем координаты с ID портала
+        _setSlot(bytes32(coordSlot), bytes32(portalId));
+
+        // Слот 1 (PORTAL_DATA): упаковываем creator (160 бит) | x (32 бит) | y (32 бит)
+        uint256 packedData = uint160(msg.sender) |
+            (uint256(uint32(x)) << 160) |
+            (uint256(uint32(y)) << 192);
+        _setSlot(bytes32(PORTAL_DATA_PREFIX + portalId), bytes32(packedData));
+
+        // Слот 2 (PORTAL_TARGET): targetUniverse (160 бит) | createdAt (96 бит)
+        uint256 packedTarget = uint160(targetUniverse) |
+            (block.timestamp << 160);
+        _setSlot(
+            bytes32(PORTAL_TARGET_PREFIX + portalId),
+            bytes32(packedTarget)
+        );
+
+        emit PortalCreated(portalId, msg.sender, targetUniverse, x, y);
+    }
+
+    /**
+     * @notice Обновление адреса контракта подвселенной создателем портала.
+     * @dev Доступно СТРОГО создателю (creator). Даже SuperAdmin не имеет доступа.
+     * @param id Порядковый номер портала
+     * @param newTarget Новый адрес контракта подвселенной
+     */
+    function updatePortalTarget(uint256 id, address newTarget) external {
+        if (newTarget == address(0)) revert ZeroAddress();
+        if (id == 0 || id > totalPortals) revert PortalNotFound();
+
+        (address creator, , ) = getPortalData(id);
+        if (creator == address(0)) revert PortalNotFound();
+        if (msg.sender != creator) revert NotPortalOwner();
+
+        (, uint256 createdAt) = getPortalTarget(id);
+        uint256 newTargetVal = uint160(newTarget) | (createdAt << 160);
+
+        _setSlot(bytes32(PORTAL_TARGET_PREFIX + id), bytes32(newTargetVal));
+        emit PortalTargetUpdated(id, newTarget);
+    }
+
+    /**
+     * @notice Получение данных владельца и координат портала по ID (с каноническим наследованием).
+     */
+    function getPortalData(
+        uint256 id
+    ) public view returns (address creator, int32 x, int32 y) {
+        if (id == 0 || id > totalPortals) return (address(0), 0, 0);
+
+        uint256 dataVal = uint256(_getSlot(bytes32(PORTAL_DATA_PREFIX + id)));
+        if (
+            dataVal == 0 &&
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            return IInfinityVerse_PrevMain(prevMain).getPortalData(id);
+        }
+
+        creator = address(uint160(dataVal));
+        x = int32(uint32(dataVal >> 160));
+        y = int32(uint32(dataVal >> 192));
+    }
+
+    /**
+     * @notice Получение адреса целевой вселенной и времени создания портала (с каноническим наследованием).
+     */
+    function getPortalTarget(
+        uint256 id
+    ) public view returns (address targetUniverse, uint256 createdAt) {
+        if (id == 0 || id > totalPortals) return (address(0), 0);
+
+        uint256 targetVal = uint256(_getSlot(bytes32(PORTAL_TARGET_PREFIX + id)));
+        if (
+            targetVal == 0 &&
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            return IInfinityVerse_PrevMain(prevMain).getPortalTarget(id);
+        }
+
+        targetUniverse = address(uint160(targetVal));
+        createdAt = targetVal >> 160;
+    }
+
+    /**
+     * @notice Получение ID портала по координатам со сквозным поиском в предках за O(1).
+     * @param x Координата X клетки
+     * @param y Координата Y клетки
+     * @return id Порядковый номер портала (0, если портала нет)
+     */
+    function getPortalIdByCoord(
+        int32 x,
+        int32 y
+    ) public view returns (uint256 id) {
+        uint256 coordKey = (uint256(uint32(x)) << 32) | uint256(uint32(y));
+        uint256 coordSlot = PORTAL_COORD_PREFIX | coordKey;
+        id = uint256(_getSlot(bytes32(coordSlot)));
+
+        if (
+            id == 0 &&
+            prevMain != address(0) &&
+            prevMain != 0x000000000000000000000000000000000000dEaD
+        ) {
+            return IInfinityVerse_PrevMain(prevMain).getPortalIdByCoord(x, y);
+        }
+    }
+
+    /**
+     * @notice Полная информация о портале за O(1).
+     * @param id Порядковый номер портала (1 .. totalPortals)
+     * @return p Распакованная структура информации о портале
+     */
+    function getPortal(uint256 id) external view returns (PortalView memory p) {
+        if (id == 0 || id > totalPortals) return p;
+
+        (address creator, int32 x, int32 y) = getPortalData(id);
+        (address targetUniverse, uint256 createdAt) = getPortalTarget(id);
+
+        p.id = id;
+        p.creator = creator;
+        p.x = x;
+        p.y = y;
+        p.targetUniverse = targetUniverse;
+        p.createdAt = createdAt;
+    }
+
+    /**
+     * @notice Последовательное чтение списка порталов Мультивселенной пачками для фронтенда.
+     * @param offset Начальный индекс (0-indexed: 0 соответствует id=1)
+     * @param count Количество запрашиваемых порталов
+     * @return list Массив информации о порталах
+     */
+    function getPortalsSequential(
+        uint256 offset,
+        uint256 count
+    ) external view returns (PortalView[] memory list) {
+        uint256 total = totalPortals;
+        if (offset >= total || count == 0) {
+            return new PortalView[](0);
+        }
+
+        uint256 end = offset + count;
+        if (end > total) {
+            end = total;
+        }
+
+        uint256 len = end - offset;
+        list = new PortalView[](len);
+
+        for (uint256 i = 0; i < len; ) {
+            uint256 id = offset + i + 1;
+            (address creator, int32 x, int32 y) = getPortalData(id);
+            (address targetUniverse, uint256 createdAt) = getPortalTarget(id);
+
+            list[i] = PortalView({
+                id: id,
+                creator: creator,
+                x: x,
+                y: y,
+                targetUniverse: targetUniverse,
+                createdAt: createdAt
+            });
             unchecked {
                 ++i;
             }
