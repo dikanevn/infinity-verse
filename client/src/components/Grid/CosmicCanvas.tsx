@@ -5,6 +5,7 @@ import {
   STAR_PIXELS_8X8,
   OBELISK_PIXELS_8X8,
   PORTAL_PIXELS_8X8,
+  PLAYER_PIXELS_8X8,
   type PixelMatrix
 } from '../../config/pixelTextures';
 
@@ -147,6 +148,13 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
             ctx.lineWidth = Math.min(4, Math.max(1.5, 2 * scale));
             ctx.strokeRect(screenLeft, screenTop, cellSizePx, cellSizePx);
           }
+        }
+
+        // Г. Отрисовка игрока (Пиксельный аватар исследователя)
+        if (player?.exists) {
+          const pLeft = originX + (player.x * cellPitch - 31) * scale;
+          const pTop = originY + (-player.y * cellPitch - 31) * scale;
+          drawMatrix(PLAYER_PIXELS_8X8, pLeft, pTop, cellSizePx);
         }
       }
 
