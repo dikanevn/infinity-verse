@@ -530,19 +530,21 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           top: '12px',
           left: '50%',
           transform: 'translateX(-50%)',
+          maxWidth: 'calc(100% - 100px)',
+          width: 'max-content',
           zIndex: 15,
-          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          backgroundColor: 'rgba(15, 23, 42, 0.92)',
           border: '1px solid #8b5cf6',
-          borderRadius: '20px',
-          padding: '5px 14px',
+          borderRadius: '12px',
+          padding: '6px 12px',
           color: '#e2e8f0',
-          fontSize: '0.75rem',
+          fontSize: '0.68rem',
           fontFamily: 'monospace',
+          lineHeight: '1.25',
           pointerEvents: 'none',
           boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
           textAlign: 'center',
-          whiteSpace: 'nowrap',
-          backdropFilter: 'blur(4px)'
+          backdropFilter: 'blur(6px)'
         }}>
           Ползунок закончился, но масштаб бесконечен — дальше колёсиком, пальцами или «+»
         </div>
