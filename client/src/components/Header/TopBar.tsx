@@ -91,12 +91,13 @@ export const TopBar: React.FC<TopBarProps> = ({
 
       {/* Название игры строго по центру */}
       <div style={{
-        fontSize: '1rem',
+        fontSize: 'clamp(0.78rem, 2.8vw, 0.9rem)',
         color: '#c084fc',
-        letterSpacing: '0.14em',
+        letterSpacing: '0.08em',
         textTransform: 'uppercase',
         fontWeight: 800,
-        lineHeight: 1.1
+        lineHeight: 1.1,
+        whiteSpace: 'nowrap'
       }}>
         INFINITY-VERSE-TEST
       </div>
