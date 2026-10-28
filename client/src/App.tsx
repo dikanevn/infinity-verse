@@ -78,7 +78,6 @@ function App() {
   // 2. Ончейн-состояние мира (считывает оба фокуса: и вокруг человека, и вокруг антенны)
   const {
     cells,
-    contractVersion,
     statusText,
     statusState,
     setStatusText,
@@ -349,9 +348,7 @@ function App() {
         }}>
           <span style={{ color: '#64748b', fontWeight: 600 }}>Gb_Main_1</span>
           <div style={{ color: '#334155' }}>|</div>
-          <span style={{ color: '#64748b', fontWeight: 600 }}>{contractVersion}</span>
-          <div style={{ color: '#334155' }}>|</div>
-          <span style={{ color: '#64748b', fontWeight: 600 }}>v{CLIENT_VERSION}</span>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>v{CLIENT_VERSION}</span>
           <div style={{ color: '#334155' }}>|</div>
           <a
             href="https://linktr.ee/dikanevn"
