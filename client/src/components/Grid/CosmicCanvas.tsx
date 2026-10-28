@@ -45,7 +45,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     let startTime = performance.now();
 
     const macroOrders = [
-      { exp: 1, side: 10, label: '10^2 (100 кл)' },
+      // 10^2 отключен по запросу пользователя
       { exp: 2, side: 100, label: '10^4 (10 000 кл)' },
       { exp: 3, side: 1000, label: '10^6 (1 млн кл)' },
       { exp: 4, side: 10000, label: '10^8 (100 млн кл)' },
