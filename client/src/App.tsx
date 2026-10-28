@@ -352,23 +352,31 @@ function App() {
           <div style={{ color: '#334155' }}>|</div>
           <button
             onClick={() => setIsFeedbackModalOpen(true)}
-            title="Обратная связь"
+            title="Обратная связь и контакты"
             style={{
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '0.85rem',
-              lineHeight: 1,
+              fontSize: '0.75rem',
+              fontWeight: 600,
               padding: '0 2px',
               display: 'inline-flex',
               alignItems: 'center',
-              filter: 'grayscale(20%)',
-              transition: 'transform 0.15s'
+              gap: '4px',
+              color: '#818cf8',
+              transition: 'color 0.15s, transform 0.15s'
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.25)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#c084fc';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#818cf8';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
           >
-            😈
+            <span>😈/контакты</span>
+            <span style={{ fontSize: '0.65rem' }}>↗</span>
           </button>
         </div>
 
