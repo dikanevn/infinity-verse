@@ -1095,7 +1095,11 @@ contract InfinityVerse_Gb_AAA_4 {
             crowd -= 1;
             bytes32 updatedCell;
             assembly {
-                let maskNoCrowd := 0xFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+                // Маска строго 32 байта (64 hex-символа):
+                // байты 0..5 (terrain, object, secondsWeight): FFFFFFFFFFFF (12 hex)
+                // байты 6..9 (crowdCount): 00000000 (8 hex)
+                // байты 10..31 (lastOccupantId и остальное): 44 символа F (22 байта)
+                let maskNoCrowd := 0xFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
                 let preserved := and(cellVal, maskNoCrowd)
                 let newCrowdPart := shl(176, crowd)
                 updatedCell := or(preserved, newCrowdPart)

@@ -378,29 +378,37 @@ function App() {
               <span>К Обелиску (0, -1)</span>
             </button>
 
-            {myPortalCoord && (
-              <button
-                type="button"
-                onClick={() => handleTeleportToMyPortal(myPortalCoord.x, myPortalCoord.y)}
-                disabled={actionPending}
-                style={{
-                  backgroundColor: '#3b0764',
-                  color: '#e879f9',
-                  border: '1px solid #c084fc',
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  cursor: actionPending ? 'wait' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>⚡</span>
-                <span>К своему порталу ({myPortalCoord.x - 1}, {myPortalCoord.y})</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (myPortalCoord) {
+                  handleTeleportToMyPortal(myPortalCoord.x, myPortalCoord.y);
+                }
+              }}
+              disabled={actionPending || !myPortalCoord}
+              title={myPortalCoord ? `Телепортация на (${myPortalCoord.x - 1}, ${myPortalCoord.y})` : 'У вас пока нет созданного портала в этом мире'}
+              style={{
+                backgroundColor: myPortalCoord ? '#3b0764' : '#1f2937',
+                color: myPortalCoord ? '#e879f9' : '#6b7280',
+                border: `1px solid ${myPortalCoord ? '#c084fc' : '#374151'}`,
+                padding: '6px 12px',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: (actionPending || !myPortalCoord) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: myPortalCoord ? 1 : 0.6
+              }}
+            >
+              <span>⚡</span>
+              <span>
+                {myPortalCoord
+                  ? `К своему порталу (${myPortalCoord.x - 1}, ${myPortalCoord.y})`
+                  : 'К своему порталу (нет врат)'}
+              </span>
+            </button>
           </div>
         )}
 
