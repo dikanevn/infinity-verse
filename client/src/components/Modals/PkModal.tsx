@@ -125,33 +125,6 @@ export const PkModal: React.FC<PkModalProps> = ({
               ВОЙТИ ➔
             </button>
           </div>
-
-          <div style={{
-            borderTop: '1px dashed #334155',
-            paddingTop: '8px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px'
-          }}>
-            <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700 }}>
-              🛠️ РЕЖИМ ДЛЯ ТЕСТА С ТЕЛЕФОНА НА HTTP 192.168...:
-            </div>
-            <button
-              onClick={() => onConnect(undefined, 'xor')}
-              style={{
-                backgroundColor: '#78350f',
-                border: '1px solid #d97706',
-                color: '#fef3c7',
-                padding: '6px 10px',
-                fontSize: '0.66rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                textAlign: 'center'
-              }}
-            >
-              2. ВОЙТИ ЧЕРЕЗ XOR-MASK (ДЛЯ HTTP 192.168) ➔
-            </button>
-          </div>
         </div>
       </div>
     </div>
