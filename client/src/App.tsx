@@ -14,6 +14,7 @@ import { PortalModal } from './components/Modals/PortalModal';
 import { FeedbackModal } from './components/Modals/FeedbackModal';
 import { IdleOverlay } from './components/Modals/IdleOverlay';
 import { QuantumKissellModal } from './components/Modals/QuantumKissellModal';
+import { WelcomeModal } from './components/Modals/WelcomeModal';
 import { useIdleDetector } from './hooks/useIdleDetector';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
   const [isPortalModalOpen, setIsPortalModalOpen] = useState<boolean>(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isQuantumKissellOpen, setIsQuantumKissellOpen] = useState<boolean>(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(true);
 
   const [pkInput, setPkInput] = useState<string>('');
   const [inferBalance, setInferBalance] = useState<string | null>(null);
@@ -236,7 +238,8 @@ function App() {
         isNetworkModalOpen ||
         isPortalModalOpen ||
         isFeedbackModalOpen ||
-        isQuantumKissellOpen
+        isQuantumKissellOpen ||
+        isWelcomeModalOpen
       ) {
         return;
       }
@@ -642,6 +645,12 @@ function App() {
       <QuantumKissellModal
         isOpen={isQuantumKissellOpen}
         onExit={() => setIsQuantumKissellOpen(false)}
+      />
+
+      {/* Приветственное модальное окно на старте игры */}
+      <WelcomeModal
+        isOpen={isWelcomeModalOpen}
+        onClose={() => setIsWelcomeModalOpen(false)}
       />
 
     </div>

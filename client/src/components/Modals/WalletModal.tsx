@@ -248,29 +248,91 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             </button>
 
             {/* Ручной режим MetaMask Direct за свой газ */}
-            <button
-              onClick={() => onConnectProvider(walletProviders[0])}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                backgroundColor: '#161b26',
-                border: '1px solid #334155',
-                padding: '10px 12px',
-                color: '#f8fafc',
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                textAlign: 'left',
-                borderRadius: '4px'
-              }}
-            >
-              <span style={{ fontSize: '1.2rem' }}>🦊</span>
-              <div>
-                <div>MetaMask Direct (Ручной режим)</div>
-                <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Каждый шаг подтверждается окном за личный газ</div>
-              </div>
-            </button>
+            {metamaskProvider ? (
+              <button
+                onClick={() => onConnectProvider(metamaskProvider)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: '#161b26',
+                  border: '1px solid #334155',
+                  padding: '10px 12px',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textAlign: 'left',
+                  borderRadius: '4px'
+                }}
+              >
+                {metamaskProvider.info.icon ? (
+                  <img src={metamaskProvider.info.icon} alt="MetaMask" style={{ width: '22px', height: '22px' }} />
+                ) : (
+                  <span style={{ fontSize: '1.2rem' }}>🦊</span>
+                )}
+                <div>
+                  <div>MetaMask Direct (Ручной режим)</div>
+                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Каждый шаг подтверждается окном за личный газ</div>
+                </div>
+              </button>
+            ) : (
+              <button
+                onClick={() => onConnectProvider(walletProviders[0])}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: '#161b26',
+                  border: '1px solid #334155',
+                  padding: '10px 12px',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textAlign: 'left',
+                  borderRadius: '4px'
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>🦊</span>
+                <div>
+                  <div>MetaMask Direct (Ручной режим)</div>
+                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Каждый шаг подтверждается окном за личный газ</div>
+                </div>
+              </button>
+            )}
+
+            {/* Другие кошельки в ручном режиме */}
+            {walletProviders.filter(p => p !== metamaskProvider).map(p => (
+              <button
+                key={'direct-' + p.info.uuid}
+                onClick={() => onConnectProvider(p)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: '#161b26',
+                  border: '1px solid #334155',
+                  padding: '10px 12px',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textAlign: 'left',
+                  borderRadius: '4px'
+                }}
+              >
+                {p.info.icon ? (
+                  <img src={p.info.icon} alt={p.info.name} style={{ width: '22px', height: '22px', borderRadius: '4px' }} />
+                ) : (
+                  <span style={{ fontSize: '1.2rem' }}>🔌</span>
+                )}
+                <div>
+                  <div>{p.info.name} (Прямой ончейн)</div>
+                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Подтверждение транзакций через {p.info.name}</div>
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>
