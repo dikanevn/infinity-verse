@@ -66,10 +66,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(5px)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
         zIndex: 99999,
-        padding: '16px'
+        padding: '16px',
+        paddingTop: 'max(24px, 8dvh)',
+        overflowY: 'auto'
       }}
     >
       <div
@@ -86,7 +88,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           flexDirection: 'column',
           gap: '14px',
           color: '#f8fafc',
-          fontFamily: 'monospace, system-ui, sans-serif'
+          fontFamily: 'monospace, system-ui, sans-serif',
+          maxHeight: 'calc(100dvh - 48px)',
+          overflowY: 'auto'
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
