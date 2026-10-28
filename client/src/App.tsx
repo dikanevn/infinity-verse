@@ -406,7 +406,7 @@ function App() {
               <span>
                 {myPortalCoord
                   ? `К своему порталу (${myPortalCoord.x - 1}, ${myPortalCoord.y})`
-                  : 'К своему порталу (нет врат)'}
+                  : 'К своему порталу'}
               </span>
             </button>
           </div>
