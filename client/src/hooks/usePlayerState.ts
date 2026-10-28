@@ -873,6 +873,158 @@ export function usePlayerState(
     }
   };
 
+  const handleTeleportToObelisk = async () => {
+    if (!connectedAddress || !player?.exists) return;
+    setActionPending(true);
+    setStatusText("🗿 Телепортация к Обелиску (0, -1)...");
+    try {
+      if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
+        await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
+          const hash = await walletClient.writeContract({
+            address: AAA_CONTRACT_ADDRESS,
+            abi: AAA_ABI,
+            functionName: 'teleportToObeliskDirect',
+            account: walletClient.account,
+            gas: 200000n
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+        });
+      } else if (authMode === 'metamask_direct') {
+        const prov = activeMetaMaskProvider || (window as any).ethereum;
+        if (!prov) throw new Error('Подключите MetaMask');
+        const walletClient = createWalletClient({
+          chain: monadTestnet,
+          transport: custom(prov)
+        });
+        const hash = await walletClient.writeContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'teleportToObeliskDirect',
+          account: connectedAddress as `0x${string}`
+        });
+        await publicClient.waitForTransactionReceipt({ hash });
+      } else {
+        const sessionAccount = getOrCreateSessionAccount();
+        const nonce = await publicClient.readContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'nonces',
+          args: [connectedAddress as `0x${string}`]
+        });
+
+        const teleportHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'uint256', 'uint256'],
+            ['TeleportToObelisk', connectedAddress as `0x${string}`, nonce, BigInt(10143)]
+          )
+        );
+
+        const sig = await sessionAccount.signMessage({
+          message: { raw: teleportHash }
+        });
+
+        const res = await fetch(RELAYER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'teleport_obelisk',
+            player: connectedAddress,
+            sig
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Teleport error');
+      }
+
+      setStatusText("✨ Вы переместились к Обелиску на (0, -1)!");
+      await fetchPlayer();
+      await onStateRefresh();
+    } catch (err: any) {
+      console.error('Teleport error:', err);
+      alert('Ошибка телепортации: ' + (err.shortMessage || err.message));
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleTeleportToMyPortal = async (portalX: number, portalY: number) => {
+    if (!connectedAddress || !player?.exists) return;
+    setActionPending(true);
+    setStatusText(`🌀 Телепортация к своему порталу (${portalX}, ${portalY})...`);
+    try {
+      if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
+        await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
+          const hash = await walletClient.writeContract({
+            address: AAA_CONTRACT_ADDRESS,
+            abi: AAA_ABI,
+            functionName: 'teleportToMyPortalDirect',
+            args: [portalX, portalY],
+            account: walletClient.account,
+            gas: 200000n
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+        });
+      } else if (authMode === 'metamask_direct') {
+        const prov = activeMetaMaskProvider || (window as any).ethereum;
+        if (!prov) throw new Error('Подключите MetaMask');
+        const walletClient = createWalletClient({
+          chain: monadTestnet,
+          transport: custom(prov)
+        });
+        const hash = await walletClient.writeContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'teleportToMyPortalDirect',
+          args: [portalX, portalY],
+          account: connectedAddress as `0x${string}`
+        });
+        await publicClient.waitForTransactionReceipt({ hash });
+      } else {
+        const sessionAccount = getOrCreateSessionAccount();
+        const nonce = await publicClient.readContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'nonces',
+          args: [connectedAddress as `0x${string}`]
+        });
+
+        const teleportHash = keccak256(
+          encodePacked(
+            ['string', 'address', 'int32', 'int32', 'uint256', 'uint256'],
+            ['TeleportToMyPortal', connectedAddress as `0x${string}`, portalX, portalY, nonce, BigInt(10143)]
+          )
+        );
+
+        const sig = await sessionAccount.signMessage({
+          message: { raw: teleportHash }
+        });
+
+        const res = await fetch(RELAYER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'teleport_portal',
+            player: connectedAddress,
+            portalX,
+            portalY,
+            sig
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Teleport error');
+      }
+
+      setStatusText(`✨ Вы переместились к своему порталу на (${portalX - 1}, ${portalY})!`);
+      await fetchPlayer();
+      await onStateRefresh();
+    } catch (err: any) {
+      console.error('Teleport error:', err);
+      alert('Ошибка телепортации к порталу: ' + (err.shortMessage || err.message));
+    } finally {
+      setActionPending(false);
+    }
+  };
+
   const handleWithdrawGoogleWallet = async (targetAddress: string) => {
     if (!googleIdToken) {
       alert('Вывод доступен только для сессии Google Login');
@@ -946,6 +1098,8 @@ export function usePlayerState(
     handleCreatePortal,
     handleTransferPortal,
     handleDestroyPortal,
+    handleTeleportToObelisk,
+    handleTeleportToMyPortal,
     fetchPlayer
   };
 }

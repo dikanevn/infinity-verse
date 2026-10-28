@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2810261131';
+export const CLIENT_VERSION = '2810261136';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -73,6 +73,8 @@ export const AAA_ABI = parseAbi([
   'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry, uint64 registeredAtBlock, uint64 registeredAtTimestamp)',
   'function nonces(address player) view returns (uint256)',
   'function isSessionValid(address player, address key) view returns (bool)',
+  'function getPortalByFounder(address founder) view returns (uint256)',
+  'function totalPortals() view returns (uint256)',
   // Прямые действия игрока за личный газ (Direct: MetaMask / Приватник)
   'function spawnDirect()',
   'function moveDirect(int32 targetX, int32 targetY)',
@@ -90,7 +92,12 @@ export const AAA_ABI = parseAbi([
   // Управление порталами Мультивселенной
   'function createPortalDirect(address targetContract, bytes32 founderName, bytes32 worldName, int32 portalX, int32 portalY) returns (uint256)',
   'function transferPortalDirect(uint256 portalId, address newOwner)',
-  'function destroyPortalDirect(uint256 portalId, int32 portalX, int32 portalY)'
+  'function destroyPortalDirect(uint256 portalId, int32 portalX, int32 portalY)',
+  // Телепортация
+  'function teleportToObeliskDirect()',
+  'function teleportToMyPortalDirect(int32 portalX, int32 portalY)',
+  'function teleportToObeliskGasless(address player, bytes sig)',
+  'function teleportToMyPortalGasless(address player, int32 portalX, int32 portalY, bytes sig)'
 ]);
 
 

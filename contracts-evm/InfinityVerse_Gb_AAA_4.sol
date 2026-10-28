@@ -469,7 +469,11 @@ contract InfinityVerse_Gb_AAA_4 {
     }
 
     function discoverCellDirect(int32 targetX, int32 targetY) external {
-        _validateAndExecuteDiscoverCell(msg.sender, targetX, targetY);
+        int32[] memory xs = new int32[](1);
+        int32[] memory ys = new int32[](1);
+        xs[0] = targetX;
+        ys[0] = targetY;
+        _validateAndExecuteDiscoverBatch(msg.sender, xs, ys);
     }
 
     function discoverCellsBatchDirect(
@@ -626,24 +630,20 @@ contract InfinityVerse_Gb_AAA_4 {
             currentNonce := shr(224, shl(224, authData))
         }
 
-        bytes32 messageHash = keccak256(
-            abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                keccak256(
-                    abi.encodePacked(
-                        "AuthorizeSession",
-                        player,
-                        sessionKey,
-                        expiry,
-                        currentNonce,
-                        block.chainid
-                    )
+        bytes32 messageHash = _getMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    "AuthorizeSession",
+                    player,
+                    sessionKey,
+                    expiry,
+                    currentNonce,
+                    block.chainid
                 )
             )
         );
 
-        address signer = recoverSigner(messageHash, sig);
-        if (signer != player) revert InvalidSignature();
+        if (recoverSigner(messageHash, sig) != player) revert InvalidSignature();
 
         _incrementNonceInternal(player, authData, currentNonce);
         _saveSessionInternal(player, sessionKey, expiry);
@@ -656,22 +656,18 @@ contract InfinityVerse_Gb_AAA_4 {
             currentNonce := shr(224, shl(224, authData))
         }
 
-        bytes32 messageHash = keccak256(
-            abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                keccak256(
-                    abi.encodePacked(
-                        "RevokeSession",
-                        player,
-                        currentNonce,
-                        block.chainid
-                    )
+        bytes32 messageHash = _getMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    "RevokeSession",
+                    player,
+                    currentNonce,
+                    block.chainid
                 )
             )
         );
 
-        address signer = recoverSigner(messageHash, sig);
-        if (signer != player) revert InvalidSignature();
+        if (recoverSigner(messageHash, sig) != player) revert InvalidSignature();
 
         _incrementNonceInternal(player, authData, currentNonce);
         _saveSessionInternal(player, address(0), 0);
@@ -687,16 +683,13 @@ contract InfinityVerse_Gb_AAA_4 {
             currentNonce := shr(224, shl(224, authData))
         }
 
-        bytes32 spawnHash = keccak256(
-            abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                keccak256(
-                    abi.encodePacked(
-                        "Spawn",
-                        player,
-                        currentNonce,
-                        block.chainid
-                    )
+        bytes32 spawnHash = _getMessageHash(
+            keccak256(
+                abi.encodePacked(
+                    "Spawn",
+                    player,
+                    currentNonce,
+                    block.chainid
                 )
             )
         );
@@ -713,6 +706,15 @@ contract InfinityVerse_Gb_AAA_4 {
 
         _incrementNonceInternal(player, authData, currentNonce);
         _executeSpawn(player);
+    }
+
+    function _getMessageHash(bytes32 innerHash) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                innerHash
+            )
+        );
     }
 
     function moveGasless(
@@ -823,13 +825,7 @@ contract InfinityVerse_Gb_AAA_4 {
         if (activeKey == address(0) || block.timestamp >= expiry)
             revert SessionExpired();
 
-        bytes32 messageHash = keccak256(
-            abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                innerHash
-            )
-        );
-
+        bytes32 messageHash = _getMessageHash(innerHash);
         address signer = recoverSigner(messageHash, sig);
         if (signer != activeKey) revert InvalidSignature();
 
@@ -1192,50 +1188,10 @@ contract InfinityVerse_Gb_AAA_4 {
         emit StarDropped(starX, starY, uint8(secondsWeight > 255 ? 255 : secondsWeight));
     }
 
-    function _validateAndExecuteDiscoverCell(
-        address player,
-        int32 targetX,
-        int32 targetY
-    ) internal {
-        bytes32 posKey = getPlayerPosKey(player);
-        bytes32 currentPos = mainContract.readSector(posKey);
-
-        int32 currentX;
-        int32 currentY;
-        bool exists;
-        assembly {
-            currentX := sar(224, currentPos)
-            currentY := sar(224, shl(32, currentPos))
-            exists := byte(8, currentPos)
-        }
-        if (!exists) revert PlayerNotSpawned();
-
-        int32 dx = targetX - currentX;
-        int32 dy = targetY - currentY;
-        if (dx < 0) dx = -dx;
-        if (dy < 0) dy = -dy;
-        if (dx > 2 || dy > 2) revert MoveTooFar();
-
-        bytes32 cellKey = getCellKey(targetX, targetY);
-        bytes32 currentCell = mainContract.readSector(cellKey);
-        uint8 terrain;
-        assembly {
-            terrain := byte(0, currentCell)
-        }
-        if (terrain != 0) revert CellAlreadyExists();
-
-        // 4 байта новой клетки: terrain = 1 (Песок), object = 0, state = 0, reserved = 0
-        bytes32 sandCell;
-        assembly {
-            sandCell := shl(248, 1)
-        }
-        mainContract.writeSector(cellKey, sandCell);
-    }
-
     function _validateAndExecuteDiscoverBatch(
         address player,
-        int32[] calldata xs,
-        int32[] calldata ys
+        int32[] memory xs,
+        int32[] memory ys
     ) internal {
         uint256 len = xs.length;
         if (len == 0 || len > 25) revert InvalidBatchLength();

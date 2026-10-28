@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { EIP6963ProviderDetail } from './types';
-import { CLIENT_VERSION, STAR_TOKEN_ADDRESS, STAR_TOKEN_ABI, publicClient } from './config/contracts';
+import { CLIENT_VERSION, STAR_TOKEN_ADDRESS, STAR_TOKEN_ABI, AAA_CONTRACT_ADDRESS, AAA_ABI, publicClient } from './config/contracts';
 
 import { useWorldState } from './hooks/useWorldState';
 import { usePlayerState } from './hooks/usePlayerState';
@@ -112,8 +112,45 @@ function App() {
     handleCreatePortal,
     handleTransferPortal,
     handleDestroyPortal,
+    handleTeleportToObelisk,
+    handleTeleportToMyPortal,
     handleExitRam
   } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState, isIdle);
+
+  // Поиск портала текущего игрока на карте
+  const [myPortalCoord, setMyPortalCoord] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!connectedAddress || !cells || cells.length === 0) {
+      setMyPortalCoord(null);
+      return;
+    }
+
+    let isSubscribed = true;
+    publicClient.readContract({
+      address: AAA_CONTRACT_ADDRESS,
+      abi: AAA_ABI,
+      functionName: 'getPortalByFounder',
+      args: [connectedAddress as `0x${string}`]
+    }).then((myPortalIdBigInt) => {
+      if (!isSubscribed) return;
+      const myPortalId = Number(myPortalIdBigInt);
+      if (myPortalId > 0) {
+        const found = cells.find(c => c.object === 4 && ((((c.state || 0) << 8) | (c.reserved || 0)) === myPortalId));
+        if (found) {
+          setMyPortalCoord({ x: found.x, y: found.y });
+        }
+      } else {
+        setMyPortalCoord(null);
+      }
+    }).catch((err) => {
+      console.warn('Error fetching founder portal id:', err);
+    });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [connectedAddress, cells]);
 
   // При первом появлении или обновлении данных игрока — сразу центрируем фокус и выбор на персонаже
   useEffect(() => {
@@ -295,30 +332,73 @@ function App() {
         />
 
         {/* 64-битный инспектор выбранной клетки */}
-        {/* Кнопка Врат Мультивселенной */}
-        {connectedAddress && (
-          <div style={{ margin: '4px auto 8px auto', display: 'flex', gap: '8px' }}>
-            
-            {player?.exists && (
+        {/* Кнопки действий: Портал и Телепортация */}
+        {connectedAddress && player?.exists && (
+          <div style={{ margin: '4px auto 8px auto', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setIsPortalModalOpen(true)}
+              style={{
+                backgroundColor: '#1e1b4b',
+                color: '#c084fc',
+                border: '1px solid #6366f1',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>🌀</span>
+              <span>Поставить портал справа ({player.x + 1}, {player.y})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleTeleportToObelisk}
+              disabled={actionPending}
+              style={{
+                backgroundColor: '#1e293b',
+                color: '#38bdf8',
+                border: '1px solid #0284c7',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: actionPending ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>🗿</span>
+              <span>К Обелиску (0, -1)</span>
+            </button>
+
+            {myPortalCoord && (
               <button
                 type="button"
-                onClick={() => setIsPortalModalOpen(true)}
+                onClick={() => handleTeleportToMyPortal(myPortalCoord.x, myPortalCoord.y)}
+                disabled={actionPending}
                 style={{
-                  backgroundColor: '#1e1b4b',
-                  color: '#c084fc',
-                  border: '1px solid #6366f1',
-                  padding: '6px 14px',
+                  backgroundColor: '#3b0764',
+                  color: '#e879f9',
+                  border: '1px solid #c084fc',
+                  padding: '6px 12px',
                   borderRadius: '4px',
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: actionPending ? 'wait' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px'
                 }}
               >
-                <span>🌀</span>
-                <span>Поставить портал справа от себя на ({player.x + 1}, {player.y})</span>
+                <span>⚡</span>
+                <span>К своему порталу ({myPortalCoord.x - 1}, {myPortalCoord.y})</span>
               </button>
             )}
           </div>
