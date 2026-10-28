@@ -494,7 +494,7 @@ export const CellView: React.FC<CellViewProps> = ({
                     try {
                       setPortalActionLoading(true);
                       await onDestroyPortal(portalId, coord.x, coord.y);
-                      alert('Портал уничтожен, врата дематериализованы.');
+                      alert('Портал уничтожен и дематериализован.');
                       setShowTooltip(false);
                       if (onRefresh) await onRefresh();
                     } catch (err: any) {
@@ -519,7 +519,7 @@ export const CellView: React.FC<CellViewProps> = ({
                   }}
                 >
                   <span>💥</span>
-                  <span>{portalActionLoading ? 'Выполнение...' : 'Уничтожить Врата и снести с карты'}</span>
+                  <span>{portalActionLoading ? 'Выполнение...' : 'Уничтожить Портал и снести с карты'}</span>
                 </button>
               </div>
             )}
