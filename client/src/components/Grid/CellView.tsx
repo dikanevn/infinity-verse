@@ -38,6 +38,7 @@ export const CellView: React.FC<CellViewProps> = ({
 
   const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: `T:${cell.terrain}`, icon: '', bg: '#14291e' }) : TERRAIN_CONFIG[0];
   const hasObject = !isFog && !!cell?.object && cell.object !== 0;
+  const isQuantumSubstance = hasObject && cell.object === 3;
   const oInfo = hasObject ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : { name: '—', icon: '' };
 
   // Если это песок (terrain === 1), берем уникальную процедурную текстуру по координатам (x, y)
@@ -86,7 +87,13 @@ export const CellView: React.FC<CellViewProps> = ({
       onMouseLeave={() => { if (isChaos) setShowTooltip(false); }}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      title={isChaos ? 'Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.' : undefined}
+      title={
+        isChaos
+          ? 'Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.'
+          : isQuantumSubstance
+          ? 'Квантовая субстанция'
+          : undefined
+      }
       style={{
         boxSizing: 'border-box',
         width: '62px',
@@ -210,7 +217,7 @@ export const CellView: React.FC<CellViewProps> = ({
             color: hasObject ? '#67e8f9' : '#64748b',
             fontWeight: hasObject ? 700 : 500
           }}>
-            {hasObject ? oInfo.name : '—'}
+            {isQuantumSubstance ? '—' : hasObject ? oInfo.name : '—'}
           </span>
         </div>
       </div>
