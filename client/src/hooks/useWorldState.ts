@@ -6,7 +6,8 @@ import { CONNECTION_CONFIG } from '../config/constants';
 
 export function useWorldState(
   connectedAddress: string,
-  focusPoints: { x: number; y: number }[]
+  focusPoints: { x: number; y: number }[],
+  isPaused: boolean = false
 ) {
   const [cells, setCells] = useState<CellData[]>([]);
   const [contractVersion, setContractVersion] = useState<string>('Main_Gb_1');
@@ -91,10 +92,12 @@ export function useWorldState(
   }, []);
 
   useEffect(() => {
+    if (isPaused) return;
+
     fetchState();
     const interval = setInterval(fetchState, CONNECTION_CONFIG.SYNC_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [connectedAddress, JSON.stringify(focusPoints)]);
+  }, [connectedAddress, JSON.stringify(focusPoints), isPaused]);
 
   useEffect(() => {
     if (!lastBlockTimestamp) return;

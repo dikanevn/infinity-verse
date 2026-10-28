@@ -28,4 +28,5 @@ export const CONNECTION_CONFIG = {
   WARN_BLOCK_AGE_SEC: 5,
   DANGER_BLOCK_AGE_SEC: 15,
   SYNC_INTERVAL_MS: 5000,
+  IDLE_TIMEOUT_MS: 3 * 60 * 1000, // 3 минуты неактивности до перехода в паузу // 15 секунд (тестовый режим) // 3 минуты неактивности до перехода в паузу
 };

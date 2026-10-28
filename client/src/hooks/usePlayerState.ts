@@ -15,7 +15,8 @@ export function usePlayerState(
   connectedAddress: string,
   setConnectedAddress: (addr: string) => void,
   setStatusText: (txt: string) => void,
-  onStateRefresh: () => Promise<void>
+  onStateRefresh: () => Promise<void>,
+  isPaused: boolean = false
 ) {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [isPlayerLoading, setIsPlayerLoading] = useState<boolean>(false);
@@ -63,14 +64,14 @@ export function usePlayerState(
   };
 
   useEffect(() => {
-    if (connectedAddress) {
+    if (connectedAddress && !isPaused) {
       fetchPlayer();
       const interval = setInterval(fetchPlayer, 5000);
       return () => clearInterval(interval);
-    } else {
+    } else if (!connectedAddress) {
       setPlayer(null);
     }
-  }, [connectedAddress]);
+  }, [connectedAddress, isPaused]);
 
   // ============================================================================
   // 2. ВХОД METAMASK С СЕССИЕЙ НА 20 ЧАСОВ (GASLESS: 1 ПОДПИСЬ БЕЗ КОМИССИИ, ДАЛЬШЕ БЕЗ ОКОН)

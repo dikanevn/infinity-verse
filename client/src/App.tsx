@@ -12,6 +12,8 @@ import { PkModal } from './components/Modals/PkModal';
 import { NetworkModal } from './components/Modals/NetworkModal';
 import { PortalModal } from './components/Modals/PortalModal';
 import { FeedbackModal } from './components/Modals/FeedbackModal';
+import { IdleOverlay } from './components/Modals/IdleOverlay';
+import { useIdleDetector } from './hooks/useIdleDetector';
 
 function App() {
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -26,6 +28,7 @@ function App() {
 
   const [pkInput, setPkInput] = useState<string>('');
   const [inferBalance, setInferBalance] = useState<string | null>(null);
+  const { isIdle, resume: resumeActivity } = useIdleDetector();
 
   // Опрос баланса токенов $INFER
   useEffect(() => {
@@ -51,10 +54,12 @@ function App() {
       }
     };
 
-    fetchInferBalance();
-    const interval = setInterval(fetchInferBalance, 5000);
-    return () => clearInterval(interval);
-  }, [connectedAddress]);
+    if (!isIdle) {
+      fetchInferBalance();
+      const interval = setInterval(fetchInferBalance, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [connectedAddress, isIdle]);
 
   // 1. Поиск установленных кошельков (EIP-6963)
   useEffect(() => {
@@ -85,7 +90,7 @@ function App() {
     statusState,
     setStatusText,
     fetchState
-  } = useWorldState(connectedAddress, focusPoints);
+  } = useWorldState(connectedAddress, focusPoints, isIdle);
 
   // 3. Состояние игрока и механики ходов
   const {
@@ -108,7 +113,7 @@ function App() {
     handleTransferPortal,
     handleDestroyPortal,
     handleExitRam
-  } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState);
+  } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState, isIdle);
 
   // При первом появлении или обновлении данных игрока — сразу центрируем фокус и выбор на персонаже
   useEffect(() => {
@@ -224,6 +229,7 @@ function App() {
   const curCell = cells.find(c => c.x === selectedCoord.x && c.y === selectedCoord.y) || null;
 
   return (
+    <>
     <div style={{
       boxSizing: 'border-box',
       width: '100vw',
@@ -430,7 +436,10 @@ function App() {
         connectedAddress={connectedAddress}
         userEmail={isGoogleMode ? googleEmail : undefined}
       />
+
     </div>
+    <IdleOverlay isOpen={isIdle} onResume={resumeActivity} />
+    </>
   );
 }
 
