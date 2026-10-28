@@ -288,9 +288,9 @@ function App() {
 
         {/* 64-битный инспектор выбранной клетки */}
         {/* Кнопка Врат Мультивселенной */}
-        {connectedAddress && curCell && (
+        {connectedAddress && (
           <div style={{ margin: '4px auto 8px auto', display: 'flex', gap: '8px' }}>
-            {curCell.object === 4 ? (
+            {curCell && curCell.object === 4 && (
               <button
                 type="button"
                 onClick={() => setIsPortalModalOpen(true)}
@@ -311,7 +311,8 @@ function App() {
                 <span>🌀</span>
                 <span>ИНСПЕКТОР ВРАТ (ID #{curCell.state})</span>
               </button>
-            ) : player?.exists && curCell.x === player.x + 1 && curCell.y === player.y ? (
+            )}
+            {player?.exists && (
               <button
                 type="button"
                 onClick={() => setIsPortalModalOpen(true)}
@@ -330,9 +331,9 @@ function App() {
                 }}
               >
                 <span>🌀</span>
-                <span>Поставить портал справа от себя на ({curCell.x}, {curCell.y})</span>
+                <span>Поставить портал справа от себя на ({player.x + 1}, {player.y})</span>
               </button>
-            ) : null}
+            )}
           </div>
         )}
 
@@ -429,8 +430,8 @@ function App() {
         isOpen={isPortalModalOpen}
         onClose={() => setIsPortalModalOpen(false)}
         portalId={curCell && curCell.object === 4 ? curCell.state : 0}
-        portalX={curCell ? curCell.x : 0}
-        portalY={curCell ? curCell.y : 0}
+        portalX={curCell && curCell.object === 4 ? curCell.x : (player?.exists ? player.x + 1 : 0)}
+        portalY={curCell && curCell.object === 4 ? curCell.y : (player?.exists ? player.y : 0)}
         connectedAddress={connectedAddress}
         isDirectSigner={isDirectSignerMode}
         onRefresh={fetchState}

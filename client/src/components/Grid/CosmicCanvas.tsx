@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
 import {
+  SAND_PIXELS_8X8,
+  STAR_PIXELS_8X8,
   OBELISK_PIXELS_8X8,
   PORTAL_PIXELS_8X8,
   PLAYER_PIXELS_8X8,
@@ -118,9 +120,9 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
             continue;
           }
 
-          // А. Отрисовка ландшафта (Terrain)
+          // А. Отрисовка ландшафта (Terrain) в пикселях
           if (cell.terrain === 1) {
-            // Песок теперь отрисовывается в пикселях на слое тайлов CellView
+            drawMatrix(SAND_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
           } else if (cell.terrain === 0) {
             // Хаос: темная космическая клетка
             ctx.fillStyle = '#06080f';
@@ -130,13 +132,13 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
             ctx.fillRect(screenLeft, screenTop, cellSizePx, cellSizePx);
           }
 
-          // Б. Отрисовка объектов (Objects) — при отдалении (когда тайлы скрыты)
-          if (scale < 0.02 || scale > 4) {
-            if (cell.object === 1 || cell.object === 9) {
-              drawMatrix(OBELISK_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
-            } else if (cell.object === 4) {
-              drawMatrix(PORTAL_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
-            }
+          // Б. Отрисовка объектов (Objects) в пикселях
+          if (cell.object === 1 || cell.object === 9) {
+            drawMatrix(OBELISK_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+          } else if (cell.object === 3) {
+            drawMatrix(STAR_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+          } else if (cell.object === 4) {
+            drawMatrix(PORTAL_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
           }
 
           // В. Граница выбранной клетки
@@ -147,8 +149,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           }
         }
 
-        // Г. Отрисовка игрока (Пиксельный аватар исследователя) при отдалении (когда тайлы скрыты)
-        if (player?.exists && (scale < 0.02 || scale > 4)) {
+        // Г. Отрисовка игрока (Пиксельный аватар исследователя)
+        if (player?.exists) {
           const pLeft = originX + (player.x * cellPitch - 31) * scale;
           const pTop = originY + (-player.y * cellPitch - 31) * scale;
           drawMatrix(PLAYER_PIXELS_8X8, pLeft, pTop, cellSizePx);
