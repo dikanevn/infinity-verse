@@ -732,7 +732,7 @@ export function usePlayerState(
       return;
     }
     setActionPending(true);
-    setStatusText("🌀 Открытие Врат справа от себя на (" + portalX + ", " + portalY + ")...");
+    setStatusText("🌀 Открытие Портала справа от себя на (" + portalX + ", " + portalY + ")...");
     try {
       const padBytes32 = (str: string): `0x${string}` => {
         let hex = '';
@@ -759,7 +759,7 @@ export function usePlayerState(
         });
       } else {
         const prov = activeMetaMaskProvider || (window as any).ethereum;
-        if (!prov) throw new Error('Для открытия Врат подключите MetaMask или кошелек');
+        if (!prov) throw new Error('Для открытия Портала подключите MetaMask или кошелек');
         const walletClient = createWalletClient({
           chain: monadTestnet,
           transport: custom(prov)
@@ -774,7 +774,7 @@ export function usePlayerState(
         await publicClient.waitForTransactionReceipt({ hash });
       }
 
-      setStatusText("✅ Врата Мультивселенной успешно материализованы на (" + portalX + ", " + portalY + ")!");
+      setStatusText("✅ Портал Мультивселенной успешно материализованы на (" + portalX + ", " + portalY + ")!");
       await onStateRefresh();
       await fetchPlayer();
     } finally {
@@ -825,7 +825,7 @@ export function usePlayerState(
   const handleDestroyPortal = async (portalId: number, portalX: number, portalY: number) => {
     if (!connectedAddress) return;
     setActionPending(true);
-    setStatusText("💥 Снос Врат #" + portalId + " на (" + portalX + ", " + portalY + ")...");
+    setStatusText("💥 Снос Портала #" + portalId + " на (" + portalX + ", " + portalY + ")...");
     try {
       if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
@@ -839,7 +839,7 @@ export function usePlayerState(
         });
       } else {
         const prov = activeMetaMaskProvider || (window as any).ethereum;
-        if (!prov) throw new Error('Для сноса врат подключите MetaMask');
+        if (!prov) throw new Error('Для сноса портала подключите MetaMask');
         const walletClient = createWalletClient({
           chain: monadTestnet,
           transport: custom(prov)
@@ -854,7 +854,7 @@ export function usePlayerState(
         await publicClient.waitForTransactionReceipt({ hash });
       }
 
-      setStatusText("✅ Врата #" + portalId + " успешно уничтожены и стерты с карты!");
+      setStatusText("✅ Портал #" + portalId + " успешно уничтожены и стерты с карты!");
       await onStateRefresh();
     } finally {
       setActionPending(false);

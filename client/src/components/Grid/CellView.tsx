@@ -21,8 +21,12 @@ interface CellViewProps {
   cell?: CellData;
   isSelected: boolean;
   player: PlayerData | null;
+  connectedAddress?: string;
   onSelect: (coord: { x: number; y: number }) => void;
   onQuickMove?: (coord: { x: number; y: number }) => void;
+  onTransferPortal?: (portalId: number, newOwner: string) => Promise<void>;
+  onDestroyPortal?: (portalId: number, x: number, y: number) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
 export const CellView: React.FC<CellViewProps> = ({
@@ -30,10 +34,16 @@ export const CellView: React.FC<CellViewProps> = ({
   cell,
   isSelected,
   player,
+  connectedAddress,
   onSelect,
-  onQuickMove
+  onQuickMove,
+  onTransferPortal,
+  onDestroyPortal,
+  onRefresh
 }) => {
   const [showTooltip, setShowTooltip] = React.useState<boolean>(false);
+  const [newOwnerAddress, setNewOwnerAddress] = React.useState<string>('');
+  const [portalActionLoading, setPortalActionLoading] = React.useState<boolean>(false);
 
   // Туман войны — только если клетка вообще не прочитана из блокчейна (!cell)
   const isFog = !cell;
@@ -288,12 +298,11 @@ export const CellView: React.FC<CellViewProps> = ({
         </div>
       )}
 
-      {/* Всплывающая подсказка с адресом, именем основателя и названием мира для Портала */}
+      {/* Всплывающая подсказка с адресом, именем основателя, названием мира и управлением для Портала */}
       {isPortal && isSelected && showTooltip && (
         <div
           onClick={(e) => {
             e.stopPropagation();
-            setShowTooltip(false);
           }}
           style={{
             position: 'absolute',
@@ -305,10 +314,10 @@ export const CellView: React.FC<CellViewProps> = ({
             border: '1px solid #c084fc',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.9), 0 0 14px rgba(192, 132, 252, 0.5)',
             borderRadius: '6px',
-            padding: '7px 10px',
+            padding: '8px 10px',
             fontSize: '0.64rem',
             lineHeight: 1.35,
-            width: '235px',
+            width: '260px',
             textAlign: 'left',
             zIndex: 100,
             pointerEvents: 'auto',
@@ -316,7 +325,7 @@ export const CellView: React.FC<CellViewProps> = ({
             cursor: 'default',
             display: 'flex',
             flexDirection: 'column',
-            gap: '3px'
+            gap: '4px'
           }}
         >
           <div style={{
@@ -331,9 +340,30 @@ export const CellView: React.FC<CellViewProps> = ({
           }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <img src={PORTAL_PIXEL_SPRITE_URI} alt="Портал" style={{ width: '16px', height: '16px', imageRendering: 'pixelated' }} />
-              <span>Врата #{portalId}</span>
+              <span>Портал #{portalId}</span>
             </span>
-            <span style={{ fontSize: '0.55rem', color: '#a855f7', fontWeight: 600 }}>({coord.x}, {coord.y})</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.55rem', color: '#a855f7', fontWeight: 600 }}>({coord.x}, {coord.y})</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTooltip(false);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '0.75rem',
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                  padding: '0 2px'
+                }}
+                title="Закрыть"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -382,6 +412,117 @@ export const CellView: React.FC<CellViewProps> = ({
                 {portalMeta ? portalMeta.targetContract : 'Определяется...'}
               </span>
             </div>
+
+            {/* Блок управления владельца портала */}
+            {portalMeta && connectedAddress && portalMeta.founder.toLowerCase() === connectedAddress.toLowerCase() && (
+              <div style={{
+                marginTop: '6px',
+                borderTop: '1px solid rgba(251, 191, 36, 0.3)',
+                paddingTop: '6px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                <div style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>👑</span>
+                  <span>УПРАВЛЕНИЕ ВЛАДЕЛЬЦА ПОРТАЛА</span>
+                </div>
+
+                {/* Форма передачи прав */}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!onTransferPortal || !newOwnerAddress) return;
+                    try {
+                      setPortalActionLoading(true);
+                      await onTransferPortal(portalId, newOwnerAddress);
+                      alert('Владение порталом успешно передано!');
+                      setNewOwnerAddress('');
+                      if (onRefresh) await onRefresh();
+                    } catch (err: any) {
+                      alert('Ошибка передачи прав: ' + (err.shortMessage || err.message));
+                    } finally {
+                      setPortalActionLoading(false);
+                    }
+                  }}
+                  style={{ display: 'flex', gap: '4px' }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Новый владелец (0x...)"
+                    value={newOwnerAddress}
+                    onChange={(e) => setNewOwnerAddress(e.target.value)}
+                    required
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#0a0d14',
+                      border: '1px solid #334155',
+                      color: '#f8fafc',
+                      padding: '4px 6px',
+                      fontSize: '0.62rem',
+                      borderRadius: '3px'
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={portalActionLoading}
+                    style={{
+                      backgroundColor: '#2563eb',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '3px',
+                      fontSize: '0.62rem',
+                      fontWeight: 700,
+                      cursor: portalActionLoading ? 'not-allowed' : 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Передать
+                  </button>
+                </form>
+
+                {/* Кнопка сноса Врат */}
+                <button
+                  type="button"
+                  disabled={portalActionLoading}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!onDestroyPortal) return;
+                    if (!confirm('ВНИМАНИЕ! Портал будет навсегда уничтожен, а тайл на карте исчезнет. Продолжить?')) return;
+                    try {
+                      setPortalActionLoading(true);
+                      await onDestroyPortal(portalId, coord.x, coord.y);
+                      alert('Портал уничтожен, врата дематериализованы.');
+                      setShowTooltip(false);
+                      if (onRefresh) await onRefresh();
+                    } catch (err: any) {
+                      alert('Ошибка сноса портала: ' + (err.shortMessage || err.message));
+                    } finally {
+                      setPortalActionLoading(false);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '6px 8px',
+                    borderRadius: '3px',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    cursor: portalActionLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>💥</span>
+                  <span>{portalActionLoading ? 'Выполнение...' : 'Уничтожить Врата и снести с карты'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Стрелка вниз */}

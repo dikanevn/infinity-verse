@@ -112,7 +112,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
       onClose();
       await onRefresh();
     } catch (err: any) {
-      alert('Ошибка открытия врат: ' + (err.shortMessage || err.message));
+      alert('Ошибка открытия портала: ' + (err.shortMessage || err.message));
     } finally {
       setActionLoading(false);
     }
@@ -140,7 +140,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
     try {
       setActionLoading(true);
       await onDestroyPortal(portalInfo.id, portalX, portalY);
-      alert('Портал уничтожен, врата дематериализованы.');
+      alert('Портал уничтожен и дематериализован.');
       onClose();
       await onRefresh();
     } catch (err: any) {
@@ -181,7 +181,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <img src={PORTAL_ICON_URI} alt="Портал" style={{ width: '24px', height: '24px', imageRendering: 'pixelated', filter: 'drop-shadow(0 0 6px rgba(192, 132, 252, 0.8))' }} />
             <span style={{ fontWeight: 800, color: '#c084fc', fontSize: '1rem' }}>
-              {portalInfo ? `ВРАТА МУЛЬТИВСЕЛЕННОЙ #${portalInfo.id}` : `СОЗДАНИЕ БЕСКОНЕЧНОЙ МУЛЬТИВСЕЛЕННОЙ (${portalX}, ${portalY})`}
+              {portalInfo ? `ПОРТАЛ МУЛЬТИВСЕЛЕННОЙ #${portalInfo.id}` : `СОЗДАНИЕ БЕСКОНЕЧНОЙ МУЛЬТИВСЕЛЕННОЙ (${portalX}, ${portalY})`}
             </span>
           </div>
           <button
@@ -282,7 +282,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                     marginTop: '4px'
                   }}
                 >
-                  💥 Уничтожить Врата и снести с карты
+                  💥 Уничтожить Портал и снести с карты
                 </button>
               </div>
             )}

@@ -13,9 +13,13 @@ interface WorldGridProps {
   player: PlayerData | null;
   focusCoord: { x: number; y: number };
   inferBalance?: string | null;
+  connectedAddress?: string;
   onSelectCoord: (coord: { x: number; y: number }) => void;
   onCenterPlayer: () => void;
   onQuickMove?: (coord: { x: number; y: number }) => void;
+  onTransferPortal?: (portalId: number, newOwner: string) => Promise<void>;
+  onDestroyPortal?: (portalId: number, x: number, y: number) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
 export const WorldGrid: React.FC<WorldGridProps> = ({
@@ -24,9 +28,13 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
   player,
   focusCoord,
   inferBalance,
+  connectedAddress,
   onSelectCoord,
   onCenterPlayer,
-  onQuickMove
+  onQuickMove,
+  onTransferPortal,
+  onDestroyPortal,
+  onRefresh
 }) => {
   const [scale, setScale] = useState<number>(0.85);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
