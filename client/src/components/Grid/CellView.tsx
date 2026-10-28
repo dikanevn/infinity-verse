@@ -153,21 +153,8 @@ export const CellView: React.FC<CellViewProps> = ({
   return (
     <button
       onClick={handleClick}
-      onMouseEnter={() => {
-        if (isChaos) setShowTooltip(true);
-        
-      }}
-      onMouseLeave={() => {
-        if (isChaos) setShowTooltip(false);
-        
-      }}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      title={
-        isChaos
-          ? 'Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.'
-          : undefined
-      }
       style={{
         boxSizing: 'border-box',
         width: '62px',
@@ -248,8 +235,8 @@ export const CellView: React.FC<CellViewProps> = ({
         </div>
       )}
 
-      {/* Всплывающая подсказка про наблюдателя для Квантового Хаоса */}
-      {isChaos && (showTooltip || isSelected) && (
+      {/* Всплывающая подсказка про наблюдателя для Квантового Хаоса (только при нажатии) */}
+      {isChaos && isSelected && showTooltip && (
         <div
           onClick={(e) => {
             e.stopPropagation();

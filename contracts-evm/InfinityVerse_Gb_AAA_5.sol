@@ -511,8 +511,8 @@ contract InfinityVerse_Gb_AAA_5 {
         int32 portalX,
         int32 portalY
     ) external returns (uint256 portalId) {
-        // Защита священной зоны 5x5 вокруг Обелиска (0, 0)
-        if (portalX >= -2 && portalX <= 2 && portalY >= -2 && portalY <= 2) {
+        // Защита священной зоны 3x3 вокруг Обелиска (0, 0)
+        if (portalX >= -1 && portalX <= 1 && portalY >= -1 && portalY <= 1) {
             revert SacredZoneProtected();
         }
 

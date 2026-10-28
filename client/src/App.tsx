@@ -108,7 +108,7 @@ function App() {
     connectWithGoogle,
     handleSpawn,
     handleMove,
-    handleDiscoverBatch,
+    // handleDiscoverBatch,
     handleCreatePortal,
     handleTransferPortal,
     handleDestroyPortal,
@@ -207,7 +207,8 @@ function App() {
     }
   };
 
-  // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 5x5 ВОКРУГ ИГРОКА
+  // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 5x5 ВОКРУГ ИГРОКА (ОТКЛЮЧЕНО)
+  /*
   const discoveringRef = useState<{ inFlight: boolean }>({
     inFlight: false
   })[0];
@@ -243,6 +244,7 @@ function App() {
       });
     }
   }, [player?.x, player?.y, player?.exists, cells, actionPending, connectedAddress]);
+  */
 
   // 4. АВТО-ВХОД ДЛЯ ЛОКАЛЬНОГО ДЕВ-ОКРУЖЕНИЯ (192.168.x.x или localhost)
   useEffect(() => {
