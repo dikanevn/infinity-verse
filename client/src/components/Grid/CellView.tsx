@@ -37,7 +37,8 @@ export const CellView: React.FC<CellViewProps> = ({
   const isFog = !cell;
 
   const tInfo = cell ? (TERRAIN_CONFIG[cell.terrain] || { name: `T:${cell.terrain}`, icon: '', bg: '#14291e' }) : TERRAIN_CONFIG[0];
-  const oInfo = cell ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : OBJECT_CONFIG[0];
+  const hasObject = !isFog && !!cell?.object && cell.object !== 0;
+  const oInfo = hasObject ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : { name: '—', icon: '' };
 
   // Если это песок (terrain === 1), берем уникальную процедурную текстуру по координатам (x, y)
   const isSand = !isFog && cell.terrain === 1;
@@ -206,10 +207,10 @@ export const CellView: React.FC<CellViewProps> = ({
           </span>
           <span style={{
             fontSize: '0.48rem',
-            color: (!isFog && cell?.object) ? '#67e8f9' : '#64748b',
-            fontWeight: (!isFog && cell?.object) ? 700 : 500
+            color: hasObject ? '#67e8f9' : '#64748b',
+            fontWeight: hasObject ? 700 : 500
           }}>
-            {(!isFog && cell?.object) ? oInfo.name : '—'}
+            {hasObject ? oInfo.name : '—'}
           </span>
         </div>
       </div>
@@ -283,7 +284,7 @@ export const CellView: React.FC<CellViewProps> = ({
             }}
           />
         )}
-        {!isFog && cell?.object && ![1, 3, 4, 9].includes(cell.object) && (
+        {hasObject && ![1, 3, 4, 9].includes(cell.object) && (
           oInfo.icon
         )}
         {isFog && '☁️'}
