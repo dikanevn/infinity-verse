@@ -612,7 +612,8 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
           transition: isInteracting ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
           position: 'relative',
           width: '0px',
-          height: '0px'
+          height: '0px',
+          zIndex: 6
         }}
       >
         

@@ -285,7 +285,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         width: `${width}px`,
         height: `${height}px`,
         pointerEvents: 'none',
-        zIndex: 5,
+        zIndex: 1,
         imageRendering: 'pixelated'
       }}
     />
