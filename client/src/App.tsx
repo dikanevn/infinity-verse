@@ -350,6 +350,26 @@ function App() {
           <span style={{ color: '#64748b', fontWeight: 600 }}>{contractVersion}</span>
           <div style={{ color: '#334155' }}>|</div>
           <span style={{ color: '#64748b', fontWeight: 600 }}>v{CLIENT_VERSION}</span>
+          <div style={{ color: '#334155' }}>|</div>
+          <a
+            href="https://linktr.ee/dikanevn"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#818cf8',
+              textDecoration: 'none',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+              transition: 'color 0.15s'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#c084fc')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#818cf8')}
+          >
+            <span>Контакты</span>
+            <span style={{ fontSize: '0.6rem' }}>↗</span>
+          </a>
         </div>
 
       </div>
