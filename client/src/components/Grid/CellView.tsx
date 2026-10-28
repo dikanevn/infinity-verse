@@ -90,22 +90,29 @@ export const CellView: React.FC<CellViewProps> = ({
     return (dx <= 1 && dy <= 1) && (dx + dy > 0);
   })();
 
+  // Вес квантовой субстанции (токены INFER-TEST)
+  const quantumTokensWeight = React.useMemo(() => {
+    if (!isFog && cell?.object === 3) {
+      const sec = cell.secondsWeight || 1;
+      const tokens = (sec * 50) / 600;
+      return tokens.toFixed(2);
+    }
+    return null;
+  }, [isFog, cell?.object, cell?.secondsWeight]);
+
   // Название объекта для всплывающей плашки над выбранной клеткой
   const selectedObjectName = React.useMemo(() => {
     if (isFog) return 'Туман войны';
     if (isChaos) return 'Квантовый хаос';
     if (!hasObject) return 'Пусто';
     if (cell?.object === 3) {
-      const sec = cell.secondsWeight || 1;
-      const tokens = (sec * 50) / 600;
-      const displayTokens = tokens.toFixed(2);
-      return `Квантовая субстанция (${displayTokens} INFER-TEST)`;
+      return `Квантовая субстанция (${quantumTokensWeight || '0.08'} INFER-TEST)`;
     }
     if (cell?.object === 1 || cell?.object === 9) return 'Обелиск';
     if (cell?.object === 2) return 'Стена';
     if (cell?.object === 4) return portalMeta ? `Портал: ${portalMeta.worldName}` : 'Портал';
     return oInfo.name || 'Объект';
-  }, [isFog, isChaos, hasObject, cell?.object, portalMeta, oInfo.name]);
+  }, [isFog, isChaos, hasObject, cell?.object, quantumTokensWeight, portalMeta, oInfo.name]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -542,6 +549,36 @@ export const CellView: React.FC<CellViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Отображение веса квантовой субстанции внизу клетки */}
+      {isQuantumSubstance && quantumTokensWeight && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '2px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '0.48rem',
+            fontWeight: 800,
+            lineHeight: 1,
+            color: '#f3e8ff',
+            backgroundColor: 'rgba(24, 9, 44, 0.85)',
+            border: '1px solid rgba(168, 85, 247, 0.55)',
+            borderRadius: '3px',
+            padding: '1px 3px',
+            whiteSpace: 'nowrap',
+            zIndex: 15,
+            pointerEvents: 'none',
+            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.7), 0 0 6px rgba(168, 85, 247, 0.4)',
+            letterSpacing: '0.02em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px'
+          }}
+        >
+          <span>{quantumTokensWeight}</span>
+        </div>
+      )}
     </button>
   );
 };
