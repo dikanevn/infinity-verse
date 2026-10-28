@@ -6,7 +6,7 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 // Постоянное универсальное хранилище мира (Main Gb-1):
 export const MAIN_CONTRACT_ADDRESS = '0xa524a7e5ddba429c227fd095bb9f5131526136f1';
 // Исполнительная логика и игровой интерфейс (Gb_AAA_1 Module с поддержкой Порталов, Звёзд, 5x5 и Gasless сессий):
-export const AAA_CONTRACT_ADDRESS = '0xcbb11633010b459310637aa65f3d0b3fba76561c';
+export const AAA_CONTRACT_ADDRESS = '0x1952c8260da039906b4e3129b701ae46de175b20';
 // Токен Звёзд (Infinity Star ERC-20):
 export const STAR_TOKEN_ADDRESS = '0x91d8e6749bf9018545fc7ef80c30306611c87033';
 
@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2810260700';
+export const CLIENT_VERSION = '2610280658';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -68,8 +68,8 @@ export const AAA_ABI = parseAbi([
   'function mainContract() view returns (address)',
   'function relayer() view returns (address)',
   'function getCellKey(int32 x, int32 y) pure returns (bytes32)',
-  'function getCell(int32 x, int32 y) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved))',
-  'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved)[])',
+  'function getCell(int32 x, int32 y) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint32 secondsWeight))',
+  'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint32 secondsWeight)[])',
   'function getPlayer(address player) view returns (int32 x, int32 y, bool exists, address sessionKey, uint256 sessionExpiry, uint64 registeredAtBlock, uint64 registeredAtTimestamp)',
   'function nonces(address player) view returns (uint256)',
   'function isSessionValid(address player, address key) view returns (bool)',

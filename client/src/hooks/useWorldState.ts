@@ -63,6 +63,7 @@ export function useWorldState(
           object: Number(c.object),
           state: Number(c.state),
           reserved: Number(c.reserved),
+          secondsWeight: Number(c.secondsWeight || 0),
           paramA: 0,
           paramB: 0
         };
