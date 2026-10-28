@@ -10,7 +10,7 @@ export interface CellData {
   reserved: number;
   paramA: number;
   paramB: number;
-  weight?: number;
+  secondsWeight?: number;
 }
 
 export interface PlayerData {

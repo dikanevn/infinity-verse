@@ -249,15 +249,15 @@ contract InfinityVerse_Gb_AAA_2 {
 
     /**
      * @notice Расчет текущей накопленной награды за майнинг в стиле Биткоина
-     * @return reward Количество токенов $INFER к начислению
-     * @return deltaT Прошедшее время в секундах с момента последнего сбора
+     * @return reward Количество токенов $INFER к начислению в wei
+     * @return deltaT Прошедшее время в секундах с момента последнего появления субстанции
      * @return lastMined Время последнего успешного майнинга
      */
     function getCurrentMiningReward() external view returns (uint256 reward, uint256 deltaT, uint256 lastMined) {
         bytes32 rawLastMined = mainContract.readSector(LAST_MINED_KEY);
         lastMined = uint256(rawLastMined);
         if (lastMined == 0) {
-            deltaT = 12; // Стартовый пул (12 сек = 1 INFER)
+            deltaT = 1; // Стартовый минимальный квант (1 секунда = 0.0833 INFER)
         } else if (block.timestamp > lastMined) {
             deltaT = block.timestamp - lastMined;
         } else {
