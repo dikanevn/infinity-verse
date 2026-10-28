@@ -1,38 +1,7 @@
 // client/src/config/sandTextures.ts
-// Дискретные пиксельные текстуры песка повышенной детализации (24x24, в 3 раза мельче пиксели)
+// Единая пиксельная текстура песка россыпью (24x24) на все клетки мира
 
 import { SAND_PIXELS_24X24, type PixelMatrix } from './pixelTextures';
-
-/**
- * Вариации 24x24 пиксельных матриц песка для процедурного разнообразия тайлов.
- */
-function generateVariations(base: PixelMatrix, count: number): PixelMatrix[] {
-  const list: PixelMatrix[] = [base];
-  const size = base.width;
-
-  for (let v = 1; v < count; v++) {
-    const data = [...base.data];
-    // Сдвиг узора дюн и вариация крупиц
-    const shift = (v * 7) % size;
-    const shiftedData = new Array(size * size);
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const nx = (x + shift) % size;
-        const ny = (y + (v * 5)) % size;
-        shiftedData[ny * size + nx] = data[y * size + x];
-      }
-    }
-    list.push({
-      width: size,
-      height: size,
-      palette: base.palette,
-      data: shiftedData
-    });
-  }
-  return list;
-}
-
-export const SAND_PIXEL_VARIANTS: PixelMatrix[] = generateVariations(SAND_PIXELS_24X24, 6);
 
 /**
  * Конвертирует PixelMatrix в пиксельный data-uri SVG с crispedge rect-пикселями
@@ -51,15 +20,13 @@ export function pixelMatrixToSvgUri(matrix: PixelMatrix): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// Предварительно сгенерированные data-uri текстуры песка 24x24
-export const SAND_PATTERNS: string[] = SAND_PIXEL_VARIANTS.map(pixelMatrixToSvgUri);
+// Единый data-uri паттерн для всех клеток песка
+export const UNIFORM_SAND_PATTERN: string = pixelMatrixToSvgUri(SAND_PIXELS_24X24);
+export const SAND_PATTERNS: string[] = [UNIFORM_SAND_PATTERN];
 
 /**
- * Вычисляет псевдослучайную пиксельную текстуру песка по координатам клетки
+ * Возвращает единую чистую пиксельную россыпь песка для всех клеток
  */
-export function getSandTextureForCoord(x: number, y: number): string {
-  let h = (x * 374761393) ^ (y * 668265263);
-  h = (h ^ (h >> 13)) * 1274126177;
-  const index = Math.abs(h ^ (h >> 16)) % SAND_PATTERNS.length;
-  return SAND_PATTERNS[index];
+export function getSandTextureForCoord(_x: number, _y: number): string {
+  return UNIFORM_SAND_PATTERN;
 }

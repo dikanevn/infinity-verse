@@ -11,64 +11,40 @@ export interface PixelMatrix {
 }
 
 /**
- * Процедурный генератор детализированной матрицы песка (24x24 или 32x32)
- * с мягкими микро-дюнами, перепадами золотого оттенка и отдельными крупинками кварца и кремния.
+ * Единая чистая текстура песка: ровная бархатная россыпь золотых песчинок
+ * без диагональных полос, гребней и волновых линий.
  */
-function createSandMatrix(size: number, seed: number): PixelMatrix {
+function createUniformSandMatrix(size: number): PixelMatrix {
   const palette = [
-    '#b58941', // 0: Базовый золотистый песок
-    '#c49649', // 1: Светло-золотая дюна
-    '#a87d37', // 2: Мягкая тень бархана
-    '#946c2c', // 3: Глубокая тень бархана
-    '#78531e', // 4: Темная крупинка кремния
-    '#facc15', // 5: Яркая песчинка кварца (блик)
-    '#d4a355'  // 6: Теплый полутон
+    '#b58941', // 0: Базовый золотой песок (основной фон)
+    '#be9047', // 1: Мягкий светлый полутон
+    '#ab7f3b', // 2: Мягкий теплый полутон
+    '#9e7434', // 3: Темная песчинка кремния
+    '#facc15'  // 4: Сверкающая крупинка кварца
   ];
 
   const data: number[] = new Array(size * size).fill(0);
 
-  // Псевдослучайный генератор на базе seed
-  let s = seed;
+  // Фиксированный LCG псевдорандом для красивой и равномерной россыпи
+  let s = 133742;
   const rnd = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 4294967296;
   };
 
-  // 1. Создаем плавные волнообразные микро-дюны по синусоиде
-  const waveAngle = 0.45;
-  const freq = 0.28;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const u = x * Math.cos(waveAngle) + y * Math.sin(waveAngle);
-      const wave = Math.sin(u * freq + seed);
-      
-      let colorIdx = 0;
-      if (wave > 0.55) {
-        colorIdx = 1; // Гребень
-      } else if (wave > 0.2) {
-        colorIdx = 6; // Полутон
-      } else if (wave < -0.55) {
-        colorIdx = 3; // Ложбина
-      } else if (wave < -0.2) {
-        colorIdx = 2; // Тень
-      }
-      data[y * size + x] = colorIdx;
-    }
-  }
-
-  // 2. Добавляем дискретные песчинки кварца и кремния
-  const grainCount = Math.floor(size * size * 0.08); // 8% поверхности
-  for (let i = 0; i < grainCount; i++) {
-    const gx = Math.floor(rnd() * size);
-    const gy = Math.floor(rnd() * size);
-    const idx = gy * size + gx;
-    const type = rnd();
-    if (type < 0.35) {
-      data[idx] = 5; // Сверкающий кварц
-    } else if (type < 0.70) {
-      data[idx] = 4; // Кремний
+  // Россыпь естественного шума по всей клетке
+  for (let i = 0; i < size * size; i++) {
+    const r = rnd();
+    if (r < 0.60) {
+      data[i] = 0; // Базовый песок (60%)
+    } else if (r < 0.78) {
+      data[i] = 1; // Светлая песчинка (18%)
+    } else if (r < 0.93) {
+      data[i] = 2; // Теплая песчинка (15%)
+    } else if (r < 0.975) {
+      data[i] = 3; // Темная крупинка кремния (4.5%)
     } else {
-      data[idx] = 1; // Светлая точка
+      data[i] = 4; // Сверкающая крупинка кварца (2.5%)
     }
   }
 
@@ -80,8 +56,8 @@ function createSandMatrix(size: number, seed: number): PixelMatrix {
   };
 }
 
-// 1. Песок (детализированная 24x24 пиксельная сетка — в 3 раза плотнее 8x8)
-export const SAND_PIXELS_24X24: PixelMatrix = createSandMatrix(24, 42);
+// 1. Песок (единая 24x24 матрица россыпи)
+export const SAND_PIXELS_24X24: PixelMatrix = createUniformSandMatrix(24);
 // Алиас для обратной совместимости
 export const SAND_PIXELS_8X8 = SAND_PIXELS_24X24;
 
