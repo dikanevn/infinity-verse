@@ -1,15 +1,83 @@
 // client/src/config/sandTextures.ts
-// 6 аккуратных процедурных текстур песка (в едином минималистичном стиле: дюна + песчинки)
+// Дискретные 8x8 пиксельные текстуры песка (чистый пиксель-арт без сглаживания)
 
-export const SAND_PATTERNS: string[] = [
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MiIgaGVpZ2h0PSI2MiIgdmlld0JveD0iMCAwIDYyIDYyIj48cmVjdCB3aWR0aD0iNjIiIGhlaWdodD0iNjIiIGZpbGw9IiNiYTg1MzQiLz48Y2lyY2xlIGN4PSIyNiIgY3k9IjEwIiByPSIyLjIiIGZpbGw9IiM0NTFhMDMiIG9wYWNpdHk9IjAuNzUiLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjIyIiByPSIxLjUiIGZpbGw9IiNmZWYwOGEiIG9wYWNpdHk9IjAuOTUiLz48Y2lyY2xlIGN4PSIzNSIgY3k9IjI1IiByPSIxLjgiIGZpbGw9IiNmZGUwNDciIG9wYWNpdHk9IjAuOSIvPjxjaXJjbGUgY3g9IjExIiBjeT0iMzgiIHI9IjIuMiIgZmlsbD0iIzQ1MWEwMyIgb3BhY2l0eT0iMC43NSIvPjxjaXJjbGUgY3g9IjUxIiBjeT0iMzQiIHI9IjIiIGZpbGw9IiMyOTExMDIiIG9wYWNpdHk9IjAuNyIvPjxwYXRoIGQ9Ik0xMywyMCBRMzIsMTUgNDksMjEiIHN0cm9rZT0iIzc4MzUwZiIgc3Ryb2tlLXdpZHRoPSIxLjgiIGZpbGw9Im5vbmUiIG9wYWNpdHk9IjAuNjUiLz48L3N2Zz4=",
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MiIgaGVpZ2h0PSI2MiIgdmlld0JveD0iMCAwIDYyIDYyIj48cmVjdCB3aWR0aD0iNjIiIGhlaWdodD0iNjIiIGZpbGw9IiNiYTg1MzQiLz48Y2lyY2xlIGN4PSIxMCIgY3k9IjExIiByPSIyLjIiIGZpbGw9IiM0NTFhMDMiIG9wYWNpdHk9IjAuNzUiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjEzIiByPSIyLjUiIGZpbGw9IiMyOTExMDIiIG9wYWNpdHk9IjAuNzUiLz48Y2lyY2xlIGN4PSIzNiIgY3k9IjE3IiByPSIxLjgiIGZpbGw9IiM3ODM1MGYiIG9wYWNpdHk9IjAuNjUiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjM4IiByPSIxLjUiIGZpbGw9IiNmZGUwNDciIG9wYWNpdHk9IjAuOSIvPjxjaXJjbGUgY3g9IjI4IiBjeT0iNDEiIHI9IjIuMiIgZmlsbD0iIzQ1MWEwMyIgb3BhY2l0eT0iMC43NSIvPjxjaXJjbGUgY3g9IjQwIiBjeT0iNDciIHI9IjEuOCIgZmlsbD0iI2ZlZjA4YSIgb3BhY2l0eT0iMC45NSIvPjxwYXRoIGQ9Ik02LDQ0IFExOSw0MCAzMyw0NSIgc3Ryb2tlPSIjNzgzNTBmIiBzdHJva2Utd2lkdGg9IjEuOCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iMC42NSIvPjwvc3ZnPg==",
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MiIgaGVpZ2h0PSI2MiIgdmlld0JveD0iMCAwIDYyIDYyIj48cmVjdCB3aWR0aD0iNjIiIGhlaWdodD0iNjIiIGZpbGw9IiNiYTg1MzQiLz48Y2lyY2xlIGN4PSIxNSIgY3k9IjE1IiByPSIxLjYiIGZpbGw9IiNmZWYwOGEiIG9wYWNpdHk9IjAuOTUiLz48Y2lyY2xlIGN4PSI0OCIgY3k9IjE4IiByPSIyLjQiIGZpbGw9IiM0NTFhMDMiIG9wYWNpdHk9IjAuNzUiLz48Y2lyY2xlIGN4PSIyMCIgY3k9IjMwIiByPSIyLjIiIGZpbGw9IiMyOTExMDIiIG9wYWNpdHk9IjAuNyIvPjxjaXJjbGUgY3g9IjM4IiBjeT0iMzYiIHI9IjEuNSIgZmlsbD0iI2ZkZTA0NyIgb3BhY2l0eT0iMC45Ii8+PGNpcmNsZSBjeD0iNTIiIGN5PSI0NiIgcj0iMS44IiBmaWxsPSIjZmVmMDhhIiBvcGFjaXR5PSIwLjkiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjUwIiByPSIyLjIiIGZpbGw9IiM0NTFhMDMiIG9wYWNpdHk9IjAuNyIvPjxwYXRoIGQ9Ik0xOCwzNCBRMzYsMjggNTQsMzUiIHN0cm9rZT0iIzc4MzUwZiIgc3Ryb2tlLXdpZHRoPSIxLjgiIGZpbGw9Im5vbmUiIG9wYWNpdHk9IjAuNjUiLz48L3N2Zz4=",
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MiIgaGVpZ2h0PSI2MiIgdmlld0JveD0iMCAwIDYyIDYyIj48cmVjdCB3aWR0aD0iNjIiIGhlaWdodD0iNjIiIGZpbGw9IiNiYTg1MzQiLz48Y2lyY2xlIGN4PSIyMCIgY3k9IjEyIiByPSIxLjgiIGZpbGw9IiNmZGUwNDciIG9wYWNpdHk9IjAuOSIvPjxjaXJjbGUgY3g9IjQ1IiBjeT0iMTQiIHI9IjIuMiIgZmlsbD0iIzQ1MWEwMyIgb3BhY2l0eT0iMC43NSIvPjxjaXJjbGUgY3g9IjE0IiBjeT0iMzIiIHI9IjIuMiIgZmlsbD0iIzI5MTEwMiIgb3BhY2l0eT0iMC43Ii8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzOCIgcj0iMS42IiBmaWxsPSIjZmVmMDhhIiBvcGFjaXR5PSIwLjk1Ii8+PGNpcmNsZSBjeD0iNDgiIGN5PSI0NCIgcj0iMiIgZmlsbD0iIzQ1MWEwMyIgb3BhY2l0eT0iMC43Ii8+PHBhdGggZD0iTTgsMjQgUTI0LDE5IDQwLDI1IiBzdHJva2U9IiM3ODM1MGYiIHN0cm9rZS13aWR0aD0iMS43IiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjYiLz48cGF0aCBkPSJNMjIsNDggUTM4LDQzIDU0LDQ5IiBzdHJva2U9IiM3ODM1MGYiIHN0cm9rZS13aWR0aD0iMS43IiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjYiLz48L3N2Zz4=",
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MiIgaGVpZ2h0PSI2MiIgdmlld0JveD0iMCAwIDYyIDYyIj48cmVjdCB3aWR0aD0iNjIiIGhlaWdodD0iNjIiIGZpbGw9IiNiYTg1MzQiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjE0IiByPSIyLjIiIGZpbGw9IiM0NTFhMDMiIG9wYWNpdHk9IjAuNzUiLz48Y2lyY2xlIGN4PSIzOCIgY3k9IjEyIiByPSIxLjYiIGZpbGw9IiNmZWYwOGEiIG9wYWNpdHk9IjAuOTUiLz48Y2lyY2xlIGN4PSI1MiIgY3k9IjI2IiByPSIyLjQiIGZpbGw9IiMyOTExMDIiIG9wYWNpdHk9IjAuNyIvPjxjaXJjbGUgY3g9IjIyIiBjeT0iNDAiIHI9IjEuOCIgZmlsbD0iI2ZkZTA0NyIgb3BhY2l0eT0iMC45Ii8+PGNpcmNsZSBjeD0iNDQiIGN5PSI0OCIgcj0iMiIgZmlsbD0iIzQ1MWEwMyIgb3BhY2l0eT0iMC43Ii8+PHBhdGggZD0iTTEwLDMwIFEzMCwyNCA1MCwzMSIgc3Ryb2tlPSIjNzgzNTBmIiBzdHJva2Utd2lkdGg9IjEuOCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iMC42NSIvPjwvc3ZnPg==",
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MiIgaGVpZ2h0PSI2MiIgdmlld0JveD0iMCAwIDYyIDYyIj48cmVjdCB3aWR0aD0iNjIiIGhlaWdodD0iNjIiIGZpbGw9IiNiYTg1MzQiLz48Y2lyY2xlIGN4PSIyNSIgY3k9IjE1IiByPSIyLjQiIGZpbGw9IiM0NTFhMDMiIG9wYWNpdHk9IjAuNzUiLz48Y2lyY2xlIGN4PSI0MiIgY3k9IjE4IiByPSIxLjYiIGZpbGw9IiNmZWYwOGEiIG9wYWNpdHk9IjAuOTUiLz48Y2lyY2xlIGN4PSIxNCIgY3k9IjI4IiByPSIxLjgiIGZpbGw9IiNmZGUwNDciIG9wYWNpdHk9IjAuOSIvPjxjaXJjbGUgY3g9IjUyIiBjeT0iMzgiIHI9IjIuMiIgZmlsbD0iIzI5MTEwMiIgb3BhY2l0eT0iMC43Ii8+PGNpcmNsZSBjeD0iMTgiIGN5PSI0OCIgcj0iMiIgZmlsbD0iIzQ1MWEwMyIgb3BhY2l0eT0iMC43NSIvPjxwYXRoIGQ9Ik0yMCw0NCBRMzYsMzggNTIsNDUiIHN0cm9rZT0iIzc4MzUwZiIgc3Ryb2tlLXdpZHRoPSIxLjgiIGZpbGw9Im5vbmUiIG9wYWNpdHk9IjAuNjUiLz48L3N2Zz4="
+import { SAND_PIXELS_8X8, type PixelMatrix } from './pixelTextures';
+
+/**
+ * Вариации 8x8 пиксельных матриц песка для процедурного разнообразия тайлов.
+ */
+export const SAND_PIXEL_VARIANTS: PixelMatrix[] = [
+  SAND_PIXELS_8X8,
+  {
+    width: 8,
+    height: 8,
+    palette: SAND_PIXELS_8X8.palette,
+    data: [
+      1, 0, 0, 0, 2, 3, 2, 0,
+      0, 0, 1, 0, 0, 2, 0, 0,
+      0, 2, 2, 0, 0, 0, 1, 4,
+      2, 3, 2, 1, 0, 0, 0, 1,
+      0, 2, 0, 4, 1, 0, 0, 0,
+      0, 0, 0, 1, 0, 2, 2, 0,
+      0, 1, 0, 0, 2, 3, 2, 0,
+      0, 0, 0, 0, 0, 2, 0, 0
+    ]
+  },
+  {
+    width: 8,
+    height: 8,
+    palette: SAND_PIXELS_8X8.palette,
+    data: [
+      0, 0, 2, 3, 2, 0, 0, 1,
+      0, 0, 0, 2, 0, 1, 4, 1,
+      0, 1, 0, 0, 0, 0, 1, 0,
+      1, 4, 1, 0, 2, 2, 0, 0,
+      0, 1, 0, 2, 3, 2, 0, 0,
+      0, 0, 0, 0, 2, 0, 0, 1,
+      2, 2, 0, 0, 0, 0, 0, 0,
+      3, 2, 0, 1, 0, 2, 2, 0
+    ]
+  },
+  {
+    width: 8,
+    height: 8,
+    palette: SAND_PIXELS_8X8.palette,
+    data: [
+      0, 1, 0, 0, 0, 1, 0, 0,
+      2, 2, 0, 0, 1, 4, 1, 0,
+      3, 2, 0, 0, 0, 1, 0, 2,
+      0, 0, 0, 2, 2, 0, 2, 3,
+      0, 0, 2, 3, 2, 0, 0, 2,
+      0, 1, 0, 2, 0, 0, 0, 0,
+      1, 4, 1, 0, 0, 0, 1, 0,
+      0, 1, 0, 0, 0, 0, 0, 0
+    ]
+  }
 ];
 
+/**
+ * Конвертирует PixelMatrix в пиксельный data-uri SVG с crispedge rect-пикселями
+ */
+export function pixelMatrixToSvgUri(matrix: PixelMatrix): string {
+  let rects = '';
+  for (let r = 0; r < matrix.height; r++) {
+    for (let c = 0; c < matrix.width; c++) {
+      const colorIdx = matrix.data[r * matrix.width + c];
+      const color = matrix.palette[colorIdx];
+      if (!color || color === 'transparent') continue;
+      rects += `<rect x="${c}" y="${r}" width="1" height="1" fill="${color}"/>`;
+    }
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${matrix.width} ${matrix.height}" shape-rendering="crispEdges">${rects}</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+// Предварительно сгенерированные data-uri текстуры песка
+export const SAND_PATTERNS: string[] = SAND_PIXEL_VARIANTS.map(pixelMatrixToSvgUri);
+
+/**
+ * Вычисляет псевдослучайную 8x8 пиксельную текстуру песка по координатам клетки
+ */
 export function getSandTextureForCoord(x: number, y: number): string {
   let h = (x * 374761393) ^ (y * 668265263);
   h = (h ^ (h >> 13)) * 1274126177;

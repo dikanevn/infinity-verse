@@ -1,8 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
 import {
-  SAND_PIXELS_8X8,
-  STAR_PIXELS_8X8,
   OBELISK_PIXELS_8X8,
   PORTAL_PIXELS_8X8,
   PLAYER_PIXELS_8X8,
@@ -122,8 +120,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
           // А. Отрисовка ландшафта (Terrain)
           if (cell.terrain === 1) {
-            // Песок: 8x8 пиксельная матрица
-            drawMatrix(SAND_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+            // Песок теперь отрисовывается в пикселях на слое тайлов CellView
           } else if (cell.terrain === 0) {
             // Хаос: темная космическая клетка
             ctx.fillStyle = '#06080f';
@@ -137,7 +134,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           if (cell.object === 1 || cell.object === 9) {
             drawMatrix(OBELISK_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
           } else if (cell.object === 3) {
-            drawMatrix(STAR_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+            // Звезды теперь отрисовываются в пикселях на слое тайлов CellView
           } else if (cell.object === 4) {
             drawMatrix(PORTAL_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
           }

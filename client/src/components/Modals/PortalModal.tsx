@@ -34,19 +34,27 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
   // Форма создания портала
   const [targetContract, setTargetContract] = useState<string>('');
-  const [founderName, setFounderName] = useState<string>('');
-  const [worldName, setWorldName] = useState<string>('');
+  const [founderName, setFounderName] = useState<string>('Bob');
+  const [worldName, setWorldName] = useState<string>('Бобсворлд');
 
   // Форма передачи владения
   const [newOwnerAddress, setNewOwnerAddress] = useState<string>('');
 
   useEffect(() => {
-    if (isOpen && portalId > 0) {
-      loadPortalData(portalId);
+    if (isOpen) {
+      if (portalId > 0) {
+        loadPortalData(portalId);
+      } else {
+        setPortalInfo(null);
+        // При создании нового портала автоматически подставляем адрес игрока и дефолтные имена
+        setTargetContract(connectedAddress || '');
+        setFounderName(prev => prev || 'Bob');
+        setWorldName(prev => prev || 'Бобсворлд');
+      }
     } else {
       setPortalInfo(null);
     }
-  }, [isOpen, portalId]);
+  }, [isOpen, portalId, connectedAddress]);
 
   const loadPortalData = async (id: number) => {
     try {

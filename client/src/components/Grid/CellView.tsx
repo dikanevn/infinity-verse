@@ -1,7 +1,10 @@
 import React from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { TERRAIN_CONFIG, OBJECT_CONFIG } from '../../config/constants';
-import { getSandTextureForCoord } from '../../config/sandTextures';
+import { getSandTextureForCoord, pixelMatrixToSvgUri } from '../../config/sandTextures';
+import { STAR_PIXELS_8X8 } from '../../config/pixelTextures';
+
+const STAR_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(STAR_PIXELS_8X8);
 
 interface CellViewProps {
   coord: { x: number; y: number };
@@ -81,6 +84,7 @@ export const CellView: React.FC<CellViewProps> = ({
         background: isFog 
           ? 'radial-gradient(circle at 50% 50%, #475569 0%, #334155 45%, #1e293b 80%, #0f172a 100%)' 
           : (sandBgPattern ? `url("${sandBgPattern}") no-repeat center/cover` : (isChaos ? '#06080f' : tInfo.bg)),
+        imageRendering: isSand ? 'pixelated' : 'auto',
         border: isSelected ? '2px solid #38bdf8' : isFog ? '1px dashed rgba(148, 163, 184, 0.25)' : 'none',
         opacity: isFog ? 0.88 : 1,
         borderRadius: '0px',
@@ -201,7 +205,7 @@ export const CellView: React.FC<CellViewProps> = ({
         </div>
       </div>
 
-      {/* Центр клетки: Обелиск или Игрок */}
+      {/* Центр клетки: Обелиск, Звезда или другой объект */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -211,7 +215,24 @@ export const CellView: React.FC<CellViewProps> = ({
         lineHeight: 1,
         position: 'relative'
       }}>
-        {(!isFog && cell?.object) ? oInfo.icon : (isFog ? '☁️' : '')}
+        {(!isFog && cell?.object === 3) ? (
+          <img
+            src={STAR_PIXEL_SPRITE_URI}
+            alt="Звезда"
+            style={{
+              width: '28px',
+              height: '28px',
+              imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 0 6px rgba(250, 204, 21, 0.6))',
+              userSelect: 'none',
+              pointerEvents: 'none'
+            }}
+          />
+        ) : (!isFog && cell?.object) ? (
+          oInfo.icon
+        ) : (
+          isFog ? '☁️' : ''
+        )}
       </div>
     </button>
   );
