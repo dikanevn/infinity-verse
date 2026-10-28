@@ -671,8 +671,12 @@ export function usePlayerState(
     portalY: number
   ) => {
     if (!connectedAddress) return;
+    if (player?.exists && (portalX !== player.x + 1 || portalY !== player.y)) {
+      alert(`Портал можно поставить ТОЛЬКО строго справа от себя на (${player.x + 1}, ${player.y})!`);
+      return;
+    }
     setActionPending(true);
-    setStatusText("🌀 Открытие Врат на (" + portalX + ", " + portalY + ")...");
+    setStatusText("🌀 Открытие Врат справа от себя на (" + portalX + ", " + portalY + ")...");
     try {
       const padBytes32 = (str: string): `0x${string}` => {
         let hex = '';

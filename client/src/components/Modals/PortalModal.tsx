@@ -287,7 +287,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
           /* Форма создания нового портала */
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-              Откройте гиперпространственный переход в новый смарт-контракт Вселенной на координатах ({portalX}, {portalY}). Все данные всегда можно поменять.
+              Откройте гиперпространственный переход в новый смарт-контракт Вселенной строго справа от себя на координатах ({portalX}, {portalY}). Все данные всегда можно поменять.
             </div>
 
             <div>

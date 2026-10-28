@@ -311,7 +311,7 @@ function App() {
                 <span>🌀</span>
                 <span>ИНСПЕКТОР ВРАТ (ID #{curCell.state})</span>
               </button>
-            ) : (
+            ) : player?.exists && curCell.x === player.x + 1 && curCell.y === player.y ? (
               <button
                 type="button"
                 onClick={() => setIsPortalModalOpen(true)}
@@ -330,9 +330,9 @@ function App() {
                 }}
               >
                 <span>🌀</span>
-                <span>Поставить портал в свою мультивселенную на ({curCell.x}, {curCell.y})</span>
+                <span>Поставить портал справа от себя на ({curCell.x}, {curCell.y})</span>
               </button>
-            )}
+            ) : null}
           </div>
         )}
 
