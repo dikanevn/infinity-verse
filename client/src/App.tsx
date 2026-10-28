@@ -28,7 +28,17 @@ function App() {
   const [isPortalModalOpen, setIsPortalModalOpen] = useState<boolean>(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isQuantumKissellOpen, setIsQuantumKissellOpen] = useState<boolean>(false);
-  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(true);
+  // На локалке (localhost, 127.0.0.1, 192.168.x.x, 10.x.x.x) приветственное окно не показываем
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.startsWith('192.168.') ||
+      window.location.hostname.startsWith('10.') ||
+      window.location.hostname.endsWith('.local');
+    return !isLocalhost;
+  });
 
   const [pkInput, setPkInput] = useState<string>('');
   const [inferBalance, setInferBalance] = useState<string | null>(null);

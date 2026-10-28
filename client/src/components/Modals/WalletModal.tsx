@@ -166,6 +166,19 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             )}
           </div>
 
+          <div
+            style={{
+              fontSize: '0.68rem',
+              color: '#ef4444',
+              fontWeight: 700,
+              textAlign: 'center',
+              letterSpacing: '0.02em',
+              padding: '2px 0'
+            }}
+          >
+            ⚠️ Все способы ниже небезопасны и ваш кошелёк обчистят
+          </div>
+
           {/* 2. Кнопка MetaMask с сессией на 20 часов */}
           {metamaskProvider ? (
             <button
