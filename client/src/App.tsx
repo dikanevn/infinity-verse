@@ -11,6 +11,7 @@ import { WalletModal } from './components/Modals/WalletModal';
 import { PkModal } from './components/Modals/PkModal';
 import { NetworkModal } from './components/Modals/NetworkModal';
 import { PortalModal } from './components/Modals/PortalModal';
+import { FeedbackModal } from './components/Modals/FeedbackModal';
 
 function App() {
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -21,6 +22,7 @@ function App() {
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
   // Модальное окно управления / создания Портала
   const [isPortalModalOpen, setIsPortalModalOpen] = useState<boolean>(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
 
   const [pkInput, setPkInput] = useState<string>('');
   const [inferBalance, setInferBalance] = useState<number | null>(null);
@@ -370,6 +372,27 @@ function App() {
             <span>Контакты</span>
             <span style={{ fontSize: '0.6rem' }}>↗</span>
           </a>
+          <div style={{ color: '#334155' }}>|</div>
+          <button
+            onClick={() => setIsFeedbackModalOpen(true)}
+            title="Обратная связь"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              lineHeight: 1,
+              padding: '0 2px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              filter: 'grayscale(20%)',
+              transition: 'transform 0.15s'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.25)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            😈
+          </button>
         </div>
 
       </div>
@@ -428,6 +451,12 @@ function App() {
         onCreatePortal={handleCreatePortal}
         onTransferPortal={handleTransferPortal}
         onDestroyPortal={handleDestroyPortal}
+      />
+      {/* Модальное окно обратной связи */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        connectedAddress={connectedAddress}
       />
     </div>
   );

@@ -1,0 +1,177 @@
+import React, { useState } from 'react';
+
+interface FeedbackModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  connectedAddress?: string;
+}
+
+export const FeedbackModal: React.FC<FeedbackModalProps> = ({
+  isOpen,
+  onClose,
+  connectedAddress
+}) => {
+  const [text, setText] = useState('');
+  const [isSent, setIsSent] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+
+    // Сохраняем локально на будущее подключение ончейна/релеера/телеграма
+    try {
+      const saved = JSON.parse(localStorage.getItem('infinity_feedbacks') || '[]');
+      saved.push({
+        text: text.trim(),
+        author: connectedAddress || 'anonymous',
+        date: new Date().toISOString()
+      });
+      localStorage.setItem('infinity_feedbacks', JSON.stringify(saved));
+    } catch (e) {
+      console.error('Feedback save error:', e);
+    }
+
+    setIsSent(true);
+    setTimeout(() => {
+      setIsSent(false);
+      setText('');
+      onClose();
+    }, 2000);
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(5px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 99999,
+        padding: '16px'
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: '#0f172a',
+          border: '1px solid #a855f7',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '420px',
+          padding: '20px',
+          boxShadow: '0 10px 30px rgba(168, 85, 247, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+          color: '#f8fafc',
+          fontFamily: 'monospace, system-ui, sans-serif'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.4rem' }}>😈</span>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5d0fe' }}>
+              ОБРАТНАЯ СВЯЗЬ
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#94a3b8',
+              fontSize: '1.2rem',
+              cursor: 'pointer',
+              lineHeight: 1
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <p style={{ margin: 0, fontSize: '0.8rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+          привет друг! если хочешь, напиши, что тебе не нравится, или нравится, или любые мысли!
+        </p>
+
+        {isSent ? (
+          <div style={{
+            padding: '14px',
+            backgroundColor: 'rgba(34, 197, 94, 0.15)',
+            border: '1px solid #22c55e',
+            borderRadius: '8px',
+            color: '#4ade80',
+            textAlign: 'center',
+            fontSize: '0.82rem',
+            fontWeight: 700
+          }}>
+            ✓ Спасибо за мысль! Записано.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <textarea
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Пиши всё, что думаешь..."
+              rows={4}
+              style={{
+                width: '100%',
+                backgroundColor: '#1e293b',
+                border: '1px solid #475569',
+                borderRadius: '8px',
+                padding: '10px',
+                color: '#f8fafc',
+                fontSize: '0.8rem',
+                fontFamily: 'monospace',
+                resize: 'none',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  padding: '7px 14px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #475569',
+                  borderRadius: '6px',
+                  color: '#94a3b8',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                disabled={!text.trim()}
+                style={{
+                  padding: '7px 18px',
+                  backgroundColor: text.trim() ? '#8b5cf6' : '#475569',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  cursor: text.trim() ? 'pointer' : 'not-allowed',
+                  transition: 'background 0.2s'
+                }}
+              >
+                Отправить
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
