@@ -171,9 +171,8 @@ function App() {
   };
 
   // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 5x5 ВОКРУГ ИГРОКА
-  const discoveringRef = useState<{ inFlight: boolean; visited: Set<string> }>({
-    inFlight: false,
-    visited: new Set()
+  const discoveringRef = useState<{ inFlight: boolean }>({
+    inFlight: false
   })[0];
 
   useEffect(() => {
@@ -188,9 +187,6 @@ function App() {
       for (let dx = -2; dx <= 2; dx++) {
         const tx = player.x + dx;
         const ty = player.y + dy;
-        const coordKey = `${tx},${ty}`;
-
-        if (discoveringRef.visited.has(coordKey)) continue;
 
         const cell = cells.find(c => c.x === tx && c.y === ty);
         // Запускаем разведку ТОЛЬКО если клетка уже загружена из блокчейна и подтверждено что terrain === 0 (пустота)
@@ -204,7 +200,6 @@ function App() {
     if (neededXs.length > 0) {
       console.log(`🌌 [AUTO-DISCOVER 5x5] Обнаружена пустота! Разведываем ${neededXs.length} клеток:`, neededXs, neededYs);
       discoveringRef.inFlight = true;
-      neededXs.forEach((x, i) => discoveringRef.visited.add(`${x},${neededYs[i]}`));
 
       handleDiscoverBatch(neededXs, neededYs).finally(() => {
         discoveringRef.inFlight = false;

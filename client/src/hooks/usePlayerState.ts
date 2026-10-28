@@ -554,7 +554,15 @@ export function usePlayerState(
 
     try {
       // РЕЖИМ 1: ПРИВАТНЫЙ КЛЮЧ (Direct)
-      if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
+      if (authMode === 'private_key') {
+        if (!EncryptedRamSigner.isLocked()) {
+          const devKey = (window as any).__DEV_LOCAL_PK__ || (typeof __DEV_LOCAL_PK__ !== 'undefined' ? __DEV_LOCAL_PK__ : '');
+          if (devKey) {
+            await EncryptedRamSigner.lockPrivateKey(devKey, 'xor');
+          } else {
+            throw new Error('Приватный ключ в оперативной памяти сброшен. Введите ключ заново.');
+          }
+        }
         const intXs = xs.map(x => Math.trunc(x));
         const intYs = ys.map(y => Math.trunc(y));
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
@@ -596,10 +604,13 @@ export function usePlayerState(
           args: [connectedAddress as `0x${string}`]
         });
 
+        const xsHash = keccak256(encodePacked(['int32[]'], [xs]));
+        const ysHash = keccak256(encodePacked(['int32[]'], [ys]));
+
         const batchInnerHash = keccak256(
           encodePacked(
-            ['string', 'address', 'int32[]', 'int32[]', 'uint256', 'uint256'],
-            ['DiscoverBatch', connectedAddress as `0x${string}`, xs, ys, nonce, BigInt(10143)]
+            ['string', 'address', 'bytes32', 'bytes32', 'uint256', 'uint256'],
+            ['DiscoverBatch', connectedAddress as `0x${string}`, xsHash, ysHash, nonce, BigInt(10143)]
           )
         );
 
