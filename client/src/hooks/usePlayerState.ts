@@ -738,11 +738,73 @@ export function usePlayerState(
     portalX: number,
     portalY: number
   ) => {
-    if (!connectedAddress) return;
-    if (player?.exists && (portalX !== player.x + 1 || portalY !== player.y)) {
-      alert(`Портал можно поставить ТОЛЬКО строго справа от себя на (${player.x + 1}, ${player.y})!`);
+    if (!connectedAddress) {
+      alert('Ошибка: кошелек не подключен!');
       return;
     }
+    if (!player?.exists) {
+      alert('Ошибка: персонаж еще не родился в этом мире! Сначала нажмите кнопку рождения.');
+      return;
+    }
+    // 1. Правило: строго справа от игрока (X+1, Y)
+    if (portalX !== player.x + 1 || portalY !== player.y) {
+      alert(`Ошибка: Портал можно поставить ТОЛЬКО строго справа от себя на координатах (${player.x + 1}, ${player.y})!`);
+      return;
+    }
+    // 2. Правило: священная зона 5х5 вокруг Обелиска (0, 0)
+    if (portalX >= -2 && portalX <= 2 && portalY >= -2 && portalY <= 2) {
+      alert(`Ошибка: Защищенная священная зона 5х5 вокруг Обелиска (${portalX}, ${portalY})! Установка запрещена.`);
+      return;
+    }
+    // 3. Валидация адреса смарт-контракта вложенного мира
+    if (!targetContract || !targetContract.startsWith('0x') || targetContract.length !== 42 || targetContract === '0x0000000000000000000000000000000000000000') {
+      alert('Ошибка: Укажите корректный EVM-адрес контракта вложенного мира (0x..., 42 символа)!');
+      return;
+    }
+    if (targetContract.toLowerCase() === MAIN_CONTRACT_ADDRESS.toLowerCase() || targetContract.toLowerCase() === AAA_CONTRACT_ADDRESS.toLowerCase()) {
+      alert('Ошибка: Нельзя указывать адрес текущей Вселенной в качестве вложенного мира!');
+      return;
+    }
+    // 4. Валидация имени основателя и названия мира
+    if (!founderName.trim()) {
+      alert('Ошибка: Укажите имя создателя / основателя портала!');
+      return;
+    }
+    if (!worldName.trim()) {
+      alert('Ошибка: Укажите название вложенного мира!');
+      return;
+    }
+
+    // 5. Проверка: 1 активный портал на человека и уникальность адреса мира в ончейн-реестре
+    try {
+      const [existingFounderPortal, existingTargetPortal] = await Promise.all([
+        publicClient.readContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'getPortalByFounder',
+          args: [connectedAddress as `0x${string}`]
+        }),
+        publicClient.readContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'getPortalId',
+          args: [targetContract as `0x${string}`]
+        })
+      ]);
+
+      if (Number(existingFounderPortal) > 0) {
+        alert(`Ошибка: У вашего адреса уже есть открытый портал #${existingFounderPortal}! Правило Мультивселенной: 1 активный портал на игрока.`);
+        return;
+      }
+
+      if (Number(existingTargetPortal) > 0) {
+        alert(`Ошибка: Врата в смарт-контракт ${targetContract} уже существуют (Портал #${existingTargetPortal})!`);
+        return;
+      }
+    } catch (checkErr) {
+      console.warn('Предупреждение при проверке порталов:', checkErr);
+    }
+
     setActionPending(true);
     setStatusText("🌀 Открытие Портала справа от себя на (" + portalX + ", " + portalY + ")...");
     try {
