@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { keccak256, encodePacked } from 'viem';
 import type { CellData } from '../types';
-import { AAA_CONTRACT_ADDRESS, AAA_ABI, MAIN_CONTRACT_ADDRESS, MAIN_ABI, publicClient } from '../config/contracts';
+import { AAA_CONTRACT_ADDRESS, AAA_ABI, publicClient } from '../config/contracts';
 import { CONNECTION_CONFIG } from '../config/constants';
 
 export function useWorldState(
@@ -11,75 +11,21 @@ export function useWorldState(
 ) {
   const [cells, setCells] = useState<CellData[]>([]);
   const cellsCacheRef = useRef<Map<string, CellData>>(new Map());
-  const playerFocusRef = useRef<{ x: number; y: number }[]>([]);
   const [contractVersion, setContractVersion] = useState<string>('Main_Gb_1');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [lastBlockNumber, setLastBlockNumber] = useState<bigint | null>(null);
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
 
-  // Периодическое фоновое сканирование позиций всех жителей мира (каждые 10 сек)
-  useEffect(() => {
-    let active = true;
-
-    const syncPlayerLocations = async () => {
-      try {
-        const total = await publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
-          functionName: 'totalPlayers'
-        });
-        const totalCount = Number(total);
-        if (totalCount === 0) return;
-
-        const playerAddrs = await publicClient.readContract({
-          address: MAIN_CONTRACT_ADDRESS,
-          abi: MAIN_ABI,
-          functionName: 'getPlayersSequential',
-          args: [0n, BigInt(Math.min(totalCount, 50))]
-        });
-
-        const playerCalls = playerAddrs.map(addr =>
-          publicClient.readContract({
-            address: AAA_CONTRACT_ADDRESS,
-            abi: AAA_ABI,
-            functionName: 'getPlayer',
-            args: [addr]
-          })
-        );
-        const playerResults = await Promise.all(playerCalls);
-
-        if (!active) return;
-        const pts: { x: number; y: number }[] = [];
-        for (const p of playerResults) {
-          if (p[2]) { // exists
-            pts.push({ x: Number(p[0]), y: Number(p[1]) });
-          }
-        }
-        playerFocusRef.current = pts;
-      } catch (err) {
-        console.warn('Ошибка синхронизации жителей Вселенной:', err);
-      }
-    };
-
-    syncPlayerLocations();
-    const interval = setInterval(syncPlayerLocations, 10000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, []);
-
   const fetchState = async () => {
     try {
-      // Собираем координаты 5х5 вокруг каждой точки фокуса (игрок + антенна + все жители мира)
+      // Собираем координаты 5х5 вокруг точек фокуса (игрок и/или выделенная клетка)
       const coordMap = new Map<string, { x: number; y: number }>();
 
-      // Если точек нет, по умолчанию берем (0, 0)
-      const basePoints = focusPoints.length > 0 ? focusPoints : [{ x: 0, y: 0 }];
-      const allPoints = [...basePoints, ...playerFocusRef.current];
+      // Если точек нет, ничего не опрашиваем
+      const basePoints = focusPoints.length > 0 ? focusPoints : [];
 
-      for (const pt of allPoints) {
+      for (const pt of basePoints) {
         for (let dy = 2; dy >= -2; dy--) {
           for (let dx = -2; dx <= 2; dx++) {
             const cx = pt.x + dx;
@@ -90,6 +36,8 @@ export function useWorldState(
       }
 
       const activeCoords = Array.from(coordMap.values());
+      if (activeCoords.length === 0) return;
+
       const xs = activeCoords.map(c => c.x);
       const ys = activeCoords.map(c => c.y);
 

@@ -79,8 +79,8 @@ function App() {
     };
   }, []);
 
-  // Точки фокуса: по умолчанию (0,0)
-  const [focusPoints, setFocusPoints] = useState<{ x: number; y: number }[]>([{ x: 0, y: 0 }]);
+  // Точки фокуса: по умолчанию пустой список (пока не выбран персонаж или клетка)
+  const [focusPoints, setFocusPoints] = useState<{ x: number; y: number }[]>([]);
   const [antennaFocus, setAntennaFocus] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // 2. Ончейн-состояние мира (считывает оба фокуса: и вокруг человека, и вокруг антенны)
