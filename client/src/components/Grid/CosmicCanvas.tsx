@@ -130,13 +130,13 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
             ctx.fillRect(screenLeft, screenTop, cellSizePx, cellSizePx);
           }
 
-          // Б. Отрисовка объектов (Objects)
-          if (cell.object === 1 || cell.object === 9) {
-            drawMatrix(OBELISK_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
-          } else if (cell.object === 3) {
-            // Звезды теперь отрисовываются в пикселях на слое тайлов CellView
-          } else if (cell.object === 4) {
-            drawMatrix(PORTAL_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+          // Б. Отрисовка объектов (Objects) — при отдалении (когда тайлы скрыты)
+          if (scale < 0.02 || scale > 4) {
+            if (cell.object === 1 || cell.object === 9) {
+              drawMatrix(OBELISK_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+            } else if (cell.object === 4) {
+              drawMatrix(PORTAL_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+            }
           }
 
           // В. Граница выбранной клетки
@@ -147,8 +147,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           }
         }
 
-        // Г. Отрисовка игрока (Пиксельный аватар исследователя)
-        if (player?.exists) {
+        // Г. Отрисовка игрока (Пиксельный аватар исследователя) при отдалении (когда тайлы скрыты)
+        if (player?.exists && (scale < 0.02 || scale > 4)) {
           const pLeft = originX + (player.x * cellPitch - 31) * scale;
           const pTop = originY + (-player.y * cellPitch - 31) * scale;
           drawMatrix(PLAYER_PIXELS_8X8, pLeft, pTop, cellSizePx);

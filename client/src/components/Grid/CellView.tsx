@@ -2,9 +2,17 @@ import React from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { TERRAIN_CONFIG, OBJECT_CONFIG } from '../../config/constants';
 import { getSandTextureForCoord, pixelMatrixToSvgUri } from '../../config/sandTextures';
-import { STAR_PIXELS_8X8 } from '../../config/pixelTextures';
+import {
+  STAR_PIXELS_8X8,
+  OBELISK_PIXELS_8X8,
+  PORTAL_PIXELS_8X8,
+  PLAYER_PIXELS_8X8
+} from '../../config/pixelTextures';
 
 const STAR_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(STAR_PIXELS_8X8);
+const OBELISK_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(OBELISK_PIXELS_8X8);
+const PORTAL_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(PORTAL_PIXELS_8X8);
+const PLAYER_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(PLAYER_PIXELS_8X8);
 
 interface CellViewProps {
   coord: { x: number; y: number };
@@ -38,7 +46,8 @@ export const CellView: React.FC<CellViewProps> = ({
   // Если прочитано из блокчейна и terrain === 0 — это Квантовый Хаос
   const isChaos = !isFog && cell.terrain === 0;
 
-  // Проверка: является ли клетка соседней для игрока (1 клетка по горизонтали, вертикали или диагонали)
+  // Проверка: находится ли игрок на этой клетке
+  const isPlayerHere = !!player?.exists && player.x === coord.x && player.y === coord.y;
   const isAdjacent = !!player?.exists && (() => {
     const dx = Math.abs(coord.x - player.x);
     const dy = Math.abs(coord.y - player.y);
@@ -205,7 +214,7 @@ export const CellView: React.FC<CellViewProps> = ({
         </div>
       </div>
 
-      {/* Центр клетки: Обелиск, Звезда или другой объект */}
+      {/* Центр клетки: Обелиск, Звезда, Портал и Человечек (Игрок) на переднем плане */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -213,9 +222,40 @@ export const CellView: React.FC<CellViewProps> = ({
         flex: 1,
         fontSize: '1.75rem',
         lineHeight: 1,
-        position: 'relative'
+        position: 'relative',
+        width: '100%',
+        height: '100%'
       }}>
-        {(!isFog && cell?.object === 3) ? (
+        {/* Базовый объект клетки (Обелиск, Стена, Звезда, Портал) */}
+        {!isFog && cell?.object === 1 && (
+          <img
+            src={OBELISK_PIXEL_SPRITE_URI}
+            alt="Обелиск"
+            style={{
+              width: '32px',
+              height: '32px',
+              imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))',
+              userSelect: 'none',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+        {!isFog && cell?.object === 9 && (
+          <img
+            src={OBELISK_PIXEL_SPRITE_URI}
+            alt="Обелиск"
+            style={{
+              width: '32px',
+              height: '32px',
+              imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))',
+              userSelect: 'none',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+        {!isFog && cell?.object === 3 && (
           <img
             src={STAR_PIXEL_SPRITE_URI}
             alt="Звезда"
@@ -228,10 +268,51 @@ export const CellView: React.FC<CellViewProps> = ({
               pointerEvents: 'none'
             }}
           />
-        ) : (!isFog && cell?.object) ? (
+        )}
+        {!isFog && cell?.object === 4 && (
+          <img
+            src={PORTAL_PIXEL_SPRITE_URI}
+            alt="Портал"
+            style={{
+              width: '32px',
+              height: '32px',
+              imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 0 8px rgba(192, 132, 252, 0.7))',
+              userSelect: 'none',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+        {!isFog && cell?.object && ![1, 3, 4, 9].includes(cell.object) && (
           oInfo.icon
-        ) : (
-          isFog ? '☁️' : ''
+        )}
+        {isFog && '☁️'}
+
+        {/* Человечек (Игрок) на переднем плане (zIndex: 10 поверх любого объекта клетки) */}
+        {isPlayerHere && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+              pointerEvents: 'none'
+            }}
+          >
+            <img
+              src={PLAYER_PIXEL_SPRITE_URI}
+              alt="Игрок"
+              style={{
+                width: '32px',
+                height: '32px',
+                imageRendering: 'pixelated',
+                filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.9))',
+                userSelect: 'none'
+              }}
+            />
+          </div>
         )}
       </div>
     </button>

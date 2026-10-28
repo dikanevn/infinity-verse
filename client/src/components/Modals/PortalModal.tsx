@@ -35,7 +35,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   // Форма создания портала
   const [targetContract, setTargetContract] = useState<string>('');
   const [founderName, setFounderName] = useState<string>('Bob');
-  const [worldName, setWorldName] = useState<string>('Бобсворлд');
+  const [worldName, setWorldName] = useState<string>("Bob's World");
 
   // Форма передачи владения
   const [newOwnerAddress, setNewOwnerAddress] = useState<string>('');
@@ -49,7 +49,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
         // При создании нового портала автоматически подставляем адрес игрока и дефолтные имена
         setTargetContract(connectedAddress || '');
         setFounderName(prev => prev || 'Bob');
-        setWorldName(prev => prev || 'Бобсворлд');
+        setWorldName(prev => prev || "Bob's World");
       }
     } else {
       setPortalInfo(null);
@@ -287,7 +287,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
           /* Форма создания нового портала */
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-              Откройте гиперпространственный переход в новый смарт-контракт Вселенной на координатах ({portalX}, {portalY}).
+              Откройте гиперпространственный переход в новый смарт-контракт Вселенной на координатах ({portalX}, {portalY}). Все данные всегда можно поменять.
             </div>
 
             <div>

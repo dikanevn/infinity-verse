@@ -114,6 +114,7 @@ contract InfinityVerse_Gb_AAA_1 {
     error ArrayLengthMismatch();
     error SacredZoneProtected();
     error CellNotPortal();
+    error PortalMustBeOnRight();
 
     // Структура клетки (для фронтенда)
     struct Cell {
@@ -443,11 +444,20 @@ contract InfinityVerse_Gb_AAA_1 {
         // 1. Проверяем, что игрок уже родился/существует в этом мире
         bytes32 posKey = getPlayerPosKey(msg.sender);
         bytes32 currentPos = mainContract.readSector(posKey);
+        int32 currentX;
+        int32 currentY;
         bool exists;
         assembly {
+            currentX := sar(224, currentPos)
+            currentY := sar(224, shl(32, currentPos))
             exists := byte(8, currentPos)
         }
         if (!exists) revert PlayerNotSpawned();
+
+        // Портал разрешено ставить ТОЛЬКО строго справа от игрока (+1 по X, то же Y)
+        if (portalX != currentX + 1 || portalY != currentY) {
+            revert PortalMustBeOnRight();
+        }
 
         // 2. Регистрируем портал в священном хранилище Main_Gb_1 (проверка 1 на человека, O(1) слоты)
         portalId = mainContract.createPortal(targetContract, msg.sender, founderName, worldName);
