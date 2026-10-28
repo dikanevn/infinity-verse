@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createWalletClient, custom, keccak256, encodePacked, encodeFunctionData } from 'viem';
 import type { PlayerData, EIP6963ProviderDetail, AuthMode } from '../types';
 import {
+  MAIN_CONTRACT_ADDRESS,
   AAA_CONTRACT_ADDRESS,
   AAA_ABI,
   RELAYER_URL,
