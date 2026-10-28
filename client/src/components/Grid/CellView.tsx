@@ -54,7 +54,6 @@ export const CellView: React.FC<CellViewProps> = ({
   const isPortal = !isFog && cell?.object === 4;
   const portalId = isPortal ? (((cell.state || 0) << 8) | (cell.reserved || 0)) : 0;
   const [portalMeta, setPortalMeta] = React.useState<{ targetContract: string; founderName: string; worldName: string } | null>(null);
-  const [isPortalHovered, setIsPortalHovered] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (isPortal && portalId > 0 && !portalMeta) {
@@ -126,8 +125,10 @@ export const CellView: React.FC<CellViewProps> = ({
 
   const handleClick = () => {
     onSelect(coord);
-    if (isChaos || isPortal) {
+    if (isChaos) {
       setShowTooltip(prev => !prev);
+    } else if (isPortal) {
+      setShowTooltip(prev => isSelected ? !prev : true);
     }
   };
 
@@ -136,19 +137,17 @@ export const CellView: React.FC<CellViewProps> = ({
       onClick={handleClick}
       onMouseEnter={() => {
         if (isChaos) setShowTooltip(true);
-        if (isPortal) setIsPortalHovered(true);
+        
       }}
       onMouseLeave={() => {
         if (isChaos) setShowTooltip(false);
-        if (isPortal) setIsPortalHovered(false);
+        
       }}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
       title={
         isChaos
           ? 'Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.'
-          : isPortal
-          ? `Врата #${portalId}: ${portalMeta?.worldName || 'Загрузка...'} (Основатель: ${portalMeta?.founderName || '...'})`
           : undefined
       }
       style={{
@@ -282,7 +281,7 @@ export const CellView: React.FC<CellViewProps> = ({
       )}
 
       {/* Всплывающая подсказка с адресом, именем основателя и названием мира для Портала */}
-      {isPortal && (isPortalHovered || showTooltip || isSelected) && (
+      {isPortal && isSelected && showTooltip && (
         <div
           onClick={(e) => {
             e.stopPropagation();
