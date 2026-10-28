@@ -55,7 +55,7 @@ function App() {
     };
 
     fetchInferBalance();
-    const interval = setInterval(fetchInferBalance, 4000);
+    const interval = setInterval(fetchInferBalance, 5000);
     return () => clearInterval(interval);
   }, [connectedAddress]);
 
