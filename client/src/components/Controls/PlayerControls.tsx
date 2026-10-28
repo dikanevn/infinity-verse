@@ -10,11 +10,11 @@ interface PlayerControlsProps {
   isDirectSignerMode: boolean;
   isGoogleMode?: boolean;
   isMetaMaskMode?: boolean;
-  selectedCoord: { x: number; y: number };
+  selectedCoord?: { x: number; y: number };
   walletProvidersCount: number;
   onOpenWalletModal: () => void;
   onSpawn: () => void;
-  onMove: (x: number, y: number) => void;
+  onMove?: (x: number, y: number) => void;
 }
 
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
@@ -24,11 +24,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   actionPending,
   isDirectSignerMode,
   isMetaMaskMode,
-  selectedCoord,
   walletProvidersCount,
   onOpenWalletModal,
-  onSpawn,
-  onMove
+  onSpawn
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -205,39 +203,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               METAMASK
             </span>
           )}
-
-          {/* Если выбрана соседняя клетка — предлагаем сделать шаг */}
-          {(() => {
-            const dx = Math.abs(selectedCoord.x - player.x);
-            const dy = Math.abs(selectedCoord.y - player.y);
-            const isAdjacent = (dx <= 1 && dy <= 1) && (dx + dy > 0);
-            const isObelisk = selectedCoord.x === 0 && selectedCoord.y === 0;
-
-            if (isAdjacent && !isObelisk) {
-              return (
-                <button
-                  onClick={() => onMove(selectedCoord.x, selectedCoord.y)}
-                  disabled={actionPending}
-                  style={{
-                    backgroundColor: isMetaMaskMode ? '#f59e0b' : '#38bdf8',
-                    color: '#07080d',
-                    border: 'none',
-                    borderRadius: '0px',
-                    padding: '4px 10px',
-                    fontWeight: 800,
-                    fontSize: '0.68rem',
-                    cursor: actionPending ? 'wait' : 'pointer',
-                    marginLeft: '6px'
-                  }}
-                >
-                  {actionPending
-                    ? 'ХОД...'
-                    : `ШАГ НА (${selectedCoord.x}, ${selectedCoord.y}) ${isMetaMaskMode ? '🦊' : '➔'}`}
-                </button>
-              );
-            }
-            return null;
-          })()}
         </div>
       )}
     </div>
