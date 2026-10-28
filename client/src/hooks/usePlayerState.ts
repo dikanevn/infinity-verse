@@ -358,7 +358,8 @@ export function usePlayerState(
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
-            functionName: 'spawnDirect'
+            functionName: 'spawnDirect',
+            account: walletClient.account
           });
           await publicClient.waitForTransactionReceipt({ hash });
         });
@@ -437,12 +438,15 @@ export function usePlayerState(
     try {
       // РЕЖИМ 1: ПРИВАТНЫЙ КЛЮЧ (Direct за собственный газ)
       if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
+        const intX = Math.trunc(targetX);
+        const intY = Math.trunc(targetY);
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
             functionName: 'moveDirect',
-            args: [targetX, targetY]
+            args: [intX, intY],
+            account: walletClient.account
           });
           await publicClient.waitForTransactionReceipt({ hash });
         });
@@ -527,12 +531,15 @@ export function usePlayerState(
     try {
       // РЕЖИМ 1: ПРИВАТНЫЙ КЛЮЧ (Direct)
       if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
+        const intXs = xs.map(x => Math.trunc(x));
+        const intYs = ys.map(y => Math.trunc(y));
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
             functionName: 'discoverCellsBatchDirect',
-            args: [xs, ys]
+            args: [intXs, intYs],
+            account: walletClient.account
           });
           await publicClient.waitForTransactionReceipt({ hash });
         });
@@ -619,7 +626,8 @@ export function usePlayerState(
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
-            functionName: 'revokeSessionDirect'
+            functionName: 'revokeSessionDirect',
+            account: walletClient.account
           });
           await publicClient.waitForTransactionReceipt({ hash });
         });
@@ -721,7 +729,8 @@ export function usePlayerState(
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
             functionName: 'createPortalDirect',
-            args: [targetAddr, founderBytes, worldBytes, portalX, portalY]
+            args: [targetAddr, founderBytes, worldBytes, Math.trunc(portalX), Math.trunc(portalY)],
+            account: walletClient.account
           });
           await publicClient.waitForTransactionReceipt({ hash });
         });

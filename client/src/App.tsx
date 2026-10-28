@@ -290,28 +290,31 @@ function App() {
         {/* Кнопка Врат Мультивселенной */}
         {connectedAddress && (
           <div style={{ margin: '4px auto 8px auto', display: 'flex', gap: '8px' }}>
-            {curCell && curCell.object === 4 && (
-              <button
-                type="button"
-                onClick={() => setIsPortalModalOpen(true)}
-                style={{
-                  backgroundColor: '#8b5cf6',
-                  color: '#fff',
-                  border: '1px solid #c084fc',
-                  padding: '6px 14px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>🌀</span>
-                <span>ИНСПЕКТОР ВРАТ (ID #{curCell.state})</span>
-              </button>
-            )}
+            {curCell && curCell.object === 4 && (() => {
+              const portalId = ((curCell.state || 0) << 8) | (curCell.reserved || 0);
+              return (
+                <button
+                  type="button"
+                  onClick={() => setIsPortalModalOpen(true)}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    color: '#fff',
+                    border: '1px solid #c084fc',
+                    padding: '6px 14px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>🌀</span>
+                  <span>ИНСПЕКТОР ВРАТ (ID #{portalId})</span>
+                </button>
+              );
+            })()}
             {player?.exists && (
               <button
                 type="button"
@@ -429,7 +432,7 @@ function App() {
       <PortalModal
         isOpen={isPortalModalOpen}
         onClose={() => setIsPortalModalOpen(false)}
-        portalId={curCell && curCell.object === 4 ? curCell.state : 0}
+        portalId={curCell && curCell.object === 4 ? (((curCell.state || 0) << 8) | (curCell.reserved || 0)) : 0}
         portalX={curCell && curCell.object === 4 ? curCell.x : (player?.exists ? player.x + 1 : 0)}
         portalY={curCell && curCell.object === 4 ? curCell.y : (player?.exists ? player.y : 0)}
         connectedAddress={connectedAddress}

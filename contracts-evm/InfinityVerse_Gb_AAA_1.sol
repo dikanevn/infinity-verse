@@ -905,16 +905,8 @@ contract InfinityVerse_Gb_AAA_1 {
         // Вес звезды: 1 или 2 токена
         uint8 weight = (uint8(rand[3]) % 2 == 0) ? 1 : 2;
 
-        // Если звезда падает ровно червю на голову (dx == 0 && dy == 0) — он сразу её съедает!
-        if (dx == 0 && dy == 0) {
-            emit StarDropped(starX, starY, weight);
-            uint256 totalReward = starRewardAmount * uint256(weight);
-            if (address(starToken) != address(0)) {
-                try starToken.mint(player, totalReward) {} catch {}
-            }
-            emit StarCollected(player, starX, starY, totalReward);
-            return;
-        }
+        // Квантовая субстанция не может появляться там, где игрок (dx == 0 && dy == 0)
+        if (dx == 0 && dy == 0) return;
 
         bytes32 cellKey = getCellKey(starX, starY);
         bytes32 cellVal = mainContract.readSector(cellKey);
@@ -926,9 +918,8 @@ contract InfinityVerse_Gb_AAA_1 {
             obj := byte(1, cellVal)
         }
 
-        // Не падаем на обелиски (1), стены (2) и порталы (4)
-        if (obj == OBJECT_OBELISK || obj == OBJECT_WALL || obj == OBJECT_PORTAL)
-            return;
+        // Квантовая субстанция не может появляться там, где уже есть ЛЮБОЙ объект (обелиск 1, стена 2, портал 4, другая звезда 3 и т.д.)
+        if (obj != 0) return;
 
         // Если клетки еще нет (terr == 0), генерируем песок (1)
         uint8 terrainType = terr == 0 ? 1 : terr;

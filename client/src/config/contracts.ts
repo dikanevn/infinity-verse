@@ -6,7 +6,7 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 // Постоянное универсальное хранилище мира (Main Gb-1):
 export const MAIN_CONTRACT_ADDRESS = '0xa524a7e5ddba429c227fd095bb9f5131526136f1';
 // Исполнительная логика и игровой интерфейс (Gb_AAA_1 Module с поддержкой Порталов, Звёзд, 5x5 и Gasless сессий):
-export const AAA_CONTRACT_ADDRESS = '0x40f38493be5bb1574058fda82a8a903749a7f564';
+export const AAA_CONTRACT_ADDRESS = '0x6b7fa42017eee9a2fe1d8ac3c51d71312d463316';
 // Токен Звёзд (Infinity Star ERC-20):
 export const STAR_TOKEN_ADDRESS = '0x91d8e6749bf9018545fc7ef80c30306611c87033';
 
@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2810260530';
+export const CLIENT_VERSION = '2810260555';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -45,6 +45,7 @@ export const monadTestnet = defineChain({
 // ============================================================================
 export const MAIN_ABI = parseAbi([
   'function VERSION() view returns (string)',
+  'function getCurrentMiningReward() view returns (uint256 reward, uint256 deltaT, uint256 lastMined)',
   'function GENERATION() view returns (uint256)',
   'function totalGenerations() view returns (uint256)',
   'function getAllGenerations() view returns (address[])',

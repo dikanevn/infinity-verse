@@ -8,6 +8,8 @@ import {
   PORTAL_PIXELS_8X8,
   PLAYER_PIXELS_8X8
 } from '../../config/pixelTextures';
+import { publicClient, MAIN_CONTRACT_ADDRESS, MAIN_ABI } from '../../config/contracts';
+import { hexToString } from 'viem';
 
 const STAR_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(STAR_PIXELS_8X8);
 const OBELISK_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(OBELISK_PIXELS_8X8);
@@ -48,6 +50,38 @@ export const CellView: React.FC<CellViewProps> = ({
   // Если прочитано из блокчейна и terrain === 0 — это Квантовый Хаос
   const isChaos = !isFog && cell.terrain === 0;
 
+  // Проверка: портал Мультивселенной
+  const isPortal = !isFog && cell?.object === 4;
+  const portalId = isPortal ? (((cell.state || 0) << 8) | (cell.reserved || 0)) : 0;
+  const [portalMeta, setPortalMeta] = React.useState<{ targetContract: string; founderName: string; worldName: string } | null>(null);
+  const [isPortalHovered, setIsPortalHovered] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (isPortal && portalId > 0 && !portalMeta) {
+      publicClient.readContract({
+        address: MAIN_CONTRACT_ADDRESS,
+        abi: MAIN_ABI,
+        functionName: 'getPortal',
+        args: [BigInt(portalId)]
+      }).then((data: any) => {
+        if (data && data.targetContract && data.targetContract !== '0x0000000000000000000000000000000000000000') {
+          const cleanHex = (hex: `0x${string}`) => {
+            try {
+              return hexToString(hex, { size: 32 }).replace(/\0/g, '').trim();
+            } catch {
+              return hex;
+            }
+          };
+          setPortalMeta({
+            targetContract: data.targetContract,
+            founderName: cleanHex(data.founderName) || 'Bob',
+            worldName: cleanHex(data.worldName) || "Bob's World"
+          });
+        }
+      }).catch(err => console.error('Ошибка предзагрузки портала:', err));
+    }
+  }, [isPortal, portalId, portalMeta]);
+
   // Проверка: находится ли игрок на этой клетке
   const isPlayerHere = !!player?.exists && player.x === coord.x && player.y === coord.y;
   const isAdjacent = !!player?.exists && (() => {
@@ -75,7 +109,7 @@ export const CellView: React.FC<CellViewProps> = ({
 
   const handleClick = () => {
     onSelect(coord);
-    if (isChaos) {
+    if (isChaos || isPortal) {
       setShowTooltip(prev => !prev);
     }
   };
@@ -83,8 +117,14 @@ export const CellView: React.FC<CellViewProps> = ({
   return (
     <button
       onClick={handleClick}
-      onMouseEnter={() => { if (isChaos) setShowTooltip(true); }}
-      onMouseLeave={() => { if (isChaos) setShowTooltip(false); }}
+      onMouseEnter={() => {
+        if (isChaos) setShowTooltip(true);
+        if (isPortal) setIsPortalHovered(true);
+      }}
+      onMouseLeave={() => {
+        if (isChaos) setShowTooltip(false);
+        if (isPortal) setIsPortalHovered(false);
+      }}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
       title={
@@ -92,6 +132,8 @@ export const CellView: React.FC<CellViewProps> = ({
           ? 'Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.'
           : isQuantumSubstance
           ? 'Квантовая субстанция'
+          : isPortal
+          ? `Врата #${portalId}: ${portalMeta?.worldName || 'Загрузка...'} (Основатель: ${portalMeta?.founderName || '...'})`
           : undefined
       }
       style={{
@@ -169,6 +211,101 @@ export const CellView: React.FC<CellViewProps> = ({
             borderLeft: '5px solid transparent',
             borderRight: '5px solid transparent',
             borderTop: '5px solid #8b5cf6'
+          }} />
+        </div>
+      )}
+
+      {/* Всплывающая подсказка с адресом, именем основателя и названием мира для Портала */}
+      {isPortal && (isPortalHovered || showTooltip || isSelected) && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowTooltip(false);
+          }}
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%) translateY(-6px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.98)',
+            color: '#f8fafc',
+            border: '1px solid #c084fc',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.9), 0 0 14px rgba(192, 132, 252, 0.5)',
+            borderRadius: '6px',
+            padding: '7px 10px',
+            fontSize: '0.64rem',
+            lineHeight: 1.35,
+            width: '210px',
+            textAlign: 'left',
+            zIndex: 100,
+            pointerEvents: 'auto',
+            backdropFilter: 'blur(10px)',
+            cursor: 'default',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px'
+          }}
+        >
+          <div style={{
+            color: '#c084fc',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(192, 132, 252, 0.25)',
+            paddingBottom: '3px',
+            marginBottom: '2px'
+          }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span>🌀</span>
+              <span>Врата #{portalId}</span>
+            </span>
+            <span style={{ fontSize: '0.55rem', color: '#a855f7', fontWeight: 600 }}>({coord.x}, {coord.y})</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.58rem' }}>Мир:</span>
+              <span style={{ color: '#facc15', fontWeight: 700, fontSize: '0.66rem' }}>
+                {portalMeta ? portalMeta.worldName : 'Загрузка...'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.58rem' }}>Основатель:</span>
+              <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '0.62rem' }}>
+                {portalMeta ? portalMeta.founderName : '...'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: '2px', paddingTop: '2px', borderTop: '1px dashed #334155' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.55rem' }}>Адрес смарт-контракта:</span>
+              <span style={{
+                color: '#e2e8f0',
+                fontFamily: 'monospace',
+                fontSize: '0.56rem',
+                wordBreak: 'break-all',
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                padding: '2px 4px',
+                borderRadius: '3px',
+                marginTop: '1px'
+              }}>
+                {portalMeta ? portalMeta.targetContract : 'Определяется...'}
+              </span>
+            </div>
+          </div>
+
+          {/* Стрелка вниз */}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: '6px solid #c084fc'
           }} />
         </div>
       )}
