@@ -189,6 +189,29 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 {isSending ? 'Отправка...' : 'Отправить'}
               </button>
             </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: '4px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <a
+                href="https://linktr.ee/dikanevn"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: '#a855f7',
+                  textDecoration: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'color 0.15s'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#c084fc')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#a855f7')}
+              >
+                <span>Контакты</span>
+                <span style={{ fontSize: '0.65rem' }}>↗</span>
+              </a>
+            </div>
           </form>
         )}
       </div>
