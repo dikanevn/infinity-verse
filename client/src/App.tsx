@@ -293,31 +293,7 @@ function App() {
         {/* Кнопка Врат Мультивселенной */}
         {connectedAddress && (
           <div style={{ margin: '4px auto 8px auto', display: 'flex', gap: '8px' }}>
-            {curCell && curCell.object === 4 && (() => {
-              const portalId = ((curCell.state || 0) << 8) | (curCell.reserved || 0);
-              return (
-                <button
-                  type="button"
-                  onClick={() => setIsPortalModalOpen(true)}
-                  style={{
-                    backgroundColor: '#8b5cf6',
-                    color: '#fff',
-                    border: '1px solid #c084fc',
-                    padding: '6px 14px',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span>🌀</span>
-                  <span>ИНСПЕКТОР ВРАТ (ID #{portalId})</span>
-                </button>
-              );
-            })()}
+            
             {player?.exists && (
               <button
                 type="button"
