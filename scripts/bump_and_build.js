@@ -5,8 +5,7 @@ const path = require('path');
 const pkgPath = path.resolve(__dirname, '..', 'client', 'package.json');
 const contractsPath = path.resolve(__dirname, '..', 'client', 'src', 'config', 'contracts.ts');
 
-// Новый формат версии: Год (yy), Месяц (MM), День (dd), Часы (HH), Минуты (mm)
-const newVer = '2610280652';
+const newVer = '2610280701';
 
 let pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 pkg.version = newVer;

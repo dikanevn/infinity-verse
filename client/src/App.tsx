@@ -1,4 +1,3 @@
-import { formatUnits } from 'viem';
 import { useState, useEffect } from 'react';
 import type { EIP6963ProviderDetail } from './types';
 import { CLIENT_VERSION, STAR_TOKEN_ADDRESS, STAR_TOKEN_ABI, publicClient } from './config/contracts';
@@ -43,12 +42,13 @@ function App() {
           functionName: 'balanceOf',
           args: [connectedAddress as `0x${string}`]
         });
-        // Точное форматирование без округления с удалением хвостовых нулей
-        let formatted = formatUnits(bal as bigint, 18);
-        if (formatted.includes('.')) {
-          formatted = formatted.replace(/\.?0+$/, '');
-        }
-        setInferBalance(formatted || '0');
+        // Округление баланса токенов INFER строго до 2 знаков после точки
+        const rawNum = Number(bal) / 1e18;
+        const formatted = rawNum.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        setInferBalance(formatted);
       } catch (e) {
         console.error('Ошибка получения баланса $INFER:', e);
       }
