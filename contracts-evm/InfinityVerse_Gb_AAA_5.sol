@@ -1151,15 +1151,22 @@ contract InfinityVerse_Gb_AAA_5 {
         bytes32 cellKey = getCellKey(starX, starY);
         bytes32 cellVal = mainContract.readSector(cellKey);
 
-        uint8 obj;
-        uint8 terr;
-        assembly {
-            terr := byte(0, cellVal)
-            obj := byte(1, cellVal)
-        }
+        uint8 terr = uint8(cellVal[0]);
+        uint8 obj = uint8(cellVal[1]);
 
         // Квантовая субстанция не может появляться там, где уже есть ЛЮБОЙ объект (обелиск 1, стена 2, портал 4, другая звезда 3 и т.д.)
         if (obj != 0) return;
+
+        // Проверка отсутствия других субстанций в радиусе 3x3 вокруг точки появления (dx_n in [-1..1], dy_n in [-1..1])
+        unchecked {
+            for (int32 nx = -1; nx <= 1; ++nx) {
+                for (int32 ny = -1; ny <= 1; ++ny) {
+                    if (nx == 0 && ny == 0) continue;
+                    bytes32 nCellVal = mainContract.readSector(getCellKey(starX + nx, starY + ny));
+                    if (uint8(nCellVal[1]) == OBJECT_STAR) return;
+                }
+            }
+        }
 
         // Если клетки еще нет (terr == 0), генерируем песок (1)
         uint8 terrainType = terr == 0 ? 1 : terr;
