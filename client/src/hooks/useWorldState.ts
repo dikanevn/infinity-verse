@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { keccak256, encodePacked } from 'viem';
 import type { CellData } from '../types';
 import { AAA_CONTRACT_ADDRESS, AAA_ABI, publicClient } from '../config/contracts';
@@ -10,6 +10,7 @@ export function useWorldState(
   isPaused: boolean = false
 ) {
   const [cells, setCells] = useState<CellData[]>([]);
+  const cellsCacheRef = useRef<Map<string, CellData>>(new Map());
   const [contractVersion, setContractVersion] = useState<string>('Main_Gb_1');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [lastBlockNumber, setLastBlockNumber] = useState<bigint | null>(null);
@@ -52,11 +53,13 @@ export function useWorldState(
       setLastBlockTimestamp(Number(latestBlock.timestamp));
       setLastBlockNumber(latestBlock.number);
 
-      const parsed: CellData[] = activeCoords.map((coord, i) => {
+      const cache = cellsCacheRef.current;
+      activeCoords.forEach((coord, i) => {
         const c = onchainCells[i];
         const localKey = keccak256(encodePacked(['int32', 'int32'], [coord.x, coord.y]));
+        const coordKey = `${coord.x},${coord.y}`;
 
-        return {
+        cache.set(coordKey, {
           x: coord.x,
           y: coord.y,
           key: localKey,
@@ -69,10 +72,11 @@ export function useWorldState(
           lastOccupantId: Number(c.lastOccupantId || 0),
           paramA: 0,
           paramB: 0
-        };
+        });
       });
 
-      setCells(parsed);
+      // Передаем в стейт актуальный снимок клеток с сохранением разведанных клеток
+      setCells(Array.from(cache.values()));
     } catch (err: any) {
       console.error(err);
       setStatusState('red');
