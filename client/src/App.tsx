@@ -83,8 +83,8 @@ function App() {
     };
   }, []);
 
-  // Точки фокуса: по умолчанию пустой список (пока не выбран персонаж или клетка)
-  const [focusPoints, setFocusPoints] = useState<{ x: number; y: number }[]>([]);
+  // Точки фокуса: по умолчанию стартуем с Обелиска (0, 0), пока игрок не вошел или не кликнул другую клетку
+  const [focusPoints, setFocusPoints] = useState<{ x: number; y: number }[]>([{ x: 0, y: 0 }]);
   const [antennaFocus, setAntennaFocus] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // 2. Ончейн-состояние мира (считывает оба фокуса: и вокруг человека, и вокруг антенны)
