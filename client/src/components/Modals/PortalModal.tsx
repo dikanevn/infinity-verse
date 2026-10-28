@@ -1,3 +1,5 @@
+import { pixelMatrixToSvgUri } from '../../config/sandTextures';
+import { PORTAL_PIXELS_8X8 } from '../../config/pixelTextures';
 import React, { useState, useEffect } from 'react';
 import { publicClient, MAIN_CONTRACT_ADDRESS, MAIN_ABI } from '../../config/contracts';
 import { hexToString } from 'viem';
@@ -15,6 +17,8 @@ interface PortalModalProps {
   onTransferPortal?: (portalId: number, newOwner: string) => Promise<void>;
   onDestroyPortal?: (portalId: number, x: number, y: number) => Promise<void>;
 }
+
+const PORTAL_ICON_URI = pixelMatrixToSvgUri(PORTAL_PIXELS_8X8);
 
 export const PortalModal: React.FC<PortalModalProps> = ({
   isOpen,
@@ -175,7 +179,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
         {/* Заголовок */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '10px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.4rem' }}>🌀</span>
+            <img src={PORTAL_ICON_URI} alt="Портал" style={{ width: '24px', height: '24px', imageRendering: 'pixelated', filter: 'drop-shadow(0 0 6px rgba(192, 132, 252, 0.8))' }} />
             <span style={{ fontWeight: 800, color: '#c084fc', fontSize: '1rem' }}>
               {portalInfo ? `ВРАТА МУЛЬТИВСЕЛЕННОЙ #${portalInfo.id}` : `СОЗДАНИЕ БЕСКОНЕЧНОЙ МУЛЬТИВСЕЛЕННОЙ (${portalX}, ${portalY})`}
             </span>
@@ -376,7 +380,10 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                 marginTop: '10px'
               }}
             >
-              {actionLoading ? 'Создание мультивселенной в Monad...' : '🌀 Поставить портал в свою мультивселенную'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <img src={PORTAL_ICON_URI} alt="Портал" style={{ width: '18px', height: '18px', imageRendering: 'pixelated' }} />
+                <span>{actionLoading ? 'Создание мультивселенной в Monad...' : 'Поставить портал в свою мультивселенную'}</span>
+              </div>
             </button>
           </form>
         )}

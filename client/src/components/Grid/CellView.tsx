@@ -209,6 +209,7 @@ export const CellView: React.FC<CellViewProps> = ({
           {cell?.object === 3 && <span>🟣</span>}
           {(cell?.object === 1 || cell?.object === 9) && <span>🗿</span>}
           {cell?.object === 2 && <span>🧱</span>}
+          {cell?.object === 4 && <img src={PORTAL_PIXEL_SPRITE_URI} alt="Портал" style={{ width: '14px', height: '14px', imageRendering: 'pixelated' }} />}
           <span>{selectedObjectName}</span>
           {/* Треугольная стрелочка вниз */}
           <div
@@ -319,7 +320,7 @@ export const CellView: React.FC<CellViewProps> = ({
             marginBottom: '2px'
           }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span>🌀</span>
+              <img src={PORTAL_PIXEL_SPRITE_URI} alt="Портал" style={{ width: '16px', height: '16px', imageRendering: 'pixelated' }} />
               <span>Врата #{portalId}</span>
             </span>
             <span style={{ fontSize: '0.55rem', color: '#a855f7', fontWeight: 600 }}>({coord.x}, {coord.y})</span>
