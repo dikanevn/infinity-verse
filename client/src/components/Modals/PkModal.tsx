@@ -122,7 +122,7 @@ export const PkModal: React.FC<PkModalProps> = ({
                 boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
               }}
             >
-              1. ЗАШИФРОВАТЬ (AES-GCM) ➔
+              ВОЙТИ ➔
             </button>
           </div>
 
