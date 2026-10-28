@@ -44,10 +44,7 @@ function App() {
         });
         // Округление баланса токенов INFER строго до 2 знаков после точки
         const rawNum = Number(bal) / 1e18;
-        const formatted = rawNum.toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        });
+        const formatted = rawNum.toFixed(2);
         setInferBalance(formatted);
       } catch (e) {
         console.error('Ошибка получения баланса $INFER:', e);
