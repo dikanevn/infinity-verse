@@ -15,6 +15,7 @@ const MAIN_ABI = parseAbi([
 
 // Симметричный ABI логического модуля AAA (все спонсируемые действия: ...Gasless)
 const AAA_ABI = parseAbi([
+  'function nonces(address player) view returns (uint256)',
   'function spawnGasless(address player, bytes sig)',
   'function moveGasless(address player, int32 targetX, int32 targetY, bytes sig)',
   'function discoverCellGasless(address player, int32 targetX, int32 targetY, bytes sig)',
