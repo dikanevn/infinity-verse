@@ -5,8 +5,8 @@ import { createPublicClient, http, parseAbi, defineChain } from 'viem';
 // ============================================================================
 // Постоянное универсальное хранилище мира (Main Gb-1):
 export const MAIN_CONTRACT_ADDRESS = '0xa524a7e5ddba429c227fd095bb9f5131526136f1';
-// Исполнительная логика и игровой интерфейс (Gb_AAA_4 Module с телепортами и фиксом маски vacateCell):
-export const AAA_CONTRACT_ADDRESS = '0x5405e99be2461d2f2ce051b0ae13c224b08ea9cf';
+// Исполнительная логика и игровой интерфейс (Gb_AAA_5 Module: 3x3 сакральная зона, проверка занятости клеток для портала, защита от кучкования субстанций):
+export const AAA_CONTRACT_ADDRESS = '0xa8f635ca638caab1bb85a5db24295438b271dbf5';
 // Токен Звёзд (Infinity Star ERC-20):
 export const STAR_TOKEN_ADDRESS = '0x91d8e6749bf9018545fc7ef80c30306611c87033';
 
@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2810261218';
+export const CLIENT_VERSION = '2810261225';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({

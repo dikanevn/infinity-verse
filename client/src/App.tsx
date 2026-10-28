@@ -207,6 +207,86 @@ function App() {
     }
   };
 
+  // 3. УПРАВЛЕНИЕ КЛАВИАТУРОЙ (WASD И СТРЕЛКИ)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Игнорируем ввод, если фокус в поле ввода текста (input, textarea и т.д.) или открыто модальное окно
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (
+        isWalletModalOpen ||
+        showPkInputModal ||
+        isNetworkModalOpen ||
+        isPortalModalOpen ||
+        isFeedbackModalOpen
+      ) {
+        return;
+      }
+
+      if (!player?.exists || actionPending) return;
+
+      let dx = 0;
+      let dy = 0;
+
+      switch (e.code) {
+        case 'KeyW':
+        case 'ArrowUp':
+          dy = 1;
+          break;
+        case 'KeyS':
+        case 'ArrowDown':
+          dy = -1;
+          break;
+        case 'KeyA':
+        case 'ArrowLeft':
+          dx = -1;
+          break;
+        case 'KeyD':
+        case 'ArrowRight':
+          dx = 1;
+          break;
+        default:
+          return;
+      }
+
+      const targetX = player.x + dx;
+      const targetY = player.y + dy;
+
+      // Не ходим в точку Обелиска (0, 0)
+      if (targetX === 0 && targetY === 0) return;
+
+      e.preventDefault();
+      const targetCoord = { x: targetX, y: targetY };
+      setSelectedCoord(targetCoord);
+      setAntennaFocus(targetCoord);
+      handleMove(targetX, targetY);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [
+    player?.x,
+    player?.y,
+    player?.exists,
+    actionPending,
+    isWalletModalOpen,
+    showPkInputModal,
+    isNetworkModalOpen,
+    isPortalModalOpen,
+    isFeedbackModalOpen,
+    handleMove
+  ]);
+
   // 3.1 АВТОМАТИЧЕСКАЯ РАЗВЕДКА "КОСМОСА" (TERRAIN == 0) В РАДИУСЕ 5x5 ВОКРУГ ИГРОКА (ОТКЛЮЧЕНО)
   /*
   const discoveringRef = useState<{ inFlight: boolean }>({
