@@ -270,6 +270,10 @@ function App() {
           onSelectCoord={handleSelectCoord}
           onCenterPlayer={handleCenterPlayer}
           onQuickMove={handleQuickMove}
+          connectedAddress={connectedAddress}
+          onTransferPortal={handleTransferPortal}
+          onDestroyPortal={handleDestroyPortal}
+          onRefresh={fetchState}
         />
 
         {/* Панель управления игроком */}
@@ -418,8 +422,6 @@ function App() {
         isDirectSigner={isDirectSignerMode}
         onRefresh={fetchState}
         onCreatePortal={handleCreatePortal}
-        onTransferPortal={handleTransferPortal}
-        onDestroyPortal={handleDestroyPortal}
       />
       {/* Модальное окно обратной связи */}
       <FeedbackModal

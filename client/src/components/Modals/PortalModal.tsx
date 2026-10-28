@@ -14,9 +14,7 @@ interface PortalModalProps {
   isDirectSigner: boolean;
   onRefresh: () => Promise<void>;
   onCreatePortal?: (targetContract: string, founderName: string, worldName: string, x: number, y: number) => Promise<void>;
-  onTransferPortal?: (portalId: number, newOwner: string) => Promise<void>;
-  onDestroyPortal?: (portalId: number, x: number, y: number) => Promise<void>;
-}
+    }
 
 const PORTAL_ICON_URI = pixelMatrixToSvgUri(PORTAL_PIXELS_8X8);
 
@@ -29,9 +27,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   connectedAddress,
   onRefresh,
   onCreatePortal,
-  onTransferPortal,
-  onDestroyPortal
-}) => {
+    }) => {
   const [portalInfo, setPortalInfo] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
@@ -42,7 +38,6 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   const [worldName, setWorldName] = useState<string>("Bob's World");
 
   // Форма передачи владения
-  const [newOwnerAddress, setNewOwnerAddress] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
@@ -101,7 +96,6 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isOwner = portalInfo && connectedAddress && portalInfo.founder.toLowerCase() === connectedAddress.toLowerCase();
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,38 +107,6 @@ export const PortalModal: React.FC<PortalModalProps> = ({
       await onRefresh();
     } catch (err: any) {
       alert('Ошибка открытия портала: ' + (err.shortMessage || err.message));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleTransferSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!onTransferPortal || !portalInfo) return;
-    try {
-      setActionLoading(true);
-      await onTransferPortal(portalInfo.id, newOwnerAddress);
-      alert('Владение порталом успешно передано!');
-      await loadPortalData(portalInfo.id);
-      await onRefresh();
-    } catch (err: any) {
-      alert('Ошибка передачи прав: ' + (err.shortMessage || err.message));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDestroySubmit = async () => {
-    if (!onDestroyPortal || !portalInfo) return;
-    if (!confirm('ВНИМАНИЕ! Портал будет навсегда уничтожен, а тайл на карте исчезнет. Продолжить?')) return;
-    try {
-      setActionLoading(true);
-      await onDestroyPortal(portalInfo.id, portalX, portalY);
-      alert('Портал уничтожен и дематериализован.');
-      onClose();
-      await onRefresh();
-    } catch (err: any) {
-      alert('Ошибка сноса портала: ' + (err.shortMessage || err.message));
     } finally {
       setActionLoading(false);
     }
@@ -224,68 +186,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
               </div>
             </div>
 
-            {/* Блок управления для владельца */}
-            {isOwner && (
-              <div style={{ marginTop: '8px', borderTop: '1px dashed #334155', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.8rem' }}>👑 УПРАВЛЕНИЕ ВЛАДЕЛЬЦА ПОРТАЛА</div>
-
-                {/* Форма передачи прав */}
-                <form onSubmit={handleTransferSubmit} style={{ display: 'flex', gap: '6px' }}>
-                  <input
-                    type="text"
-                    placeholder="Новый владелец (0x...)"
-                    value={newOwnerAddress}
-                    onChange={(e) => setNewOwnerAddress(e.target.value)}
-                    required
-                    style={{
-                      flex: 1,
-                      backgroundColor: '#0a0d14',
-                      border: '1px solid #334155',
-                      color: '#f8fafc',
-                      padding: '6px 8px',
-                      fontSize: '0.75rem',
-                      borderRadius: '4px'
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={actionLoading}
-                    style={{
-                      backgroundColor: '#3b82f6',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Передать
-                  </button>
-                </form>
-
-                {/* Кнопка сноса */}
-                <button
-                  type="button"
-                  onClick={handleDestroySubmit}
-                  disabled={actionLoading}
-                  style={{
-                    backgroundColor: '#ef4444',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    marginTop: '4px'
-                  }}
-                >
-                  💥 Уничтожить Портал и снести с карты
-                </button>
-              </div>
-            )}
+            
           </div>
         ) : (
           /* Форма создания нового портала */

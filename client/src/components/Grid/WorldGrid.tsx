@@ -661,8 +661,12 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
                 cell={cell}
                 isSelected={isSelected}
                 player={player}
+                connectedAddress={connectedAddress}
                 onSelect={onSelectCoord}
                 onQuickMove={onQuickMove}
+                onTransferPortal={onTransferPortal}
+                onDestroyPortal={onDestroyPortal}
+                onRefresh={onRefresh}
               />
             </div>
           );
