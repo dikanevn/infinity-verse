@@ -161,7 +161,7 @@ export function usePlayerState(
       }
 
       setAuthMode('metamask_session');
-      setStatusText('✅ MetaMask подключен: сессия активна на 20 часов! Играйте без окон и без газа.');
+      setStatusText('✅ Кошелек подключен: сессия активна на 20 часов! Сайт платит за газ.');
       await fetchPlayer();
       if (onSuccess) onSuccess();
       await onStateRefresh();

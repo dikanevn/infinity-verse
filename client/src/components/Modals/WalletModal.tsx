@@ -143,7 +143,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         {/* ОСНОВНОЙ БЛОК: БЫСТРЫЙ ВХОД БЕЗ ОКОН И БЕЗ ГАЗА (GOOGLE + METAMASK СЕССИЯ) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.04em' }}>
-            🚀 БЫСТРЫЙ ВХОД (БЕЗ КОМИССИИ И ОКОН):
+            🚀 БЫСТРЫЙ ВХОД (САЙТ ПЛАТИТ ЗА ГАЗ):
           </div>
 
           {/* 1. Кнопка Google */}
@@ -193,7 +193,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               )}
               <div>
                 <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
-                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, игра без окон и без газа</div>
+                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, сайт платит за газ</div>
               </div>
             </button>
           ) : (
@@ -218,7 +218,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <span style={{ fontSize: '1.25rem' }}>🦊</span>
               <div>
                 <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
-                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, игра без окон и без газа</div>
+                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, сайт платит за газ</div>
               </div>
             </button>
           )}
@@ -257,7 +257,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                     <div style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                       {p.info.name} (Сессия 20 ч)
                     </div>
-                    <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Бесплатная подпись без окон</div>
+                    <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>1 бесплатная подпись, сайт платит за газ</div>
                   </div>
                 </button>
               ))}
