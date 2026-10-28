@@ -214,6 +214,27 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 <span>Контакты</span>
                 <span style={{ fontSize: '0.65rem' }}>↗</span>
               </a>
+              <span style={{ color: 'rgba(255, 255, 255, 0.2)', fontSize: '0.75rem', margin: '0 8px' }}>•</span>
+              <a
+                href="https://github.com/dikanevn/infinity-verse"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: '#94a3b8',
+                  textDecoration: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'color 0.15s'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#f8fafc')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+              >
+                <span>GitHub</span>
+                <span style={{ fontSize: '0.65rem' }}>↗</span>
+              </a>
             </div>
           </form>
         )}
