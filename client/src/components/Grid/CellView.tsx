@@ -53,7 +53,7 @@ export const CellView: React.FC<CellViewProps> = ({
   // Проверка: портал Мультивселенной
   const isPortal = !isFog && cell?.object === 4;
   const portalId = isPortal ? (((cell.state || 0) << 8) | (cell.reserved || 0)) : 0;
-  const [portalMeta, setPortalMeta] = React.useState<{ targetContract: string; founderName: string; worldName: string } | null>(null);
+  const [portalMeta, setPortalMeta] = React.useState<{ targetContract: string; founder: string; founderName: string; worldName: string } | null>(null);
 
   React.useEffect(() => {
     if (isPortal && portalId > 0 && !portalMeta) {
@@ -73,6 +73,7 @@ export const CellView: React.FC<CellViewProps> = ({
           };
           setPortalMeta({
             targetContract: data.targetContract,
+            founder: data.founder,
             founderName: cleanHex(data.founderName) || 'Bob',
             worldName: cleanHex(data.worldName) || "Bob's World"
           });
@@ -300,7 +301,7 @@ export const CellView: React.FC<CellViewProps> = ({
             padding: '7px 10px',
             fontSize: '0.64rem',
             lineHeight: 1.35,
-            width: '210px',
+            width: '235px',
             textAlign: 'left',
             zIndex: 100,
             pointerEvents: 'auto',
@@ -340,6 +341,22 @@ export const CellView: React.FC<CellViewProps> = ({
               <span style={{ color: '#94a3b8', fontSize: '0.58rem' }}>Основатель:</span>
               <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '0.62rem' }}>
                 {portalMeta ? portalMeta.founderName : '...'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.55rem' }}>Адрес владельца:</span>
+              <span style={{
+                color: '#facc15',
+                fontFamily: 'monospace',
+                fontSize: '0.54rem',
+                wordBreak: 'break-all',
+                backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                padding: '2px 4px',
+                borderRadius: '3px',
+                marginTop: '1px'
+              }}>
+                {portalMeta ? portalMeta.founder : 'Определяется...'}
               </span>
             </div>
 
