@@ -26,6 +26,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const isRenderedRef = React.useRef<boolean>(false);
   const [showAdvanced, setShowAdvanced] = React.useState<boolean>(false);
 
+  // Поиск MetaMask среди найденных EIP-6963 кошельков
+  const metamaskProvider = walletProviders.find(p =>
+    p.info?.rdns?.toLowerCase().includes('metamask') ||
+    p.info?.name?.toLowerCase().includes('metamask')
+  );
+
   React.useEffect(() => {
     if (!isOpen) {
       isRenderedRef.current = false;
@@ -161,30 +167,102 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </div>
 
           {/* 2. Кнопка MetaMask с сессией на 20 часов */}
-          <button
-            onClick={() => onConnectMetaMaskWithSession(walletProviders[0])}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              backgroundColor: '#1c1917',
-              border: '1px solid #f97316',
-              padding: '10px 12px',
-              color: '#fdba74',
-              cursor: 'pointer',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              textAlign: 'left',
-              boxShadow: '0 0 12px rgba(249, 115, 22, 0.25)',
-              borderRadius: '4px'
-            }}
-          >
-            <span style={{ fontSize: '1.25rem' }}>🦊</span>
-            <div>
-              <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
-              <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, игра без окон и без газа</div>
+          {metamaskProvider ? (
+            <button
+              onClick={() => onConnectMetaMaskWithSession(metamaskProvider)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                backgroundColor: '#1c1917',
+                border: '1px solid #f97316',
+                padding: '10px 12px',
+                color: '#fdba74',
+                cursor: 'pointer',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                textAlign: 'left',
+                boxShadow: '0 0 12px rgba(249, 115, 22, 0.25)',
+                borderRadius: '4px'
+              }}
+            >
+              {metamaskProvider.info?.icon ? (
+                <img src={metamaskProvider.info.icon} alt="MetaMask" style={{ width: '24px', height: '24px' }} />
+              ) : (
+                <span style={{ fontSize: '1.25rem' }}>🦊</span>
+              )}
+              <div>
+                <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
+                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, игра без окон и без газа</div>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={() => onConnectMetaMaskWithSession(undefined)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                backgroundColor: '#1c1917',
+                border: '1px solid #f97316',
+                padding: '10px 12px',
+                color: '#fdba74',
+                cursor: 'pointer',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                textAlign: 'left',
+                boxShadow: '0 0 12px rgba(249, 115, 22, 0.25)',
+                borderRadius: '4px'
+              }}
+            >
+              <span style={{ fontSize: '1.25rem' }}>🦊</span>
+              <div>
+                <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
+                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, игра без окон и без газа</div>
+              </div>
+            </button>
+          )}
+
+          {/* Список других найденных кошельков с поддержкой сессии */}
+          {walletProviders.filter(p => p !== metamaskProvider).length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 700 }}>
+                ДРУГИЕ ОБНАРУЖЕННЫЕ КОШЕЛЬКИ (СЕССИЯ):
+              </div>
+              {walletProviders.filter(p => p !== metamaskProvider).map(p => (
+                <button
+                  key={'session-' + p.info.uuid}
+                  onClick={() => onConnectMetaMaskWithSession(p)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    backgroundColor: '#131823',
+                    border: '1px solid #3b4252',
+                    padding: '8px 10px',
+                    color: '#e2e8f0',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {p.info.icon ? (
+                    <img src={p.info.icon} alt={p.info.name} style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+                  ) : (
+                    <span>🔌</span>
+                  )}
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {p.info.name} (Сессия 20 ч)
+                    </div>
+                    <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Бесплатная подпись без окон</div>
+                  </div>
+                </button>
+              ))}
             </div>
-          </button>
+          )}
         </div>
 
         {/* Разделитель / Кнопка раскрытия дополнительных способов */}
