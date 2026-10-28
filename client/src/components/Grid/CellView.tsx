@@ -712,6 +712,32 @@ export const CellView: React.FC<CellViewProps> = ({
                 {cell.crowdCount}
               </div>
             )}
+
+            {/* Заметная плашка «ВЫ» над головой своего персонажа */}
+            {isPlayerHere && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-7px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: '#0284c7',
+                  color: '#ffffff',
+                  fontSize: '0.52rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.04em',
+                  lineHeight: 1,
+                  padding: '1.5px 4px',
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px rgba(56, 189, 248, 0.9), 0 2px 4px rgba(0,0,0,0.8)',
+                  border: '1px solid #7dd3fc',
+                  zIndex: 20,
+                  pointerEvents: 'none'
+                }}
+              >
+                ВЫ
+              </div>
+            )}
           </div>
         )}
       </div>

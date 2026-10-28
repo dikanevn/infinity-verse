@@ -198,6 +198,30 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
             ctx.shadowBlur = 8;
             ctx.lineWidth = 1.5;
             ctx.strokeRect(pLeft - 1, pTop - 1, cellSizePx + 2, cellSizePx + 2);
+
+            // Плашка «ВЫ» над персонажем на канвасе
+            if (cellSizePx >= 20) {
+              const label = 'ВЫ';
+              ctx.font = `bold ${Math.max(9, Math.min(13, Math.floor(cellSizePx * 0.28)))}px monospace`;
+              const metrics = ctx.measureText(label);
+              const lblW = metrics.width + 6;
+              const lblH = Math.max(10, Math.floor(cellSizePx * 0.3));
+              const lblX = pLeft + (cellSizePx - lblW) / 2;
+              const lblY = pTop - lblH - 2;
+
+              ctx.fillStyle = '#0284c7';
+              ctx.strokeStyle = '#7dd3fc';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.roundRect(lblX, lblY, lblW, lblH, 3);
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.fillStyle = '#ffffff';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(label, lblX + lblW / 2, lblY + lblH / 2);
+            }
             ctx.restore();
           }
         }
