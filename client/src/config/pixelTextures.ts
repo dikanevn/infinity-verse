@@ -62,26 +62,35 @@ export const SAND_PIXELS_24X24: PixelMatrix = createUniformSandMatrix(24);
 export const SAND_PIXELS_8X8 = SAND_PIXELS_24X24;
 
 /**
- * 2. Синяя квантовая субстанция (бывший объект Звезда / $INFER) в разрешении 24x24.
- * Плотное квантовое ядро, концентрические энергетические слои, мерцающие частицы декогеренции.
+ * 2. Фиолетовая квантовая субстанция (бывший объект Звезда / $INFER) в разрешении 24x24.
+ * Круглое разреженное полупрозрачное облачко квантового тумана с мерцающими микро-сгустками.
  */
 export const STAR_PIXELS_24X24: PixelMatrix = (() => {
   const width = 24;
   const height = 24;
   const palette = [
     'transparent', // 0
-    '#0284c7',     // 1: Глубокая синяя квантовая тень
-    '#0ea5e9',     // 2: Энергетическое поле
-    '#38bdf8',     // 3: Яркая лазурная плазма
-    '#7dd3fc',     // 4: Светлое квантовое излучение
-    '#ffffff',     // 5: Сверхчистый белый фокус ядра
-    '#818cf8',     // 6: Фиолетовый квантовый сдвиг
-    '#c084fc'      // 7: Искры декогеренции
+    '#3b0764',     // 1: Глубокая фиолетовая вуаль
+    '#581c87',     // 2: Разреженное облачко
+    '#7e22ce',     // 3: Пурпурный газовый слой
+    '#a855f7',     // 4: Яркий фиолетовый сгусток
+    '#c084fc',     // 5: Светящийся эфирный пар
+    '#e9d5ff',     // 6: Блик квантовой флуктуации
+    '#ffffff'      // 7: Центр мерцания
   ];
 
   const data: number[] = new Array(width * height).fill(0);
   const centerX = 11.5;
   const centerY = 11.5;
+
+  // Псевдослучайный генератор на базе seed для мягкой разреженности облака
+  let s = 987654321;
+  const rnd = () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+
+  const maxRadius = 10.5;
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -89,34 +98,53 @@ export const STAR_PIXELS_24X24: PixelMatrix = (() => {
       const dy = y - centerY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Квантовая субстанция: органическая капля плазмы с 4 лучами поля
-      const angle = Math.atan2(dy, dx);
-      const ripple = Math.sin(angle * 4) * 1.5 + Math.cos(angle * 8) * 0.6;
-      const r = dist + ripple;
+      if (dist > maxRadius) continue;
 
-      if (r < 2.2) {
-        data[y * width + x] = 5; // Белоснежный центр сингулярности
-      } else if (r < 4.2) {
-        data[y * width + x] = 4; // Светлая лазурь
-      } else if (r < 6.5) {
-        data[y * width + x] = 3; // Неоновая синева
-      } else if (r < 8.6) {
-        data[y * width + x] = 2; // Энергетическая оболочка
-      } else if (r < 10.2) {
-        data[y * width + x] = 1; // Внешний ореол
+      // Нормализованное расстояние от 0 (центр) до 1 (край облака)
+      const normDist = dist / maxRadius;
+      
+      // Разреженность: вероятность появления пикселя падает к краю круга
+      const density = Math.pow(1 - normDist, 1.25);
+      const r = rnd();
+
+      // Если случайная величина больше плотности — оставляем пустоту (прозрачность, разреженность)
+      if (r > density * 1.05 && dist > 2.5) {
+        continue;
+      }
+
+      // Назначаем цвет облачка в зависимости от близости к центру и случайных флуктуаций
+      const noise = (rnd() - 0.5) * 0.35;
+      const val = Math.max(0, Math.min(1, (1 - normDist) + noise));
+
+      if (val > 0.88) {
+        data[y * width + x] = 7; // Белый центр мерцания
+      } else if (val > 0.72) {
+        data[y * width + x] = 6; // Светло-лавандовый блик
+      } else if (val > 0.54) {
+        data[y * width + x] = 5; // Светящийся эфир
+      } else if (val > 0.38) {
+        data[y * width + x] = 4; // Фиолетовый сгусток
+      } else if (val > 0.22) {
+        data[y * width + x] = 3; // Пурпурный газ
+      } else if (val > 0.10) {
+        data[y * width + x] = 2; // Разреженная дымка
+      } else {
+        data[y * width + x] = 1; // Краевая вуаль
       }
     }
   }
 
-  // Мерцающие квантовые искры вокруг ядра
-  const sparks = [
-    { x: 3, y: 11, c: 7 }, { x: 20, y: 12, c: 7 },
-    { x: 11, y: 3, c: 6 }, { x: 12, y: 20, c: 6 },
-    { x: 6, y: 6, c: 4 },  { x: 17, y: 6, c: 4 },
-    { x: 6, y: 17, c: 3 }, { x: 17, y: 17, c: 3 }
+  // Несколько разреженных одиночных квантовых пылинок вокруг облачка
+  const outerSparks = [
+    { x: 3, y: 11, c: 2 }, { x: 20, y: 12, c: 2 },
+    { x: 11, y: 3, c: 3 }, { x: 12, y: 20, c: 2 },
+    { x: 5, y: 6, c: 3 },  { x: 18, y: 6, c: 3 },
+    { x: 5, y: 17, c: 2 }, { x: 18, y: 17, c: 3 }
   ];
-  for (const s of sparks) {
-    data[s.y * width + s.x] = s.c;
+  for (const p of outerSparks) {
+    if (data[p.y * width + p.x] === 0) {
+      data[p.y * width + p.x] = p.c;
+    }
   }
 
   return {

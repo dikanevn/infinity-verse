@@ -268,10 +268,10 @@ export const CellView: React.FC<CellViewProps> = ({
             src={STAR_PIXEL_SPRITE_URI}
             alt="Квантовая субстанция"
             style={{
-              width: '30px',
-              height: '30px',
+              width: '32px',
+              height: '32px',
               imageRendering: 'pixelated',
-              filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.8))',
+              filter: 'drop-shadow(0 0 8px rgba(168, 85, 247, 0.75))',
               userSelect: 'none',
               pointerEvents: 'none'
             }}
