@@ -8,6 +8,8 @@ AAA_CONTRACT_ADDRESS = "0x2459a68d1da04291a2fb59da26457a26c7b02b76"
 RPC_URL = "https://testnet-rpc.monad.xyz"
 CHAIN_ID = 10143
 GOOGLE_CLIENT_ID = "302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com"
+TG_BOT_TOKEN = "9093909103:AAETvpZbdeCstnNo1PY58JTor1rCaz4X30U"
+TG_CHAT_ID = "257047316"
 
 [[kv_namespaces]]
 binding = "GOOGLE_WALLETS"

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { RELAYER_URL } from '../../config/contracts';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -12,16 +13,30 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   connectedAddress
 }) => {
   const [text, setText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || isSending) return;
 
-    // Сохраняем локально на будущее подключение ончейна/релеера/телеграма
+    setIsSending(true);
+
     try {
+      // 1. Отправляем отзыв через Cloudflare Relayer прямо в Telegram
+      await fetch(RELAYER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'feedback',
+          message: text.trim(),
+          author: connectedAddress || ''
+        })
+      });
+
+      // 2. Локальная копия
       const saved = JSON.parse(localStorage.getItem('infinity_feedbacks') || '[]');
       saved.push({
         text: text.trim(),
@@ -30,15 +45,16 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       });
       localStorage.setItem('infinity_feedbacks', JSON.stringify(saved));
     } catch (e) {
-      console.error('Feedback save error:', e);
+      console.error('Feedback send error:', e);
+    } finally {
+      setIsSending(false);
+      setIsSent(true);
+      setTimeout(() => {
+        setIsSent(false);
+        setText('');
+        onClose();
+      }, 2000);
     }
-
-    setIsSent(true);
-    setTimeout(() => {
-      setIsSent(false);
-      setText('');
-      onClose();
-    }, 2000);
   };
 
   return (
@@ -153,20 +169,20 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!text.trim()}
+                disabled={!text.trim() || isSending}
                 style={{
                   padding: '7px 18px',
-                  backgroundColor: text.trim() ? '#8b5cf6' : '#475569',
+                  backgroundColor: text.trim() && !isSending ? '#8b5cf6' : '#475569',
                   border: 'none',
                   borderRadius: '6px',
                   color: '#fff',
                   fontWeight: 700,
                   fontSize: '0.75rem',
-                  cursor: text.trim() ? 'pointer' : 'not-allowed',
+                  cursor: text.trim() && !isSending ? 'pointer' : 'not-allowed',
                   transition: 'background 0.2s'
                 }}
               >
-                Отправить
+                {isSending ? 'Отправка...' : 'Отправить'}
               </button>
             </div>
           </form>

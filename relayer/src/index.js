@@ -487,6 +487,41 @@ export default {
           return jsonResponse({ success: true, txHash: hash, blockNumber: receipt.blockNumber.toString() });
         }
 
+        // 7. Обратная связь от игроков в Telegram (Feedback)
+        if (action === 'feedback') {
+          const { message, author, coord } = body;
+          if (!message || typeof message !== 'string') {
+            return jsonResponse({ error: 'Message required' }, 400);
+          }
+
+          const tgToken = env.TG_BOT_TOKEN;
+          const tgChatId = env.TG_CHAT_ID;
+
+          if (tgToken && tgChatId) {
+            const authorStr = author ? `<code>${author}</code>` : '<i>Аноним</i>';
+            const coordStr = coord ? `(${coord.x}, ${coord.y})` : 'не указано';
+            const cleanMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            const tgText = `😈 <b>Новый отзыв в Infinity-Verse!</b>\n\n👤 <b>Игрок:</b> ${authorStr}\n📍 <b>Координаты:</b> ${coordStr}\n\n💬 <b>Сообщение:</b>\n${cleanMsg}`;
+
+            try {
+              await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: tgChatId,
+                  text: tgText,
+                  parse_mode: 'HTML'
+                })
+              });
+            } catch (tgErr) {
+              console.error('Failed to send TG message:', tgErr);
+            }
+          }
+
+          return jsonResponse({ success: true });
+        }
+
         return jsonResponse({ error: 'Unknown action' }, 400);
       } catch (err) {
         console.error('Relayer error:', err);
