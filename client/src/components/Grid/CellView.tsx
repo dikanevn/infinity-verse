@@ -178,7 +178,7 @@ export const CellView: React.FC<CellViewProps> = ({
       }}
     >
             {/* Название объекта прямо над клеткой при ее выделении */}
-      {isSelected && !isChaos && !isPortal && (
+      {isSelected && !isChaos && !isPortal && hasObject && (
         <div
           style={{
             position: 'absolute',
