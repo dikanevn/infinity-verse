@@ -129,6 +129,7 @@ contract InfinityVerse_Gb_AAA_2 {
         uint8 object;
         uint8 state;
         uint8 reserved;
+        uint32 secondsWeight;
     }
 
     IInfinityVerse_Main_Gb_1 public mainContract;
@@ -286,12 +287,17 @@ contract InfinityVerse_Gb_AAA_2 {
 
     function getCell(int32 x, int32 y) public view returns (Cell memory c) {
         bytes32 val = mainContract.readSector(getCellKey(x, y));
+        uint32 sw;
+        assembly {
+            sw := shr(224, shl(16, val))
+        }
         return
             Cell({
                 terrain: uint8(val[0]),
                 object: uint8(val[1]),
                 state: uint8(val[2]),
-                reserved: uint8(val[3])
+                reserved: uint8(val[3]),
+                secondsWeight: sw
             });
     }
 
@@ -393,11 +399,16 @@ contract InfinityVerse_Gb_AAA_2 {
         cells = new Cell[](len);
         for (uint256 i = 0; i < len; ) {
             bytes32 val = rawData[i];
+            uint32 sw;
+            assembly {
+                sw := shr(224, shl(16, val))
+            }
             cells[i] = Cell({
                 terrain: uint8(val[0]),
                 object: uint8(val[1]),
                 state: uint8(val[2]),
-                reserved: uint8(val[3])
+                reserved: uint8(val[3]),
+                secondsWeight: sw
             });
             unchecked {
                 ++i;
