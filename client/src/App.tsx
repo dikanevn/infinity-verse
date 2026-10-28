@@ -1,3 +1,4 @@
+import { formatUnits } from 'viem';
 import { useState, useEffect } from 'react';
 import type { EIP6963ProviderDetail } from './types';
 import { CLIENT_VERSION, STAR_TOKEN_ADDRESS, STAR_TOKEN_ABI, publicClient } from './config/contracts';
@@ -25,7 +26,7 @@ function App() {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
 
   const [pkInput, setPkInput] = useState<string>('');
-  const [inferBalance, setInferBalance] = useState<number | null>(null);
+  const [inferBalance, setInferBalance] = useState<string | null>(null);
 
   // Опрос баланса токенов $INFER
   useEffect(() => {
@@ -42,7 +43,12 @@ function App() {
           functionName: 'balanceOf',
           args: [connectedAddress as `0x${string}`]
         });
-        setInferBalance(Number(bal) / 1e18);
+        // Точное форматирование без округления с удалением хвостовых нулей
+        let formatted = formatUnits(bal as bigint, 18);
+        if (formatted.includes('.')) {
+          formatted = formatted.replace(/\.?0+$/, '');
+        }
+        setInferBalance(formatted || '0');
       } catch (e) {
         console.error('Ошибка получения баланса $INFER:', e);
       }

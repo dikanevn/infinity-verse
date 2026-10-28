@@ -12,7 +12,7 @@ interface WorldGridProps {
   selectedCoord: { x: number; y: number };
   player: PlayerData | null;
   focusCoord: { x: number; y: number };
-  inferBalance?: number | null;
+  inferBalance?: string | null;
   onSelectCoord: (coord: { x: number; y: number }) => void;
   onCenterPlayer: () => void;
   onQuickMove?: (coord: { x: number; y: number }) => void;
@@ -425,7 +425,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
             $INFER
           </span>
           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f3e8ff', fontFamily: 'monospace', lineHeight: 1.1 }}>
-            {inferBalance !== undefined && inferBalance !== null ? inferBalance.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '...'}
+            {inferBalance !== undefined && inferBalance !== null ? inferBalance : '...'}
           </span>
         </div>
       </div>
