@@ -15,3 +15,6 @@ temp/
 Thumbs.db
 .vscode/
 .idea/
+
+# Temp deploy files
+.last_deployed_*.json
