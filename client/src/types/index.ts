@@ -11,6 +11,8 @@ export interface CellData {
   paramA: number;
   paramB: number;
   secondsWeight?: number;
+  crowdCount?: number;
+  lastOccupantId?: number;
 }
 
 export interface PlayerData {

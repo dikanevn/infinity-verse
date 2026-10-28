@@ -141,7 +141,42 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
             drawMatrix(PORTAL_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
           }
 
-          // В. Граница выбранной клетки
+          // В. Отрисовка жителей и толпы из блокчейна (доступно всем, даже без кошелька)
+          const hasOccupants = (cell.crowdCount || 0) > 0;
+          const isCurrentPlayerHere = player?.exists && player.x === cell.x && player.y === cell.y;
+
+          if (hasOccupants && !isCurrentPlayerHere) {
+            // Рисуем исследователя мира
+            drawMatrix(PLAYER_PIXELS_8X8, screenLeft, screenTop, cellSizePx);
+
+            // Если на клетке толпа (> 1 человека), рисуем стильный бейдж численности
+            if ((cell.crowdCount || 0) > 1 && cellSizePx >= 16) {
+              ctx.save();
+              const badgeText = `${cell.crowdCount}`;
+              ctx.font = `bold ${Math.max(9, Math.min(14, Math.floor(cellSizePx * 0.28)))}px monospace`;
+              const textMetrics = ctx.measureText(badgeText);
+              const bWidth = textMetrics.width + 6;
+              const bHeight = Math.max(10, Math.floor(cellSizePx * 0.32));
+              const bX = screenLeft + cellSizePx - bWidth - 2;
+              const bY = screenTop + 2;
+
+              ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+              ctx.strokeStyle = '#38bdf8';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.roundRect(bX, bY, bWidth, bHeight, 3);
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.fillStyle = '#38bdf8';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(badgeText, bX + bWidth / 2, bY + bHeight / 2);
+              ctx.restore();
+            }
+          }
+
+          // Г. Граница выбранной клетки
           if (selectedCoord.x === cell.x && selectedCoord.y === cell.y) {
             ctx.strokeStyle = '#38bdf8';
             ctx.lineWidth = Math.min(4, Math.max(1.5, 2 * scale));
@@ -149,11 +184,22 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
           }
         }
 
-        // Г. Отрисовка игрока (Пиксельный аватар исследователя)
+        // Д. Отрисовка текущего подключенного игрока (с неоновым свечением первооткрывателя)
         if (player?.exists) {
           const pLeft = originX + (player.x * cellPitch - 31) * scale;
           const pTop = originY + (-player.y * cellPitch - 31) * scale;
           drawMatrix(PLAYER_PIXELS_8X8, pLeft, pTop, cellSizePx);
+
+          // Неоновый ореол вокруг активного исследователя
+          if (cellSizePx >= 12) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 8;
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(pLeft - 1, pTop - 1, cellSizePx + 2, cellSizePx + 2);
+            ctx.restore();
+          }
         }
       }
 

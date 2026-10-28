@@ -65,6 +65,8 @@ export function useWorldState(
           state: Number(c.state),
           reserved: Number(c.reserved),
           secondsWeight: Number(c.secondsWeight || 0),
+          crowdCount: Number(c.crowdCount || 0),
+          lastOccupantId: Number(c.lastOccupantId || 0),
           paramA: 0,
           paramB: 0
         };
