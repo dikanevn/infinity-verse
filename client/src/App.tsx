@@ -237,21 +237,47 @@ function App() {
       let dy = 0;
 
       switch (e.code) {
+        // Прямые направления
         case 'KeyW':
         case 'ArrowUp':
+        case 'Numpad8':
           dy = 1;
           break;
         case 'KeyS':
         case 'ArrowDown':
+        case 'Numpad2':
           dy = -1;
           break;
         case 'KeyA':
         case 'ArrowLeft':
+        case 'Numpad4':
           dx = -1;
           break;
         case 'KeyD':
         case 'ArrowRight':
+        case 'Numpad6':
           dx = 1;
+          break;
+        // Диагональные направления
+        case 'KeyQ':
+        case 'Numpad7':
+          dx = -1;
+          dy = 1;
+          break;
+        case 'KeyE':
+        case 'Numpad9':
+          dx = 1;
+          dy = 1;
+          break;
+        case 'KeyZ':
+        case 'Numpad1':
+          dx = -1;
+          dy = -1;
+          break;
+        case 'KeyC':
+        case 'Numpad3':
+          dx = 1;
+          dy = -1;
           break;
         default:
           return;
