@@ -118,7 +118,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               autoFocus
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Пиши всё, что думаешь..."
+              placeholder="Критика особенно приветствуется..."
               rows={4}
               style={{
                 width: '100%',
