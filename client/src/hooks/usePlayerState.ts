@@ -440,6 +440,13 @@ export function usePlayerState(
       if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
         const intX = Math.trunc(targetX);
         const intY = Math.trunc(targetY);
+        
+        // Проверяем баланс игрока на газ перед вызовом RPC
+        const bal = await publicClient.getBalance({ address: connectedAddress as `0x${string}` });
+        if (bal < 15000000000000000n) { // меньше 0.015 MON
+          throw new Error('Недостаточно MON на балансе для оплаты газа в Monad Testnet. Пополните кошелек.');
+        }
+
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
