@@ -17,7 +17,8 @@ export function usePlayerState(
   setConnectedAddress: (addr: string) => void,
   setStatusText: (txt: string) => void,
   onStateRefresh: () => Promise<void>,
-  isPaused: boolean = false
+  isPaused: boolean = false,
+  onPortalEntered?: () => void
 ) {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [isPlayerLoading, setIsPlayerLoading] = useState<boolean>(false);
@@ -535,6 +536,23 @@ export function usePlayerState(
       setStatusText(`✅ Успешный шаг на (${targetX}, ${targetY})`);
       await fetchPlayer();
       await onStateRefresh();
+
+      // Проверка входа в портал: если на клетке назначения стоит портал (object === 4)
+      try {
+        const destCell: any = await publicClient.readContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'getCell',
+          args: [Math.trunc(targetX), Math.trunc(targetY)]
+        });
+        if (destCell && Number(destCell.object) === 4) {
+          if (onPortalEntered) {
+            onPortalEntered();
+          }
+        }
+      } catch (checkErr) {
+        console.warn('Не удалось проверить наличие портала на клетке хода:', checkErr);
+      }
     } catch (err: any) {
       console.error('MOVE ERROR:', err);
       const detailedMsg = err.shortMessage || err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));

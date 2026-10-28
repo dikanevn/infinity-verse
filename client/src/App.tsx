@@ -13,6 +13,7 @@ import { NetworkModal } from './components/Modals/NetworkModal';
 import { PortalModal } from './components/Modals/PortalModal';
 import { FeedbackModal } from './components/Modals/FeedbackModal';
 import { IdleOverlay } from './components/Modals/IdleOverlay';
+import { QuantumKissellModal } from './components/Modals/QuantumKissellModal';
 import { useIdleDetector } from './hooks/useIdleDetector';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
   // Модальное окно управления / создания Портала
   const [isPortalModalOpen, setIsPortalModalOpen] = useState<boolean>(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
+  const [isQuantumKissellOpen, setIsQuantumKissellOpen] = useState<boolean>(false);
 
   const [pkInput, setPkInput] = useState<string>('');
   const [inferBalance, setInferBalance] = useState<string | null>(null);
@@ -115,7 +117,14 @@ function App() {
     handleTeleportToObelisk,
     handleTeleportToMyPortal,
     handleExitRam
-  } = usePlayerState(connectedAddress, setConnectedAddress, setStatusText, fetchState, isIdle);
+  } = usePlayerState(
+    connectedAddress,
+    setConnectedAddress,
+    setStatusText,
+    fetchState,
+    isIdle,
+    () => setIsQuantumKissellOpen(true)
+  );
 
   // Поиск портала текущего игрока на карте
   const [myPortalCoord, setMyPortalCoord] = useState<{ x: number; y: number } | null>(null);
@@ -226,7 +235,8 @@ function App() {
         showPkInputModal ||
         isNetworkModalOpen ||
         isPortalModalOpen ||
-        isFeedbackModalOpen
+        isFeedbackModalOpen ||
+        isQuantumKissellOpen
       ) {
         return;
       }
@@ -626,6 +636,12 @@ function App() {
         onClose={() => setIsFeedbackModalOpen(false)}
         connectedAddress={connectedAddress}
         userEmail={isGoogleMode ? googleEmail : undefined}
+      />
+
+      {/* Экран квантового киселя при входе в портал */}
+      <QuantumKissellModal
+        isOpen={isQuantumKissellOpen}
+        onExit={() => setIsQuantumKissellOpen(false)}
       />
 
     </div>

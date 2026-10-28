@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2810261231';
+export const CLIENT_VERSION = '2810261236';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -101,7 +101,9 @@ export const AAA_ABI = parseAbi([
   'function teleportToObeliskDirect()',
   'function teleportToMyPortalDirect(int32 portalX, int32 portalY)',
   'function teleportToObeliskGasless(address player, bytes sig)',
-  'function teleportToMyPortalGasless(address player, int32 portalX, int32 portalY, bytes sig)'
+  'function teleportToMyPortalGasless(address player, int32 portalX, int32 portalY, bytes sig)',
+  // События
+  'event PortalEntered(address indexed player, int32 indexed x, int32 indexed y, uint256 portalId)'
 ]);
 
 
