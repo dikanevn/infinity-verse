@@ -99,7 +99,7 @@ export const CellView: React.FC<CellViewProps> = ({
       const sec = cell.secondsWeight || 1;
       const tokens = (sec * 50) / 600;
       const displayTokens = tokens.toFixed(2);
-      return `Квантовая субстанция (${displayTokens} INFER)`;
+      return `Квантовая субстанция (${displayTokens} INFER-TEST)`;
     }
     if (cell?.object === 1 || cell?.object === 9) return 'Обелиск';
     if (cell?.object === 2) return 'Стена';

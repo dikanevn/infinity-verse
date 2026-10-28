@@ -412,7 +412,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
       }}>
         <img
           src={QUANTUM_SUBSTANCE_ICON_URI}
-          alt="$INFER"
+          alt="$INFER-TEST"
           style={{
             width: '20px',
             height: '20px',
@@ -422,7 +422,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: '0.62rem', color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1, fontWeight: 700 }}>
-            $INFER
+            $INFER-TEST
           </span>
           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f3e8ff', fontFamily: 'monospace', lineHeight: 1.1 }}>
             {inferBalance !== undefined && inferBalance !== null ? inferBalance : '...'}

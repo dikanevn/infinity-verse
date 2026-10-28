@@ -65,6 +65,8 @@ export function usePlayerState(
   useEffect(() => {
     if (connectedAddress) {
       fetchPlayer();
+      const interval = setInterval(fetchPlayer, 5000);
+      return () => clearInterval(interval);
     } else {
       setPlayer(null);
     }
@@ -437,7 +439,15 @@ export function usePlayerState(
 
     try {
       // РЕЖИМ 1: ПРИВАТНЫЙ КЛЮЧ (Direct за собственный газ)
-      if (authMode === 'private_key' && EncryptedRamSigner.isLocked()) {
+      if (authMode === 'private_key') {
+        if (!EncryptedRamSigner.isLocked()) {
+          const devKey = (window as any).__DEV_LOCAL_PK__ || (typeof __DEV_LOCAL_PK__ !== 'undefined' ? __DEV_LOCAL_PK__ : '');
+          if (devKey) {
+            await EncryptedRamSigner.lockPrivateKey(devKey, 'xor');
+          } else {
+            throw new Error('Приватный ключ в оперативной памяти сброшен. Введите ключ заново.');
+          }
+        }
         const intX = Math.trunc(targetX);
         const intY = Math.trunc(targetY);
         
@@ -519,8 +529,6 @@ export function usePlayerState(
       }
 
       setStatusText(`✅ Успешный шаг на (${targetX}, ${targetY})`);
-      // Мгновенное обновление стейта игрока на клиенте, чтобы не ждать RPC-задержки Monad
-      setPlayer((prev) => prev ? { ...prev, x: targetX, y: targetY } : null);
       await fetchPlayer();
       await onStateRefresh();
     } catch (err: any) {
