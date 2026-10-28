@@ -236,9 +236,14 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
           if (screenWidth < 3 || screenWidth > Math.max(width, height) * 6) continue;
 
+          // Квадраты ровно и концентрически выходят из центра экрана (viewport center),
+          // в который смотрит камера при зуме в любой точке мира
+          const screenCenterX = width / 2;
+          const screenCenterY = height / 2;
+
           const half = screenWidth / 2;
-          const screenLeft = originX - half;
-          const screenTop = originY - half;
+          const screenLeft = screenCenterX - half;
+          const screenTop = screenCenterY - half;
 
           ctx.save();
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';

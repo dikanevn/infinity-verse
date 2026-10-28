@@ -360,7 +360,7 @@ export default {
 
         // Обратная связь от игроков в Telegram (Feedback) - не требует адреса кошелька и газа спонсора
         if (action === 'feedback') {
-          const { message, author, coord } = body;
+          const { message, author, coord, email } = body;
           if (!message || typeof message !== 'string') {
             return jsonResponse({ error: 'Message required' }, 400);
           }
@@ -370,10 +370,15 @@ export default {
 
           if (tgToken && tgChatId) {
             const authorStr = author && author.startsWith('0x') ? `<code>${author}</code>` : '<i>Аноним</i>';
+            const emailStr = email && typeof email === 'string' && email.includes('@') ? `<code>${email.trim()}</code>` : null;
             const coordStr = coord ? `(${coord.x}, ${coord.y})` : 'не указано';
             const cleanMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-            const tgText = `😈 <b>Новый отзыв в Infinity-Verse!</b>\n\n👤 <b>Игрок:</b> ${authorStr}\n📍 <b>Координаты:</b> ${coordStr}\n\n💬 <b>Сообщение:</b>\n${cleanMsg}`;
+            let tgText = `😈 <b>Новый отзыв в Infinity-Verse!</b>\n\n👤 <b>Игрок:</b> ${authorStr}\n`;
+            if (emailStr) {
+              tgText += `📧 <b>Почта (Google):</b> ${emailStr}\n`;
+            }
+            tgText += `📍 <b>Координаты:</b> ${coordStr}\n\n💬 <b>Сообщение:</b>\n${cleanMsg}`;
 
             try {
               const tgRes = await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {

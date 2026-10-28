@@ -25,6 +25,7 @@ export function usePlayerState(
   // 'none' | 'google' | 'metamask_session' | 'private_key' | 'metamask_direct'
   const [authMode, setAuthMode] = useState<AuthMode>('none');
   const [googleIdToken, setGoogleIdToken] = useState<string>('');
+  const [googleEmail, setGoogleEmail] = useState<string>(() => localStorage.getItem('infinity_google_email') || '');
   const [activeMetaMaskProvider, setActiveMetaMaskProvider] = useState<any>(null);
 
   // Производные флаги для UI
@@ -258,8 +259,13 @@ export function usePlayerState(
       }
 
       const playerAddr = authData.address;
+      const playerEmail = authData.email || '';
       setConnectedAddress(playerAddr);
       setGoogleIdToken(idToken);
+      setGoogleEmail(playerEmail);
+      if (playerEmail) {
+        localStorage.setItem('infinity_google_email', playerEmail);
+      }
       setAuthMode('google');
 
       const sessionAccount = getOrCreateSessionAccount();
@@ -835,6 +841,8 @@ export function usePlayerState(
     EncryptedRamSigner.clear();
     setAuthMode('none');
     setGoogleIdToken('');
+    setGoogleEmail('');
+    localStorage.removeItem('infinity_google_email');
     setActiveMetaMaskProvider(null);
     setConnectedAddress('');
     setPlayer(null);
@@ -851,6 +859,7 @@ export function usePlayerState(
     isMetaMaskDirectMode,
     isMetaMaskMode,
     googleIdToken,
+    googleEmail,
     connectProvider,
     connectMetaMaskWithSession,
     connectWithPrivateKey,

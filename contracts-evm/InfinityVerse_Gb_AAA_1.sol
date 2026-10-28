@@ -531,6 +531,72 @@ contract InfinityVerse_Gb_AAA_1 {
     // === GASLESS ДЕЙСТВИЯ (ЧЕРЕЗ RELAYER С ПОДПИСЬЮ EIP-191) ===
     // ========================================================================
 
+    function authorizeSessionGasless(
+        address player,
+        address sessionKey,
+        uint256 expiry,
+        bytes calldata sig
+    ) external {
+        if (block.timestamp >= expiry) revert SessionExpired();
+        if (sessionKey == address(0)) revert InvalidSessionKey();
+
+        bytes32 authData = mainContract.readSector(getPlayerAuthKey(player));
+        uint256 currentNonce;
+        assembly {
+            currentNonce := shr(224, shl(224, authData))
+        }
+
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(
+                    abi.encodePacked(
+                        "AuthorizeSession",
+                        player,
+                        sessionKey,
+                        expiry,
+                        currentNonce,
+                        block.chainid
+                    )
+                )
+            )
+        );
+
+        address signer = recoverSigner(messageHash, sig);
+        if (signer != player) revert InvalidSignature();
+
+        _incrementNonceInternal(player, authData, currentNonce);
+        _saveSessionInternal(player, sessionKey, expiry);
+    }
+
+    function revokeSessionGasless(address player, bytes calldata sig) external {
+        bytes32 authData = mainContract.readSector(getPlayerAuthKey(player));
+        uint256 currentNonce;
+        assembly {
+            currentNonce := shr(224, shl(224, authData))
+        }
+
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(
+                    abi.encodePacked(
+                        "RevokeSession",
+                        player,
+                        currentNonce,
+                        block.chainid
+                    )
+                )
+            )
+        );
+
+        address signer = recoverSigner(messageHash, sig);
+        if (signer != player) revert InvalidSignature();
+
+        _incrementNonceInternal(player, authData, currentNonce);
+        _saveSessionInternal(player, address(0), 0);
+    }
+
     function spawnGasless(address player, bytes calldata sig) external {
         if (msg.sender != relayer && msg.sender != superAdmin)
             revert Unauthorized();

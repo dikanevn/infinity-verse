@@ -144,17 +144,26 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
     onCenterPlayer();
   };
 
-  // Изменение зума через бегунок со строгим центрированием на Обелиске (0, 0)
+  // Изменение зума через бегунок относительно текущего центра экрана (сохраняет текущую позицию)
   const handleSliderZoom = (sliderValue: number) => {
     // sliderValue: от -8.4 (граница мира 10^18) до +5 (микро-зум 10^-10)
     // scale = 0.85 * 10^(sliderValue)
+    const curScale = scaleRef.current;
     const newScale = 0.85 * Math.pow(10, sliderValue);
+    const scaleMultiplier = newScale / curScale;
+
     setScale(newScale);
     scaleRef.current = newScale;
-    // Центрирование мира строго на Обелиск (0, 0)
-    const centerPos = { x: 0, y: 0 };
-    setPosition(centerPos);
-    positionRef.current = centerPos;
+
+    // Масштабирование относительно центра экрана без сброса на (0, 0)
+    setPosition(prev => {
+      const nextPos = {
+        x: prev.x * scaleMultiplier,
+        y: prev.y * scaleMultiplier
+      };
+      positionRef.current = nextPos;
+      return nextPos;
+    });
   };
 
   // Текущее значение слайдера: log10(scale / 0.85)
@@ -323,16 +332,20 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left - rect.width / 2;
+    const mouseY = e.clientY - rect.top - rect.height / 2;
+
     const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
     const curScale = scaleRef.current;
     const newScale = Math.max(0.0000000001, curScale * zoomFactor);
 
-    const scaleMultiplier = newScale / curScale;
     setScale(newScale);
     setPosition(prev => {
       const nextPos = {
-        x: prev.x * scaleMultiplier,
-        y: prev.y * scaleMultiplier
+        x: mouseX - (mouseX - prev.x) * (newScale / curScale),
+        y: mouseY - (mouseY - prev.y) * (newScale / curScale)
       };
       positionRef.current = nextPos;
       return nextPos;
@@ -468,7 +481,7 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
               e.stopPropagation();
               handleSliderZoom(parseFloat(e.target.value));
             }}
-            title="Бегунок масштаба: от Границы Мира 10^18 до микромира 10^-10. Центрирует на Обелиск."
+            title="Бегунок масштаба: от Границы Мира 10^18 до микромира 10^-10"
             style={{
               writingMode: 'vertical-lr',
               direction: 'rtl',

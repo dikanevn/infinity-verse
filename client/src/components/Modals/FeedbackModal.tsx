@@ -5,12 +5,14 @@ interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   connectedAddress?: string;
+  userEmail?: string;
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   isOpen,
   onClose,
-  connectedAddress
+  connectedAddress,
+  userEmail
 }) => {
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -32,7 +34,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         body: JSON.stringify({
           action: 'feedback',
           message: text.trim(),
-          author: connectedAddress || ''
+          author: connectedAddress || '',
+          email: userEmail || ''
         })
       });
 

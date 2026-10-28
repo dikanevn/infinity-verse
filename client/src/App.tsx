@@ -93,6 +93,7 @@ function App() {
     isDirectSignerMode,
     isGoogleMode,
     isMetaMaskMode,
+    googleEmail,
     connectProvider,
     connectMetaMaskWithSession,
     connectWithPrivateKey,
@@ -442,6 +443,7 @@ function App() {
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
         connectedAddress={connectedAddress}
+        userEmail={isGoogleMode ? googleEmail : undefined}
       />
     </div>
   );
