@@ -455,7 +455,10 @@ export function usePlayerState(
             args: [intX, intY],
             account: walletClient.account
           });
-          await publicClient.waitForTransactionReceipt({ hash });
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status === 'reverted') {
+            throw new Error(`Транзакция отменена контрактом (reverted). Проверьте препятствия на клетке (${intX}, ${intY}).`);
+          }
         });
       }
       // РЕЖИМ 2: METAMASK DIRECT (Direct с подтверждением окна)
@@ -516,12 +519,15 @@ export function usePlayerState(
       }
 
       setStatusText(`✅ Успешный шаг на (${targetX}, ${targetY})`);
-      await onStateRefresh();
+      // Мгновенное обновление стейта игрока на клиенте, чтобы не ждать RPC-задержки Monad
+      setPlayer((prev) => prev ? { ...prev, x: targetX, y: targetY } : null);
       await fetchPlayer();
+      await onStateRefresh();
     } catch (err: any) {
       console.error('MOVE ERROR:', err);
       const detailedMsg = err.shortMessage || err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
       alert(`[Режим: ${authMode}] Ошибка хода: ${detailedMsg}`);
+      await fetchPlayer();
     } finally {
       setActionPending(false);
     }

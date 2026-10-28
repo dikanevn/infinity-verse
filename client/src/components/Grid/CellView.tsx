@@ -95,7 +95,7 @@ export const CellView: React.FC<CellViewProps> = ({
     if (isFog) return 'Туман войны';
     if (isChaos) return 'Квантовый хаос';
     if (!hasObject) return 'Пусто';
-    if (cell?.object === 3) return 'Квантовая субстанция';
+    if (cell?.object === 3) return cell.weight ? `Квантовая субстанция (${cell.weight} INFER)` : 'Квантовая субстанция';
     if (cell?.object === 1 || cell?.object === 9) return 'Обелиск';
     if (cell?.object === 2) return 'Стена';
     if (cell?.object === 4) return portalMeta ? `Портал: ${portalMeta.worldName}` : 'Портал';
