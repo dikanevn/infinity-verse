@@ -147,8 +147,6 @@ export const CellView: React.FC<CellViewProps> = ({
       title={
         isChaos
           ? 'Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.'
-          : isQuantumSubstance
-          ? 'Квантовая субстанция'
           : isPortal
           ? `Врата #${portalId}: ${portalMeta?.worldName || 'Загрузка...'} (Основатель: ${portalMeta?.founderName || '...'})`
           : undefined
@@ -471,7 +469,7 @@ export const CellView: React.FC<CellViewProps> = ({
         {!isFog && cell?.object === 3 && (
           <img
             src={STAR_PIXEL_SPRITE_URI}
-            alt="Квантовая субстанция"
+            alt=""
             style={{
               width: '32px',
               height: '32px',
