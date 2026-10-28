@@ -24,9 +24,20 @@ for (let y = WORLD_RADIUS; y >= -WORLD_RADIUS; y--) {
   }
 }
 
+// Проверка локального спецрежима (локальная сеть / dev)
+const isLocalNetwork = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.startsWith('10.') ||
+  window.location.hostname.endsWith('.local')
+);
+
 export const CONNECTION_CONFIG = {
   WARN_BLOCK_AGE_SEC: 5,
   DANGER_BLOCK_AGE_SEC: 15,
   SYNC_INTERVAL_MS: 5000,
-  IDLE_TIMEOUT_MS: 3 * 60 * 1000, // 3 минуты неактивности до перехода в паузу // 15 секунд (тестовый режим) // 3 минуты неактивности до перехода в паузу
+  // В спецрежиме локальной сети пауза 1 час (60 мин), для публичного веб-доступа 3 минуты
+  IDLE_TIMEOUT_MS: isLocalNetwork ? 60 * 60 * 1000 : 3 * 60 * 1000,
 };
+

@@ -98,7 +98,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         fontWeight: 800,
         lineHeight: 1.1
       }}>
-        INFINITY-VERSE
+        INFINITY-VERSE-TEST
       </div>
 
       {/* Статус связи */}
