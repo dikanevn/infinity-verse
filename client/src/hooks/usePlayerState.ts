@@ -458,12 +458,14 @@ export function usePlayerState(
         }
 
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
+          // Задаем явный щедрый лимит газа 250,000, чтобы не падать по Out-Of-Gas при ончейн-майнинге звезды
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
             functionName: 'moveDirect',
             args: [intX, intY],
-            account: walletClient.account
+            account: walletClient.account,
+            gas: 250000n
           });
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           if (receipt.status === 'reverted') {
