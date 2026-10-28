@@ -776,9 +776,15 @@ export function usePlayerState(
       return;
     }
 
-    // 5. Проверка: 1 активный портал на человека и уникальность адреса мира в ончейн-реестре
+    // 5. Проверка: свободна ли клетка, 1 активный портал на человека и уникальность адреса мира в ончейн-реестре
     try {
-      const [existingFounderPortal, existingTargetPortal] = await Promise.all([
+      const [existingCell, existingFounderPortal, existingTargetPortal] = await Promise.all([
+        publicClient.readContract({
+          address: AAA_CONTRACT_ADDRESS,
+          abi: AAA_ABI,
+          functionName: 'getCell',
+          args: [portalX, portalY]
+        }) as Promise<{ terrain: number; object: number; state: number; reserved: number; secondsWeight: number; crowdCount: number; lastOccupantId: number }>,
         publicClient.readContract({
           address: AAA_CONTRACT_ADDRESS,
           abi: AAA_ABI,
@@ -792,6 +798,12 @@ export function usePlayerState(
           args: [targetContract as `0x${string}`]
         })
       ]);
+
+      if (existingCell && existingCell.object !== 0) {
+        const objName = existingCell.object === 4 ? 'другим Порталом' : existingCell.object === 1 ? 'Обелиском' : 'другим объектом';
+        alert(`Ошибка: Клетка (${portalX}, ${portalY}) уже занята ${objName}! Установка портала поверх существующих объектов запрещена.`);
+        return;
+      }
 
       if (Number(existingFounderPortal) > 0) {
         alert(`Ошибка: У вашего адреса уже есть открытый портал #${existingFounderPortal}! Правило Мультивселенной: 1 активный портал на игрока.`);

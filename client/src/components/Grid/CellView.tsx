@@ -664,7 +664,8 @@ export const CellView: React.FC<CellViewProps> = ({
         {isFog && '☁️'}
 
         {/* Человечек (Игрок) на переднем плане (zIndex: 10 поверх любого объекта клетки) */}
-        {isPlayerHere && (
+        {/* Отображается: либо если это локальный игрок, либо если на клетке есть жители из блокчейна (crowdCount > 0) */}
+        {(isPlayerHere || (!isFog && (cell?.crowdCount || 0) > 0)) && (
           <div
             style={{
               position: 'absolute',
@@ -683,10 +684,34 @@ export const CellView: React.FC<CellViewProps> = ({
                 width: '32px',
                 height: '32px',
                 imageRendering: 'pixelated',
-                filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.9))',
+                filter: isPlayerHere
+                  ? 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.9))'
+                  : 'drop-shadow(0 0 6px rgba(148, 163, 184, 0.75))',
                 userSelect: 'none'
               }}
             />
+
+            {/* Бейдж толпы при скоплении нескольких игроков */}
+            {!isFog && (cell?.crowdCount || 0) > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  right: '2px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                  border: '1px solid #38bdf8',
+                  borderRadius: '3px',
+                  padding: '1px 3px',
+                  fontSize: '0.52rem',
+                  fontWeight: 800,
+                  color: '#38bdf8',
+                  lineHeight: 1,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.6)'
+                }}
+              >
+                {cell.crowdCount}
+              </div>
+            )}
           </div>
         )}
       </div>

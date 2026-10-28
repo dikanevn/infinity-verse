@@ -19,7 +19,7 @@ export const getActiveRpcUrl = (): string => {
 };
 export const RPC_URL = getActiveRpcUrl();
 export const RELAYER_URL = 'https://infinity-verse-relayer.infinity-verse.workers.dev';
-export const CLIENT_VERSION = '2810261143';
+export const CLIENT_VERSION = '2810261155';
 export const GOOGLE_CLIENT_ID = '302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com';
 
 export const monadTestnet = defineChain({
@@ -52,6 +52,9 @@ export const MAIN_ABI = parseAbi([
   'function readSector(bytes32 sector) view returns (bytes32)',
   'function readSectorBatch(bytes32[] sectors) view returns (bytes32[])',
   'function totalPortals() view returns (uint256)',
+  'function totalPlayers() view returns (uint256)',
+  'function getPlayerAddress(uint256 id) view returns (address)',
+  'function getPlayersSequential(uint256 offset, uint256 count) view returns (address[])',
   'function getPortal(uint256 id) view returns ((uint256 id, address parentContract, address targetContract, address founder, bytes32 founderName, bytes32 worldName, uint256 createdAt))',
   'function getPortalsSequential(uint256 offset, uint256 count) view returns ((uint256 id, address parentContract, address targetContract, address founder, bytes32 founderName, bytes32 worldName, uint256 createdAt)[])',
   'function getPortalId(address targetContract) view returns (uint256)',
