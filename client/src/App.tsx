@@ -218,8 +218,67 @@ function App() {
     }
   };
 
-  // 3. УПРАВЛЕНИЕ КЛАВИАТУРОЙ (WASD И СТРЕЛКИ)
+  // 3. УПРАВЛЕНИЕ КЛАВИАТУРОЙ (WASD И СТРЕЛКИ, ВКЛЮЧАЯ ДИАГОНАЛИ ПРИ ОДНОВРЕМЕННОМ НАЖАТИИ)
   useEffect(() => {
+    const pressedKeys = new Set<string>();
+    let comboTimer: any = null;
+
+    const executeMove = (dx: number, dy: number) => {
+      if (!player?.exists || actionPending) return;
+      if (dx === 0 && dy === 0) return;
+
+      const targetX = player.x + dx;
+      const targetY = player.y + dy;
+
+      // Не ходим в точку Обелиска (0, 0)
+      if (targetX === 0 && targetY === 0) return;
+
+      const targetCoord = { x: targetX, y: targetY };
+      setSelectedCoord(targetCoord);
+      setAntennaFocus(targetCoord);
+      handleMove(targetX, targetY);
+    };
+
+    const processPressedKeys = () => {
+      let dx = 0;
+      let dy = 0;
+
+      // Проверка направлений вверх/вниз
+      if (pressedKeys.has('KeyW') || pressedKeys.has('ArrowUp') || pressedKeys.has('Numpad8')) {
+        dy += 1;
+      }
+      if (pressedKeys.has('KeyS') || pressedKeys.has('ArrowDown') || pressedKeys.has('Numpad2')) {
+        dy -= 1;
+      }
+
+      // Проверка направлений влево/вправо
+      if (pressedKeys.has('KeyA') || pressedKeys.has('ArrowLeft') || pressedKeys.has('Numpad4')) {
+        dx -= 1;
+      }
+      if (pressedKeys.has('KeyD') || pressedKeys.has('ArrowRight') || pressedKeys.has('Numpad6')) {
+        dx += 1;
+      }
+
+      // Поддержка отдельных клавиш диагоналей (Q, E, Z, C, Numpad)
+      if (pressedKeys.has('KeyQ') || pressedKeys.has('Numpad7')) {
+        dx = -1;
+        dy = 1;
+      } else if (pressedKeys.has('KeyE') || pressedKeys.has('Numpad9')) {
+        dx = 1;
+        dy = 1;
+      } else if (pressedKeys.has('KeyZ') || pressedKeys.has('Numpad1')) {
+        dx = -1;
+        dy = -1;
+      } else if (pressedKeys.has('KeyC') || pressedKeys.has('Numpad3')) {
+        dx = 1;
+        dy = -1;
+      }
+
+      if (dx !== 0 || dy !== 0) {
+        executeMove(dx, dy);
+      }
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Игнорируем ввод, если фокус в поле ввода текста (input, textarea и т.д.) или открыто модальное окно
       const target = e.target as HTMLElement | null;
@@ -244,74 +303,49 @@ function App() {
         return;
       }
 
-      if (!player?.exists || actionPending) return;
+      const movementCodes = [
+        'KeyW', 'KeyA', 'KeyS', 'KeyD',
+        'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
+        'KeyQ', 'KeyE', 'KeyZ', 'KeyC',
+        'Numpad1', 'Numpad2', 'Numpad3', 'Numpad4', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9'
+      ];
 
-      let dx = 0;
-      let dy = 0;
-
-      switch (e.code) {
-        // Прямые направления
-        case 'KeyW':
-        case 'ArrowUp':
-        case 'Numpad8':
-          dy = 1;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-        case 'Numpad2':
-          dy = -1;
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-        case 'Numpad4':
-          dx = -1;
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-        case 'Numpad6':
-          dx = 1;
-          break;
-        // Диагональные направления
-        case 'KeyQ':
-        case 'Numpad7':
-          dx = -1;
-          dy = 1;
-          break;
-        case 'KeyE':
-        case 'Numpad9':
-          dx = 1;
-          dy = 1;
-          break;
-        case 'KeyZ':
-        case 'Numpad1':
-          dx = -1;
-          dy = -1;
-          break;
-        case 'KeyC':
-        case 'Numpad3':
-          dx = 1;
-          dy = -1;
-          break;
-        default:
-          return;
-      }
-
-      const targetX = player.x + dx;
-      const targetY = player.y + dy;
-
-      // Не ходим в точку Обелиска (0, 0)
-      if (targetX === 0 && targetY === 0) return;
+      if (!movementCodes.includes(e.code)) return;
 
       e.preventDefault();
-      const targetCoord = { x: targetX, y: targetY };
-      setSelectedCoord(targetCoord);
-      setAntennaFocus(targetCoord);
-      handleMove(targetX, targetY);
+
+      if (e.repeat) return;
+
+      pressedKeys.add(e.code);
+
+      // Небольшое окно (70мс), чтобы поймать вторую клавишу для диагонали (например W + D или Вверх + Вправо)
+      if (comboTimer) {
+        clearTimeout(comboTimer);
+      }
+
+      comboTimer = setTimeout(() => {
+        processPressedKeys();
+      }, 70);
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      pressedKeys.delete(e.code);
+    };
+
+    const handleBlur = () => {
+      pressedKeys.clear();
+      if (comboTimer) clearTimeout(comboTimer);
     };
 
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+      if (comboTimer) clearTimeout(comboTimer);
     };
   }, [
     player?.x,
@@ -323,6 +357,8 @@ function App() {
     isNetworkModalOpen,
     isPortalModalOpen,
     isFeedbackModalOpen,
+    isQuantumKissellOpen,
+    isWelcomeModalOpen,
     handleMove
   ]);
 
