@@ -1,9 +1,9 @@
 const fs = require('fs');
 
 const mainAddr = '0xa524a7e5ddba429c227fd095bb9f5131526136f1';
-const aaaAddr = '0x08ea81ae4161925c02c4ac0a2aedc274c4816dd6';
+const aaaAddr = '0xc84be36834d491c662b589ad38c063ec8b662ced';
 const starAddr = '0x91d8e6749bf9018545fc7ef80c30306611c87033';
-const version = '2810260420';
+const version = '2810260424';
 
 // 1. wrangler.toml
 let wr = fs.readFileSync('relayer/wrangler.toml', 'utf8');

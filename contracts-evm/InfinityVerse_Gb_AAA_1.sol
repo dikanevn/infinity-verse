@@ -622,7 +622,14 @@ contract InfinityVerse_Gb_AAA_1 {
         );
 
         address signer = recoverSigner(spawnHash, sig);
-        if (signer != player) revert InvalidSignature();
+        address activeKey;
+        uint256 expiry;
+        assembly {
+            activeKey := shr(96, authData)
+            expiry := shr(192, shl(160, authData))
+        }
+        bool isSessionAuth = (activeKey != address(0) && block.timestamp < expiry && signer == activeKey);
+        if (signer != player && !isSessionAuth) revert InvalidSignature();
 
         _incrementNonceInternal(player, authData, currentNonce);
         _executeSpawn(player);
