@@ -422,6 +422,27 @@ export function usePlayerState(
       }
 
       setStatusText('🎉 Персонаж успешно родился в мире!');
+
+      // Уведомление в Telegram бота создателя о новом жителе
+      fetch(RELAYER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'notify_spawn',
+          player: connectedAddress,
+          email: googleEmail || '',
+          method: authMode === 'google'
+            ? 'Google Gasless'
+            : authMode === 'metamask_session'
+            ? 'MetaMask Session (20h)'
+            : authMode === 'metamask_direct'
+            ? 'MetaMask Direct'
+            : authMode === 'private_key'
+            ? 'Private Key Direct'
+            : 'Unknown'
+        })
+      }).catch(notifyErr => console.warn('Не удалось отправить TG-уведомление о спавне:', notifyErr));
+
       await onStateRefresh();
       await fetchPlayer();
     } catch (err: any) {

@@ -358,6 +358,44 @@ export default {
         const body = await request.json();
         const { action, player, sessionKey, expiry, sig, targetX, targetY, moveSig } = body;
 
+        // 0.1 Оповещение о спавне нового жителя в Telegram
+        if (action === 'notify_spawn') {
+          const { player: spawnedPlayer, method, email } = body;
+          const tgToken = env.TG_BOT_TOKEN;
+          const tgChatId = env.TG_CHAT_ID;
+
+          if (tgToken && tgChatId) {
+            const playerStr = spawnedPlayer && spawnedPlayer.startsWith('0x') ? `<code>${spawnedPlayer}</code>` : '<i>Неизвестно</i>';
+            const emailStr = email && typeof email === 'string' && email.includes('@') ? `<code>${email.trim()}</code>` : null;
+            const methodStr = method || 'Не указан';
+
+            let tgText = `🌟 <b>Новый житель родился во Вселенной!</b>\n\n`;
+            tgText += `👤 <b>Адрес:</b> ${playerStr}\n`;
+            if (emailStr) {
+              tgText += `📧 <b>Google:</b> ${emailStr}\n`;
+            }
+            tgText += `🔑 <b>Режим входа:</b> ${methodStr}\n`;
+            tgText += `📍 <b>Спавн:</b> (1, 0)\n`;
+            tgText += `⛓ <b>Сеть:</b> Monad Testnet (10143)`;
+
+            try {
+              await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: tgChatId,
+                  text: tgText,
+                  parse_mode: 'HTML'
+                })
+              });
+            } catch (tgErr) {
+              console.error('Failed to send spawn TG notification:', tgErr);
+            }
+          }
+
+          return jsonResponse({ success: true });
+        }
+
         // Обратная связь от игроков в Telegram (Feedback) - не требует адреса кошелька и газа спонсора
         if (action === 'feedback') {
           const { message, author, coord, email } = body;
