@@ -2,14 +2,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const newAaaAddress = '0x59b85a9ce34be3d22281726f943306ddddb31c2a';
-const newVersion = '2810260630';
+const newAaaAddress = '0xcbb11633010b459310637aa65f3d0b3fba76561c';
+const newVersion = '2810260650';
 
 // 1. types/index.ts
 const typesPath = path.resolve(__dirname, '..', 'client', 'src', 'types', 'index.ts');
 let typesCode = fs.readFileSync(typesPath, 'utf8');
-typesCode = typesCode.replace('weight?: number;', 'secondsWeight?: number;');
-fs.writeFileSync(typesPath, typesCode, 'utf8');
+if (!typesCode.includes('secondsWeight?: number;')) {
+  typesCode = typesCode.replace('weight?: number;', 'secondsWeight?: number;');
+  fs.writeFileSync(typesPath, typesCode, 'utf8');
+}
 
 // 2. contracts.ts
 const contractsPath = path.resolve(__dirname, '..', 'client', 'src', 'config', 'contracts.ts');
@@ -23,15 +25,6 @@ contractsCode = contractsCode.replace(
   `export const CLIENT_VERSION = '${newVersion}';`
 );
 
-contractsCode = contractsCode.replace(
-  /'function getCell\(int32 x, int32 y\) view returns \(\(uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint32 weight\)\)',/g,
-  `'function getCell(int32 x, int32 y) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint32 secondsWeight))',`
-);
-contractsCode = contractsCode.replace(
-  /'function getCellsBatch\(int32\[\] xs, int32\[\] ys\) view returns \(\(uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint32 weight\)\[\]\)',/g,
-  `'function getCellsBatch(int32[] xs, int32[] ys) view returns ((uint8 terrain, uint8 object, uint8 state, uint8 reserved, uint32 secondsWeight)[])',`
-);
-
 fs.writeFileSync(contractsPath, contractsCode, 'utf8');
 
 // 3. package.json
@@ -40,32 +33,7 @@ let pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 pkg.version = newVersion;
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf8');
 
-// 4. useWorldState.ts
-const worldStatePath = path.resolve(__dirname, '..', 'client', 'src', 'hooks', 'useWorldState.ts');
-let worldCode = fs.readFileSync(worldStatePath, 'utf8');
-worldCode = worldCode.replace(
-  'weight: Number(c.weight || 0),',
-  'secondsWeight: Number(c.secondsWeight || 0),'
-);
-fs.writeFileSync(worldStatePath, worldCode, 'utf8');
-
-// 5. CellView.tsx: красивое отображение веса в токенах INFER:
-// secondsWeight * 50 / 600 токенов (1 сек = ~0.0833 INFER)
-const cellViewPath = path.resolve(__dirname, '..', 'client', 'src', 'components', 'Grid', 'CellView.tsx');
-let cellCode = fs.readFileSync(cellViewPath, 'utf8');
-
-const oldLogic = "if (cell?.object === 3) return cell.weight ? `Квантовая субстанция (${cell.weight} INFER)` : 'Квантовая субстанция';";
-const newLogic = `if (cell?.object === 3) {
-      const sec = cell.secondsWeight || 1;
-      const tokens = (sec * 50) / 600;
-      const displayTokens = tokens < 1 ? tokens.toFixed(3) : tokens >= 100 ? Math.round(tokens).toString() : tokens.toFixed(1);
-      return \`Квантовая субстанция (\${displayTokens} INFER)\`;
-    }`;
-
-cellCode = cellCode.replace(oldLogic, newLogic);
-fs.writeFileSync(cellViewPath, cellCode, 'utf8');
-
-// 6. relayer/wrangler.toml
+// 4. relayer/wrangler.toml
 const relayerPath = path.resolve(__dirname, '..', 'relayer', 'wrangler.toml');
 let relayerCode = fs.readFileSync(relayerPath, 'utf8');
 relayerCode = relayerCode.replace(
@@ -74,4 +42,4 @@ relayerCode = relayerCode.replace(
 );
 fs.writeFileSync(relayerPath, relayerCode, 'utf8');
 
-console.log('All configs updated for seconds-based mining!');
+console.log('All configs updated for AAA', newAaaAddress);
