@@ -1073,8 +1073,11 @@ contract InfinityVerse_Gb_AAA_1 {
         bytes32 newAuth;
         assembly {
             // [sessionKey: 20B][expiry: 8B][nonce: 4B]
+            // sessionKey занимает старшие 160 бит (shl(96, sessionKey))
+            // expiry занимает следующие 64 бита (shl(32, expiry64))
+            // nonce занимает младшие 32 бита (currentNonce)
             newAuth := or(
-                or(shl(96, sessionKey), shr(64, shl(192, expiry64))),
+                or(shl(96, sessionKey), shl(32, expiry64)),
                 currentNonce
             )
         }

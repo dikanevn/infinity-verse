@@ -9,7 +9,7 @@ export function useWorldState(
   focusPoints: { x: number; y: number }[]
 ) {
   const [cells, setCells] = useState<CellData[]>([]);
-  const [contractVersion, setContractVersion] = useState<string>('Gb_Main_1');
+  const [contractVersion, setContractVersion] = useState<string>('Main_Gb_1');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');

@@ -347,7 +347,7 @@ function App() {
           gap: '12px',
           padding: '2px 0'
         }}>
-          <span style={{ color: '#64748b', fontWeight: 600 }}>Gb_Main_1</span>
+          <span style={{ color: '#64748b', fontWeight: 600 }}>Main_Gb_1</span>
           <div style={{ color: '#334155' }}>|</div>
                     <span style={{ color: '#64748b', fontWeight: 600 }}>v{CLIENT_VERSION}</span>
           <div style={{ color: '#334155' }}>|</div>
