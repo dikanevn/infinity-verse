@@ -102,17 +102,16 @@ export function useWorldState(
     const updateStatus = () => {
       const nowSec = Math.floor(Date.now() / 1000);
       const ageSec = Math.max(0, nowSec - lastBlockTimestamp);
-      const blockSuffix = lastBlockNumber ? ` · #${lastBlockNumber}` : '';
 
       if (ageSec > CONNECTION_CONFIG.DANGER_BLOCK_AGE_SEC) {
         setStatusState('red');
-        setStatusText(`🚨 Нет сигнала (${ageSec} сек назад${blockSuffix})`);
+        setStatusText(`🚨 Нет сигнала (${ageSec} сек назад)`);
       } else if (ageSec > CONNECTION_CONFIG.WARN_BLOCK_AGE_SEC) {
         setStatusState('yellow');
-        setStatusText(`⚠️ Замедление связи (${ageSec} сек назад${blockSuffix})`);
+        setStatusText(`⚠️ Замедление связи (${ageSec} сек назад)`);
       } else {
         setStatusState('green');
-        setStatusText(`📡 Межпространственная связь (${ageSec} сек назад${blockSuffix})`);
+        setStatusText(`📡 Межпространственная связь (${ageSec} сек назад)`);
       }
     };
 
