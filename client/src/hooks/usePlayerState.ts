@@ -508,8 +508,9 @@ export function usePlayerState(
       await onStateRefresh();
       await fetchPlayer();
     } catch (err: any) {
-      console.error(err);
-      alert('Недопустимый ход или ошибка: ' + (err.shortMessage || err.message || err));
+      console.error('MOVE ERROR:', err);
+      const detailedMsg = err.shortMessage || err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+      alert(`[Режим: ${authMode}] Ошибка хода: ${detailedMsg}`);
     } finally {
       setActionPending(false);
     }

@@ -259,12 +259,12 @@ export const CellView: React.FC<CellViewProps> = ({
         {!isFog && cell?.object === 3 && (
           <img
             src={STAR_PIXEL_SPRITE_URI}
-            alt="Звезда"
+            alt="Квантовая субстанция"
             style={{
-              width: '28px',
-              height: '28px',
+              width: '30px',
+              height: '30px',
               imageRendering: 'pixelated',
-              filter: 'drop-shadow(0 0 6px rgba(250, 204, 21, 0.6))',
+              filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.8))',
               userSelect: 'none',
               pointerEvents: 'none'
             }}

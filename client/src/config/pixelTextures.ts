@@ -61,28 +61,74 @@ export const SAND_PIXELS_24X24: PixelMatrix = createUniformSandMatrix(24);
 // Алиас для обратной совместимости
 export const SAND_PIXELS_8X8 = SAND_PIXELS_24X24;
 
-// 2. Звезда ($INFER 8x8 пиксельный спрайт)
-export const STAR_PIXELS_8X8: PixelMatrix = {
-  width: 8,
-  height: 8,
-  palette: [
+/**
+ * 2. Синяя квантовая субстанция (бывший объект Звезда / $INFER) в разрешении 24x24.
+ * Плотное квантовое ядро, концентрические энергетические слои, мерцающие частицы декогеренции.
+ */
+export const STAR_PIXELS_24X24: PixelMatrix = (() => {
+  const width = 24;
+  const height = 24;
+  const palette = [
     'transparent', // 0
-    '#fef08a',     // 1: Яркий центр
-    '#facc15',     // 2: Золотое тело звезды
-    '#ca8a04',     // 3: Контур
-    '#ffffff'      // 4: Блик
-  ],
-  data: [
-    0, 0, 0, 4, 1, 0, 0, 0,
-    0, 0, 3, 1, 1, 3, 0, 0,
-    3, 3, 2, 1, 1, 2, 3, 3,
-    0, 3, 2, 1, 1, 2, 3, 0,
-    0, 0, 3, 2, 2, 3, 0, 0,
-    0, 3, 2, 3, 3, 2, 3, 0,
-    0, 3, 2, 0, 0, 2, 3, 0,
-    0, 0, 3, 0, 0, 3, 0, 0
-  ]
-};
+    '#0284c7',     // 1: Глубокая синяя квантовая тень
+    '#0ea5e9',     // 2: Энергетическое поле
+    '#38bdf8',     // 3: Яркая лазурная плазма
+    '#7dd3fc',     // 4: Светлое квантовое излучение
+    '#ffffff',     // 5: Сверхчистый белый фокус ядра
+    '#818cf8',     // 6: Фиолетовый квантовый сдвиг
+    '#c084fc'      // 7: Искры декогеренции
+  ];
+
+  const data: number[] = new Array(width * height).fill(0);
+  const centerX = 11.5;
+  const centerY = 11.5;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Квантовая субстанция: органическая капля плазмы с 4 лучами поля
+      const angle = Math.atan2(dy, dx);
+      const ripple = Math.sin(angle * 4) * 1.5 + Math.cos(angle * 8) * 0.6;
+      const r = dist + ripple;
+
+      if (r < 2.2) {
+        data[y * width + x] = 5; // Белоснежный центр сингулярности
+      } else if (r < 4.2) {
+        data[y * width + x] = 4; // Светлая лазурь
+      } else if (r < 6.5) {
+        data[y * width + x] = 3; // Неоновая синева
+      } else if (r < 8.6) {
+        data[y * width + x] = 2; // Энергетическая оболочка
+      } else if (r < 10.2) {
+        data[y * width + x] = 1; // Внешний ореол
+      }
+    }
+  }
+
+  // Мерцающие квантовые искры вокруг ядра
+  const sparks = [
+    { x: 3, y: 11, c: 7 }, { x: 20, y: 12, c: 7 },
+    { x: 11, y: 3, c: 6 }, { x: 12, y: 20, c: 6 },
+    { x: 6, y: 6, c: 4 },  { x: 17, y: 6, c: 4 },
+    { x: 6, y: 17, c: 3 }, { x: 17, y: 17, c: 3 }
+  ];
+  for (const s of sparks) {
+    data[s.y * width + s.x] = s.c;
+  }
+
+  return {
+    width,
+    height,
+    palette,
+    data
+  };
+})();
+
+// Алиас для обратной совместимости
+export const STAR_PIXELS_8X8 = STAR_PIXELS_24X24;
 
 // 3. Обелиск (Монолит 8x8)
 export const OBELISK_PIXELS_8X8: PixelMatrix = {
@@ -132,7 +178,6 @@ export const PORTAL_PIXELS_8X8: PixelMatrix = {
 
 /**
  * 5. Игрок: Детализированный Робот-Первооткрыватель (24x24 пикселя)
- * Разрешение полностью совпадает с песком (24x24 = 576 пикселей на клетку).
  */
 export const PLAYER_PIXELS_24X24: PixelMatrix = (() => {
   const width = 24;
@@ -150,7 +195,6 @@ export const PLAYER_PIXELS_24X24: PixelMatrix = (() => {
     '#ef4444'      // 9: Аварийный маячок / антенна
   ];
 
-  // Матрица 24x24
   const data: number[] = new Array(width * height).fill(0);
 
   const setPixel = (x: number, y: number, color: number) => {
@@ -168,29 +212,27 @@ export const PLAYER_PIXELS_24X24: PixelMatrix = (() => {
   };
 
   // --- 1. Антенна со сферическим маячком на макушке (Y = 1 .. 4) ---
-  fillRect(11, 1, 2, 2, 9); // Красный маяк
-  fillRect(11, 3, 2, 2, 1); // Стержень антенны
+  fillRect(11, 1, 2, 2, 9);
+  fillRect(11, 3, 2, 2, 1);
 
   // --- 2. Голова робота (Y = 5 .. 10, X = 7 .. 16) ---
-  fillRect(7, 5, 10, 6, 1);   // Контур головы
-  fillRect(8, 6, 8, 4, 3);    // Металлический лоб и бока
-  fillRect(8, 6, 2, 4, 4);    // Блик слева
-  // Неоновый визор (горизонтальный сканер)
-  fillRect(9, 7, 6, 2, 6);    // Тень визора
-  fillRect(10, 7, 5, 2, 5);   // Неоновое свечение визора
-  fillRect(13, 7, 1, 2, 4);   // Фокус сенсора
+  fillRect(7, 5, 10, 6, 1);
+  fillRect(8, 6, 8, 4, 3);
+  fillRect(8, 6, 2, 4, 4);
+  fillRect(9, 7, 6, 2, 6);
+  fillRect(10, 7, 5, 2, 5);
+  fillRect(13, 7, 1, 2, 4);
 
   // --- 3. Шея / шарнир (Y = 11, X = 10 .. 13) ---
   fillRect(10, 11, 4, 1, 1);
 
   // --- 4. Плечи и корпус (Y = 12 .. 17, X = 5 .. 18) ---
-  fillRect(5, 12, 14, 6, 1);  // Контур торса и плеч
-  fillRect(6, 13, 12, 4, 2);  // Бронепластина
-  fillRect(6, 13, 3, 4, 4);   // Блик плеча слева
-  fillRect(15, 13, 2, 4, 3);  // Правое плечо
-  // Плазменный реактор в груди
-  fillRect(10, 13, 4, 3, 7);  // Реактор
-  fillRect(11, 14, 2, 1, 8);  // Яркое ядро
+  fillRect(5, 12, 14, 6, 1);
+  fillRect(6, 13, 12, 4, 2);
+  fillRect(6, 13, 3, 4, 4);
+  fillRect(15, 13, 2, 4, 3);
+  fillRect(10, 13, 4, 3, 7);
+  fillRect(11, 14, 2, 1, 8);
 
   // --- 5. Руки-манипуляторы (Y = 14 .. 18, X = 4..5 и X = 18..19) ---
   fillRect(4, 14, 2, 4, 1);
@@ -203,14 +245,12 @@ export const PLAYER_PIXELS_24X24: PixelMatrix = (() => {
   fillRect(9, 18, 6, 1, 3);
 
   // --- 7. Ноги / сервоопоры (Y = 19 .. 22) ---
-  // Левая нога
   fillRect(7, 19, 4, 3, 1);
   fillRect(8, 19, 2, 2, 3);
-  fillRect(8, 19, 1, 2, 4); // Блик
-  // Правая нога
+  fillRect(8, 19, 1, 2, 4);
   fillRect(13, 19, 4, 3, 1);
   fillRect(14, 19, 2, 2, 3);
-  fillRect(14, 19, 1, 2, 4); // Блик
+  fillRect(14, 19, 1, 2, 4);
 
   // --- 8. Гусеничные / магнитные стопы (Y = 22 .. 23) ---
   fillRect(6, 22, 5, 2, 1);
