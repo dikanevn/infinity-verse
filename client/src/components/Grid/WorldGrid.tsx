@@ -2,6 +2,10 @@ import { CosmicCanvas } from './CosmicCanvas';
 import React, { useState, useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
 import { CellView } from './CellView';
+import { STAR_PIXELS_8X8 } from '../../config/pixelTextures';
+import { pixelMatrixToSvgUri } from '../../config/sandTextures';
+
+const QUANTUM_SUBSTANCE_ICON_URI = pixelMatrixToSvgUri(STAR_PIXELS_8X8);
 
 interface WorldGridProps {
   cells: CellData[];
@@ -396,22 +400,31 @@ export const WorldGrid: React.FC<WorldGridProps> = ({
         zIndex: 10,
         display: 'flex',
         alignItems: 'center',
-        gap: '6px',
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+        gap: '8px',
+        backgroundColor: 'rgba(15, 23, 42, 0.88)',
         backdropFilter: 'blur(6px)',
-        border: '1px solid #eab308',
-        boxShadow: '0 0 10px rgba(234, 179, 8, 0.2)',
-        padding: '4px 8px',
+        border: '1px solid #8b5cf6',
+        boxShadow: '0 0 12px rgba(139, 92, 246, 0.35)',
+        padding: '4px 10px',
         borderRadius: '4px',
         pointerEvents: 'auto',
         userSelect: 'none'
       }}>
-        <span style={{ fontSize: '1rem', lineHeight: 1 }}>⭐</span>
+        <img
+          src={QUANTUM_SUBSTANCE_ICON_URI}
+          alt="$INFER"
+          style={{
+            width: '20px',
+            height: '20px',
+            imageRendering: 'pixelated',
+            filter: 'drop-shadow(0 0 6px rgba(192, 132, 252, 0.8))'
+          }}
+        />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1 }}>
+          <span style={{ fontSize: '0.62rem', color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1, fontWeight: 700 }}>
             $INFER
           </span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a', fontFamily: 'monospace', lineHeight: 1.1 }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f3e8ff', fontFamily: 'monospace', lineHeight: 1.1 }}>
             {inferBalance !== undefined && inferBalance !== null ? inferBalance.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '...'}
           </span>
         </div>
