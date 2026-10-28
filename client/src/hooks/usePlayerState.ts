@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createWalletClient, custom, keccak256, encodePacked } from 'viem';
+import { createWalletClient, custom, keccak256, encodePacked, encodeFunctionData } from 'viem';
 import type { PlayerData, EIP6963ProviderDetail, AuthMode } from '../types';
 import {
   AAA_CONTRACT_ADDRESS,
@@ -188,6 +188,27 @@ export function usePlayerState(
       if (!accounts || !accounts[0]) {
         setIsPlayerLoading(false);
         return;
+      }
+
+      // Проверяем и при необходимости переключаем сеть в MetaMask на Monad Testnet (10143 = 0x279f)
+      try {
+        await prov.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x279f' }]
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902) {
+          await prov.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x279f',
+              chainName: 'Monad Testnet',
+              nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+              rpcUrls: ['https://testnet-rpc.monad.xyz'],
+              blockExplorerUrls: ['https://testnet.monadvision.com']
+            }]
+          });
+        }
       }
 
       const userAddress = accounts[0];
@@ -434,12 +455,15 @@ export function usePlayerState(
           chain: monadTestnet,
           transport: custom(prov)
         });
-        const hash = await walletClient.writeContract({
-          address: AAA_CONTRACT_ADDRESS,
+        const data = encodeFunctionData({
           abi: AAA_ABI,
           functionName: 'moveDirect',
-          args: [targetX, targetY],
-          account: connectedAddress as `0x${string}`
+          args: [targetX, targetY]
+        });
+        const hash = await walletClient.sendTransaction({
+          account: connectedAddress as `0x${string}`,
+          to: AAA_CONTRACT_ADDRESS,
+          data
         });
         setStatusText('⏳ Фиксация шага в Monad...');
         await publicClient.waitForTransactionReceipt({ hash });

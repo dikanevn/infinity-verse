@@ -1,59 +1,38 @@
 // client/src/config/sandTextures.ts
-// Дискретные 8x8 пиксельные текстуры песка (чистый пиксель-арт без сглаживания)
+// Дискретные пиксельные текстуры песка повышенной детализации (24x24, в 3 раза мельче пиксели)
 
-import { SAND_PIXELS_8X8, type PixelMatrix } from './pixelTextures';
+import { SAND_PIXELS_24X24, type PixelMatrix } from './pixelTextures';
 
 /**
- * Вариации 8x8 пиксельных матриц песка для процедурного разнообразия тайлов.
+ * Вариации 24x24 пиксельных матриц песка для процедурного разнообразия тайлов.
  */
-export const SAND_PIXEL_VARIANTS: PixelMatrix[] = [
-  SAND_PIXELS_8X8,
-  {
-    width: 8,
-    height: 8,
-    palette: SAND_PIXELS_8X8.palette,
-    data: [
-      1, 0, 0, 0, 2, 3, 2, 0,
-      0, 0, 1, 0, 0, 2, 0, 0,
-      0, 2, 2, 0, 0, 0, 1, 4,
-      2, 3, 2, 1, 0, 0, 0, 1,
-      0, 2, 0, 4, 1, 0, 0, 0,
-      0, 0, 0, 1, 0, 2, 2, 0,
-      0, 1, 0, 0, 2, 3, 2, 0,
-      0, 0, 0, 0, 0, 2, 0, 0
-    ]
-  },
-  {
-    width: 8,
-    height: 8,
-    palette: SAND_PIXELS_8X8.palette,
-    data: [
-      0, 0, 2, 3, 2, 0, 0, 1,
-      0, 0, 0, 2, 0, 1, 4, 1,
-      0, 1, 0, 0, 0, 0, 1, 0,
-      1, 4, 1, 0, 2, 2, 0, 0,
-      0, 1, 0, 2, 3, 2, 0, 0,
-      0, 0, 0, 0, 2, 0, 0, 1,
-      2, 2, 0, 0, 0, 0, 0, 0,
-      3, 2, 0, 1, 0, 2, 2, 0
-    ]
-  },
-  {
-    width: 8,
-    height: 8,
-    palette: SAND_PIXELS_8X8.palette,
-    data: [
-      0, 1, 0, 0, 0, 1, 0, 0,
-      2, 2, 0, 0, 1, 4, 1, 0,
-      3, 2, 0, 0, 0, 1, 0, 2,
-      0, 0, 0, 2, 2, 0, 2, 3,
-      0, 0, 2, 3, 2, 0, 0, 2,
-      0, 1, 0, 2, 0, 0, 0, 0,
-      1, 4, 1, 0, 0, 0, 1, 0,
-      0, 1, 0, 0, 0, 0, 0, 0
-    ]
+function generateVariations(base: PixelMatrix, count: number): PixelMatrix[] {
+  const list: PixelMatrix[] = [base];
+  const size = base.width;
+
+  for (let v = 1; v < count; v++) {
+    const data = [...base.data];
+    // Сдвиг узора дюн и вариация крупиц
+    const shift = (v * 7) % size;
+    const shiftedData = new Array(size * size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const nx = (x + shift) % size;
+        const ny = (y + (v * 5)) % size;
+        shiftedData[ny * size + nx] = data[y * size + x];
+      }
+    }
+    list.push({
+      width: size,
+      height: size,
+      palette: base.palette,
+      data: shiftedData
+    });
   }
-];
+  return list;
+}
+
+export const SAND_PIXEL_VARIANTS: PixelMatrix[] = generateVariations(SAND_PIXELS_24X24, 6);
 
 /**
  * Конвертирует PixelMatrix в пиксельный data-uri SVG с crispedge rect-пикселями
@@ -72,11 +51,11 @@ export function pixelMatrixToSvgUri(matrix: PixelMatrix): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// Предварительно сгенерированные data-uri текстуры песка
+// Предварительно сгенерированные data-uri текстуры песка 24x24
 export const SAND_PATTERNS: string[] = SAND_PIXEL_VARIANTS.map(pixelMatrixToSvgUri);
 
 /**
- * Вычисляет псевдослучайную 8x8 пиксельную текстуру песка по координатам клетки
+ * Вычисляет псевдослучайную пиксельную текстуру песка по координатам клетки
  */
 export function getSandTextureForCoord(x: number, y: number): string {
   let h = (x * 374761393) ^ (y * 668265263);
