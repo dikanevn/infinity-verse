@@ -482,9 +482,12 @@ export function usePlayerState(
         }
 
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
-          // Динамический расчет газа с безопасным запасом 25%:
-          // сбор субстанции требует ~265k gas, обычный шаг ~110k-180k gas.
-          // Фиксируем безопасный fallback 350,000, чтобы не блокировать отправку по балансу на Monad RPC.
+          // Динамический расчет газа:
+          // При шаге контракт выполняет псевдослучайный дроп звезды (_maybeDropStar) с вероятностью 50%.
+          // Если при estimateGas выпало "false" (~111k gas), а в момент майнинга блока выпало "true" с проверкой 8 соседей (~220k gas),
+          // транзакция с лимитом 111k * 1.25 = 139k упадет по Out of Gas!
+          // Поэтому устанавливаем жесткий минимальный порог (floor) 350,000 gas,
+          // а при сборе субстанции (где базовая оценка ~265k) берем 25% запас (~330k-400k).
           let safeGasLimit = 350000n;
           try {
             const estimated = await publicClient.estimateContractGas({
@@ -494,7 +497,8 @@ export function usePlayerState(
               args: [intX, intY],
               account: walletClient.account
             });
-            safeGasLimit = (estimated * 125n) / 100n;
+            const withMargin = (estimated * 125n) / 100n;
+            safeGasLimit = withMargin > 350000n ? withMargin : 350000n;
           } catch {
             safeGasLimit = 350000n;
           }
