@@ -1,0 +1,78 @@
+{
+  "common": {
+    "close": "Close",
+    "exit": "Exit",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "loading": "Loading...",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "network": "NETWORK",
+    "you": "YOU",
+    "language": "Language",
+    "ru": "RU",
+    "en": "EN"
+  },
+  "topbar": {
+    "networkBtn": "NET",
+    "exitBtn": "EXIT",
+    "exitTooltip": "Disconnect wallet",
+    "switchLanguage": "Switch language (RU/EN)",
+    "title": "INFINITY-VERSE-TEST"
+  },
+  "welcome": {
+    "title": "Hello, friend!",
+    "p1": "You have arrived in another universe. It is infinite — each nested level inside is larger than outside.",
+    "p2": "There is not much here yet, but you can already collect test coins and build a portal to your own world.",
+    "controlsTitle": "🕹 Controls: ",
+    "controlsDesc": "{wasd} keys, or {rmb}, or {doubleTap}.",
+    "wasd": "WASD",
+    "rmb": "Right Mouse Button",
+    "doubleTap": "Double Tap"
+  },
+  "idle": {
+    "title": "Idle Pause",
+    "desc": "Blockchain connection paused to save bandwidth and prevent redundant requests.",
+    "resume": "Click anywhere to resume"
+  },
+  "kissell": {
+    "text": "This universe currently exists only as quantum jelly.",
+    "exit": "Exit"
+  },
+  "wallet": {
+    "title": "Enter the Multiverse",
+    "subtitle": "Choose connection method",
+    "sessionMode": "Gasless Mode (Session)",
+    "directMode": "Direct Mode (Manual)",
+    "google": "Sign in with Google",
+    "connecting": "Connecting...",
+    "metamask": "MetaMask",
+    "phantom": "Phantom",
+    "rabby": "Rabby Wallet",
+    "privateKey": "Private Key",
+    "detectedWallets": "Detected EIP-6963 Wallets",
+    "noWallets": "No wallets detected"
+  },
+  "inspector": {
+    "cellTitle": "Cell ({x}, {y})",
+    "empty": "Quantum Void",
+    "obelisk": "Sacred Obelisk",
+    "portal": "Rainbow Portal",
+    "star": "Quantum Substance",
+    "chaos": "Quantum Chaos",
+    "crowd": "Dwellers: {count}",
+    "tokens": "Substance weight: {amount} INFER",
+    "owner": "Owner: {address}",
+    "founder": "Founder: {address}",
+    "inspectPortal": "Inspect Portal",
+    "enterPortal": "Enter Portal"
+  },
+  "actions": {
+    "teleportObelisk": "To Obelisk (0, 0)",
+    "teleportPortal": "To My Portal",
+    "createPortal": "Build Portal",
+    "claim": "Claim",
+    "move": "Move"
+  }
+}
