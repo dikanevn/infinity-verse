@@ -23,6 +23,41 @@
     "switchLanguage": "Switch language (RU/EN)",
     "title": "INFINITY-VERSE-TEST"
   },
+  "status": {
+    "calibrating": "Calibrating interdimensional link...",
+    "connected": "📡 Interdimensional Link ({sec}s ago)",
+    "warning": "⚠️ Link Latency Warning ({sec}s ago)",
+    "danger": "🚨 Signal Lost ({sec}s ago)"
+  },
+  "grid": {
+    "fog": "🌫️ Fog",
+    "chaos": "🌀 Chaos",
+    "fogOfWar": "Fog of War",
+    "quantumChaos": "Quantum Chaos",
+    "empty": "Empty",
+    "object": "Object",
+    "wall": "Wall",
+    "obelisk": "Obelisk",
+    "portal": "Portal",
+    "portalWithWorld": "Portal: {name}",
+    "portalBadge": "Portal #{id}",
+    "worldLabel": "World:",
+    "founderLabel": "Founder:",
+    "substanceLabel": "Quantum Substance ({amount} INFER-TEST)"
+  },
+  "terrains": {
+    "chaos": "Chaos",
+    "sand": "Sand",
+    "water": "Water",
+    "rock": "Rock"
+  },
+  "objects": {
+    "empty": "Empty",
+    "obelisk": "Obelisk",
+    "wall": "Wall",
+    "star": "Substance",
+    "portal": "Portal"
+  },
   "welcome": {
     "title": "Hello, friend!",
     "p1": "You have arrived in another universe. It is infinite — each nested level inside is larger than outside.",
@@ -80,7 +115,7 @@
     "title": "FEEDBACK",
     "intro": "hello friend! feel free to share what you dislike, what you enjoy, or any ideas!",
     "thanks": "✓ Thank you for your thoughts! Recorded.",
-    "placeholder": "Constructive criticism is especially appreciated. When something is frustrating, you usually know how to make it better.",
+    "placeholder": "Criticism is especially welcome. Frustration usually comes with knowing how things could be done better.",
     "sending": "Sending...",
     "send": "Send",
     "contacts": "Contacts",

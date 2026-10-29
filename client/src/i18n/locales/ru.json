@@ -23,6 +23,41 @@
     "switchLanguage": "Переключить язык (RU/EN)",
     "title": "INFINITY-VERSE-TEST"
   },
+  "status": {
+    "calibrating": "Калибровка межпространственной связи...",
+    "connected": "📡 Межпространственная связь ({sec} сек назад)",
+    "warning": "⚠️ Замедление связи ({sec} сек назад)",
+    "danger": "🚨 Нет сигнала ({sec} сек назад)"
+  },
+  "grid": {
+    "fog": "🌫️ Туман",
+    "chaos": "🌀 Хаос",
+    "fogOfWar": "Туман войны",
+    "quantumChaos": "Квантовый хаос",
+    "empty": "Пусто",
+    "object": "Объект",
+    "wall": "Стена",
+    "obelisk": "Обелиск",
+    "portal": "Портал",
+    "portalWithWorld": "Портал: {name}",
+    "portalBadge": "Портал #{id}",
+    "worldLabel": "Мир:",
+    "founderLabel": "Основатель:",
+    "substanceLabel": "Квантовая субстанция ({amount} INFER-TEST)"
+  },
+  "terrains": {
+    "chaos": "Хаос",
+    "sand": "Песок",
+    "water": "Вода",
+    "rock": "Скала"
+  },
+  "objects": {
+    "empty": "Пусто",
+    "obelisk": "Обелиск",
+    "wall": "Стена",
+    "star": "Субстанция",
+    "portal": "Портал"
+  },
   "welcome": {
     "title": "Привет, друг!",
     "p1": "Ты оказался в другой вселенной. Она бесконечная — каждый вложенный уровень внутри больше чем снаружи.",
