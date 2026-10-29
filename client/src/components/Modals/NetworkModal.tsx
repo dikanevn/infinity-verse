@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MONAD_RPC_LIST, type RpcEndpoint } from '../../config/rpcList';
 import { getActiveRpcUrl } from '../../config/contracts';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface NetworkModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
   const [activeUrl, setActiveUrl] = useState<string>(getActiveRpcUrl());
   const [pings, setPings] = useState<Record<string, { latency: number | null; block: number | null; error: boolean }>>({});
   const [testing, setTesting] = useState<boolean>(false);
+  const { t } = useLanguage();
 
   const measurePing = async (endpoint: RpcEndpoint) => {
     const start = performance.now();
@@ -114,16 +116,16 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
         }}>
           <div>
             <div style={{ color: '#38bdf8', fontWeight: 800, fontSize: '0.86rem', letterSpacing: '0.06em' }}>
-              🌐 ВЫБОР СЕТИ И RPC УЗЛА
+              {t('networkModal.title')}
             </div>
             <div style={{ color: '#94a3b8', fontSize: '0.62rem' }}>
-              Monad Testnet (Chain ID: 10143)
+              {t('networkModal.subtitle')}
             </div>
           </div>
           <button
             onClick={checkAllPings}
             disabled={testing}
-            title="Перепроверить пинг"
+            title={t('networkModal.recheckTooltip')}
             style={{
               backgroundColor: '#1e293b',
               border: '1px solid #334155',
@@ -134,7 +136,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
               cursor: testing ? 'wait' : 'pointer'
             }}
           >
-            {testing ? '⏳ ТЕСТ...' : '🔄 ПИНГ'}
+            {testing ? t('networkModal.testing') : t('networkModal.ping')}
           </button>
         </div>
 
@@ -178,7 +180,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
                         padding: '1px 5px',
                         fontWeight: 800
                       }}>
-                        РЕКОМЕНДОВАНО
+                        {t('networkModal.recommended')}
                       </span>
                     )}
                     {isCurrent && (
@@ -189,7 +191,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
                         padding: '1px 5px',
                         fontWeight: 800
                       }}>
-                        АКТИВЕН
+                        {t('networkModal.active')}
                       </span>
                     )}
                   </div>
@@ -202,7 +204,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
                   {pingInfo ? (
                     pingInfo.error ? (
                       <span style={{ color: '#ef4444', fontSize: '0.62rem', fontWeight: 700 }}>
-                        ❌ ОФФЛАЙН
+                        {t('networkModal.offline')}
                       </span>
                     ) : (
                       <>
@@ -223,7 +225,7 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
                     )
                   ) : (
                     <span style={{ color: '#475569', fontSize: '0.62rem' }}>
-                      опрос...
+                      {t('networkModal.polling')}
                     </span>
                   )}
                 </div>
@@ -252,10 +254,11 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose, onS
               cursor: 'pointer'
             }}
           >
-            ЗАКРЫТЬ
+            {t('common.close')}
           </button>
         </div>
       </div>
     </div>
   );
 };
+

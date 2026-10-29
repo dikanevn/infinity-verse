@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PkModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ export const PkModal: React.FC<PkModalProps> = ({
   onClose,
   onConnect
 }) => {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   return (
@@ -53,7 +56,7 @@ export const PkModal: React.FC<PkModalProps> = ({
           paddingBottom: '8px'
         }}>
           <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#a5b4fc', letterSpacing: '0.05em' }}>
-            🔐 ПРИВАТНЫЙ КЛЮЧ (ШИФРОВАНИЕ В RAM)
+            {t('pk.title')}
           </span>
           <button
             onClick={onClose}
@@ -71,12 +74,12 @@ export const PkModal: React.FC<PkModalProps> = ({
         </div>
 
         <div style={{ fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.4 }}>
-          Ключ никогда не сохраняется на диске (localStorage выключен). При загрузке генерируется случайный 256-битный мастер-ключ, и приватник держится в памяти в виде зашифрованного шума AES-GCM или XOR-маски.
+          {t('pk.desc')}
         </div>
 
         <input
           type="password"
-          placeholder="0x... (приватный ключ EVM)"
+          placeholder={t('pk.placeholder')}
           value={pkInput}
           autoComplete="new-password"
           autoCorrect="off"
@@ -107,7 +110,7 @@ export const PkModal: React.FC<PkModalProps> = ({
                 cursor: 'pointer'
               }}
             >
-              Отмена
+              {t('common.cancel')}
             </button>
             <button
               onClick={() => onConnect(undefined, 'aes')}
@@ -122,7 +125,7 @@ export const PkModal: React.FC<PkModalProps> = ({
                 boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
               }}
             >
-              ВОЙТИ ➔
+              {t('pk.login')}
             </button>
           </div>
         </div>
@@ -130,3 +133,4 @@ export const PkModal: React.FC<PkModalProps> = ({
     </div>
   );
 };
+

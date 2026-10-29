@@ -3,6 +3,7 @@ import { PORTAL_PIXELS_8X8 } from '../../config/pixelTextures';
 import React, { useState, useEffect } from 'react';
 import { publicClient, MAIN_CONTRACT_ADDRESS, MAIN_ABI } from '../../config/contracts';
 import { hexToString } from 'viem';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PortalModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface PortalModalProps {
   isDirectSigner: boolean;
   onRefresh: () => Promise<void>;
   onCreatePortal?: (targetContract: string, founderName: string, worldName: string, x: number, y: number) => Promise<void>;
-    }
+}
 
 const PORTAL_ICON_URI = pixelMatrixToSvgUri(PORTAL_PIXELS_8X8);
 
@@ -27,17 +28,16 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   connectedAddress,
   onRefresh,
   onCreatePortal,
-    }) => {
+}) => {
   const [portalInfo, setPortalInfo] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const { t, language } = useLanguage();
 
   // Форма создания портала
   const [targetContract, setTargetContract] = useState<string>('');
   const [founderName, setFounderName] = useState<string>('Bob');
   const [worldName, setWorldName] = useState<string>("Bob's World");
-
-  // Форма передачи владения
 
   useEffect(() => {
     if (isOpen) {
@@ -96,7 +96,6 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
   if (!isOpen) return null;
 
-
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!onCreatePortal) return;
@@ -143,7 +142,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <img src={PORTAL_ICON_URI} alt="Портал" style={{ width: '24px', height: '24px', imageRendering: 'pixelated', filter: 'drop-shadow(0 0 6px rgba(192, 132, 252, 0.8))' }} />
             <span style={{ fontWeight: 800, color: '#c084fc', fontSize: '1rem' }}>
-              {portalInfo ? `ПОРТАЛ МУЛЬТИВСЕЛЕННОЙ #${portalInfo.id}` : `СОЗДАНИЕ БЕСКОНЕЧНОЙ МУЛЬТИВСЕЛЕННОЙ (${portalX}, ${portalY})`}
+              {portalInfo ? `ПОРТАЛ МУЛЬТИВСЕЛЕННОЙ #${portalInfo.id}` : t('portalModal.title', { x: portalX, y: portalY })}
             </span>
           </div>
           <button
@@ -162,42 +161,40 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '30px 0', color: '#94a3b8' }}>
-            Считывание хроник квантового портала из Monad...
+            {t('portalModal.loading')}
           </div>
         ) : portalInfo ? (
           /* Информация о существующем портале */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ backgroundColor: '#131826', padding: '12px', borderRadius: '4px', border: '1px solid #1e293b' }}>
-              <div style={{ color: '#a78bfa', fontSize: '0.8rem', marginBottom: '4px' }}>НАЗВАНИЕ ВСЕЛЕННОЙ:</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#38bdf8' }}>{portalInfo.worldName || 'Без имени'}</div>
+              <div style={{ color: '#a78bfa', fontSize: '0.8rem', marginBottom: '4px' }}>{t('portalModal.worldName')}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#38bdf8' }}>{portalInfo.worldName || t('portalModal.unnamed')}</div>
 
-              <div style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '8px', marginBottom: '4px' }}>ОСНОВАТЕЛЬ МИРА:</div>
+              <div style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '8px', marginBottom: '4px' }}>{t('portalModal.founder')}</div>
               <div style={{ fontSize: '0.9rem', color: '#facc15' }}>
                 {portalInfo.founderName} ({portalInfo.founder.slice(0, 8)}...{portalInfo.founder.slice(-6)})
               </div>
 
-              <div style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '8px', marginBottom: '4px' }}>ЦЕЛЕВОЙ СМАРТ-КОНТРАКТ:</div>
+              <div style={{ color: '#a78bfa', fontSize: '0.8rem', marginTop: '8px', marginBottom: '4px' }}>{t('portalModal.targetContract')}</div>
               <div style={{ fontSize: '0.75rem', color: '#4ade80', wordBreak: 'break-all' }}>
                 {portalInfo.targetContract}
               </div>
 
               <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '8px' }}>
-                ОТКРЫТ: {new Date(portalInfo.createdAt * 1000).toLocaleString('ru-RU')}
+                {t('portalModal.openedAt', { date: new Date(portalInfo.createdAt * 1000).toLocaleString(language === 'ru' ? 'ru-RU' : 'en-US') })}
               </div>
             </div>
-
-            
           </div>
         ) : (
           /* Форма создания нового портала */
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-              Откройте гиперпространственный переход в новый смарт-контракт Вселенной строго справа от себя на координатах ({portalX}, {portalY}). Все данные всегда можно поменять.
+              {t('portalModal.createDesc', { x: portalX, y: portalY })}
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.7rem', color: '#a78bfa', marginBottom: '2px' }}>
-                Адрес смарт-контракта вложенного мира (targetContract):
+                {t('portalModal.targetContractLabel')}
               </label>
               <input
                 type="text"
@@ -220,11 +217,11 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
             <div>
               <label style={{ display: 'block', fontSize: '0.7rem', color: '#a78bfa', marginBottom: '2px' }}>
-                Имя первооткрывателя / Основателя:
+                {t('portalModal.founderNameLabel')}
               </label>
               <input
                 type="text"
-                placeholder="Например: Explorer_01"
+                placeholder="Explorer_01"
                 value={founderName}
                 onChange={(e) => setFounderName(e.target.value)}
                 required
@@ -244,11 +241,11 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
             <div>
               <label style={{ display: 'block', fontSize: '0.7rem', color: '#a78bfa', marginBottom: '2px' }}>
-                Название создаваемого мира:
+                {t('portalModal.worldNameLabel')}
               </label>
               <input
                 type="text"
-                placeholder="Например: Monad Prime Horizon"
+                placeholder="Monad Prime Horizon"
                 value={worldName}
                 onChange={(e) => setWorldName(e.target.value)}
                 required
@@ -283,7 +280,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <img src={PORTAL_ICON_URI} alt="Портал" style={{ width: '18px', height: '18px', imageRendering: 'pixelated' }} />
-                <span>{actionLoading ? 'Создание мультивселенной в Monad...' : 'Поставить портал в свою мультивселенную'}</span>
+                <span>{actionLoading ? t('portalModal.creating') : t('portalModal.createBtn')}</span>
               </div>
             </button>
           </form>

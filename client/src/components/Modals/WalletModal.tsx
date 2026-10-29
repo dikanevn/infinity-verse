@@ -1,5 +1,6 @@
 import React from 'react';
 import type { EIP6963ProviderDetail } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   onGoogleLoginSuccess,
   isLoggingInGoogle
 }) => {
+  const { t } = useLanguage();
   const googleBtnRef = React.useRef<HTMLDivElement>(null);
   const isRenderedRef = React.useRef<boolean>(false);
   const [showAdvanced, setShowAdvanced] = React.useState<boolean>(false);
@@ -123,7 +125,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           paddingBottom: '8px'
         }}>
           <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#c084fc', letterSpacing: '0.05em' }}>
-            ⚡ ВЫБЕРИТЕ СПОСОБ ВХОДА
+            ⚡ {t('wallet.title')}
           </span>
           <button
             onClick={onClose}
@@ -143,7 +145,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         {/* ОСНОВНОЙ БЛОК: БЫСТРЫЙ ВХОД БЕЗ ОКОН И БЕЗ ГАЗА (GOOGLE + METAMASK СЕССИЯ) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.04em' }}>
-            🚀 БЫСТРЫЙ ВХОД (САЙТ ПЛАТИТ ЗА ГАЗ):
+            {t('wallet.fastHeader')}
           </div>
 
           {/* 1. Кнопка Google */}
@@ -162,7 +164,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             }}
           >
             {isLoggingInGoogle && (
-              <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>⏳ Вход через Google...</span>
+              <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{t('wallet.googleLoggingIn')}</span>
             )}
           </div>
 
@@ -176,7 +178,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               padding: '2px 0'
             }}
           >
-            ⚠️ Все способы ниже небезопасны и ваш кошелёк обчистят
+            {t('wallet.dangerWarning')}
           </div>
 
           {/* 2. Кнопка MetaMask с сессией на 20 часов */}
@@ -205,8 +207,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 <span style={{ fontSize: '1.25rem' }}>🦊</span>
               )}
               <div>
-                <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
-                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, сайт платит за газ</div>
+                <div style={{ color: '#fff', fontWeight: 800 }}>{t('wallet.metamaskSessionTitle')}</div>
+                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>{t('wallet.sessionSubtitle')}</div>
               </div>
             </button>
           ) : (
@@ -230,8 +232,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             >
               <span style={{ fontSize: '1.25rem' }}>🦊</span>
               <div>
-                <div style={{ color: '#fff', fontWeight: 800 }}>Вход через MetaMask (Сессия на 20 ч)</div>
-                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>1 бесплатная подпись, сайт платит за газ</div>
+                <div style={{ color: '#fff', fontWeight: 800 }}>{t('wallet.metamaskSessionTitle')}</div>
+                <div style={{ fontSize: '0.62rem', color: '#fb923c' }}>{t('wallet.sessionSubtitle')}</div>
               </div>
             </button>
           )}
@@ -240,7 +242,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           {walletProviders.filter(p => p !== metamaskProvider).length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
               <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 700 }}>
-                ДРУГИЕ ОБНАРУЖЕННЫЕ КОШЕЛЬКИ (СЕССИЯ):
+                {t('wallet.otherWalletsSession')}
               </div>
               {walletProviders.filter(p => p !== metamaskProvider).map(p => (
                 <button
@@ -268,9 +270,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   )}
                   <div style={{ flex: 1, overflow: 'hidden' }}>
                     <div style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      {p.info.name} (Сессия 20 ч)
+                      {t('wallet.walletSessionTitle', { name: p.info.name })}
                     </div>
-                    <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>1 бесплатная подпись, сайт платит за газ</div>
+                    <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>{t('wallet.sessionSubtitle')}</div>
                   </div>
                 </button>
               ))}
@@ -304,7 +306,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             }}
           >
             <span>{showAdvanced ? '▼' : '▶'}</span>
-            <span>ДОПОЛНИТЕЛЬНЫЕ СПОСОБЫ ВХОДА</span>
+            <span>{t('wallet.advancedToggle')}</span>
           </button>
           <div style={{ flex: 1, height: '1px', backgroundColor: '#1e293b' }}></div>
         </div>
@@ -333,8 +335,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             >
               <span style={{ fontSize: '1.2rem' }}>🔐</span>
               <div>
-                <div>Вход по ключу (Шифрование в RAM)</div>
-                <div style={{ fontSize: '0.62rem', color: '#818cf8' }}>Прямой ончейн без релееров, AES-GCM-256</div>
+                <div>{t('wallet.pkTitle')}</div>
+                <div style={{ fontSize: '0.62rem', color: '#818cf8' }}>{t('wallet.pkSubtitle')}</div>
               </div>
             </button>
 
@@ -363,8 +365,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   <span style={{ fontSize: '1.2rem' }}>🦊</span>
                 )}
                 <div>
-                  <div>MetaMask Direct (Ручной режим)</div>
-                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Каждый шаг подтверждается окном за личный газ</div>
+                  <div>{t('wallet.metamaskDirectTitle')}</div>
+                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>{t('wallet.metamaskDirectSubtitle')}</div>
                 </div>
               </button>
             ) : (
@@ -387,8 +389,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               >
                 <span style={{ fontSize: '1.2rem' }}>🦊</span>
                 <div>
-                  <div>MetaMask Direct (Ручной режим)</div>
-                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Каждый шаг подтверждается окном за личный газ</div>
+                  <div>{t('wallet.metamaskDirectTitle')}</div>
+                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>{t('wallet.metamaskDirectSubtitle')}</div>
                 </div>
               </button>
             )}
@@ -419,8 +421,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   <span style={{ fontSize: '1.2rem' }}>🔌</span>
                 )}
                 <div>
-                  <div>{p.info.name} (Прямой ончейн)</div>
-                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>Подтверждение транзакций через {p.info.name}</div>
+                  <div>{t('wallet.otherDirectTitle', { name: p.info.name })}</div>
+                  <div style={{ fontSize: '0.62rem', color: '#64748b' }}>{t('wallet.otherDirectSubtitle', { name: p.info.name })}</div>
                 </div>
               </button>
             ))}
@@ -430,3 +432,4 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     </div>
   );
 };
+

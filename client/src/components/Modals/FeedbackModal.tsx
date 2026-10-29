@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RELAYER_URL } from '../../config/contracts';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const { t } = useLanguage();
 
   if (!isOpen) return null;
 
@@ -100,7 +102,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.4rem' }}>😈</span>
             <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f5d0fe' }}>
-              ОБРАТНАЯ СВЯЗЬ
+              {t('feedback.title')}
             </span>
           </div>
           <button
@@ -119,7 +121,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         </div>
 
         <p style={{ margin: 0, fontSize: '0.8rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-          привет друг! если хочешь, напиши, что тебе не нравится, или нравится, или любые мысли!
+          {t('feedback.intro')}
         </p>
 
         {isSent ? (
@@ -133,7 +135,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             fontSize: '0.82rem',
             fontWeight: 700
           }}>
-            ✓ Спасибо за мысль! Записано.
+            {t('feedback.thanks')}
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -141,7 +143,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               autoFocus
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Критика особенно приветствуется. Если человека что-то бесит, значит он наверняка уже знает как это исправить и сделать лучше."
+              placeholder={t('feedback.placeholder')}
               rows={4}
               style={{
                 width: '100%',
@@ -172,7 +174,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   cursor: 'pointer'
                 }}
               >
-                Отмена
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -189,7 +191,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   transition: 'background 0.2s'
                 }}
               >
-                {isSending ? 'Отправка...' : 'Отправить'}
+                {isSending ? t('feedback.sending') : t('feedback.send')}
               </button>
             </div>
 
@@ -211,7 +213,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#c084fc')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#a855f7')}
               >
-                <span>Контакты</span>
+                <span>{t('feedback.contacts')}</span>
                 <span style={{ fontSize: '0.65rem' }}>↗</span>
               </a>
               <span style={{ color: 'rgba(255, 255, 255, 0.2)', fontSize: '0.75rem', margin: '0 8px' }}>•</span>
@@ -232,7 +234,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#f8fafc')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
               >
-                <span>GitHub</span>
+                <span>{t('feedback.github')}</span>
                 <span style={{ fontSize: '0.65rem' }}>↗</span>
               </a>
             </div>
@@ -242,3 +244,4 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     </div>
   );
 };
+
