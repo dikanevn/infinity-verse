@@ -3,6 +3,7 @@ import { keccak256, encodePacked } from 'viem';
 import type { CellData } from '../types';
 import { AAA_CONTRACT_ADDRESS, AAA_ABI, publicClient } from '../config/contracts';
 import { CONNECTION_CONFIG } from '../config/constants';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export function useWorldState(
   connectedAddress: string,
@@ -15,6 +16,7 @@ export function useWorldState(
   const [lastBlockNumber, setLastBlockNumber] = useState<bigint | null>(null);
   const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
+  const { t } = useLanguage();
 
   const fetchState = async () => {
     try {
