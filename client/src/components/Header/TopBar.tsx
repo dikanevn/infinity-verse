@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface TopBarProps {
   statusText: string;
@@ -15,6 +16,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenNetworkModal,
   onExit
 }) => {
+  const { language, toggleLanguage, t } = useLanguage();
+
   return (
     <div style={{
       width: '100%',
@@ -34,38 +37,78 @@ export const TopBar: React.FC<TopBarProps> = ({
         }
       `}</style>
 
-      {/* Кнопка "ВЫБРАТЬ СЕТЬ" в самом верху СЛЕВА */}
-      {onOpenNetworkModal && (
+      {/* Верхний левый блок: СЕТЬ и переключатель RU/EN */}
+      <div style={{
+        position: 'absolute',
+        left: '4px',
+        top: '2px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        zIndex: 10
+      }}>
+        {onOpenNetworkModal && (
+          <button
+            onClick={onOpenNetworkModal}
+            style={{
+              backgroundColor: '#1e293b',
+              border: '1px solid #475569',
+              color: '#38bdf8',
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              padding: '3px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              borderRadius: '0px'
+            }}
+          >
+            <span>🌐</span>
+            <span>{t('topbar.networkBtn')}</span>
+          </button>
+        )}
+
+        {/* Переключатель языка RU / EN */}
         <button
-          onClick={onOpenNetworkModal}
+          onClick={toggleLanguage}
+          title={t('topbar.switchLanguage')}
           style={{
-            position: 'absolute',
-            left: '4px',
-            top: '2px',
-            backgroundColor: '#1e293b',
-            border: '1px solid #475569',
-            color: '#38bdf8',
+            backgroundColor: '#1e1b4b',
+            border: '1px solid #6366f1',
+            color: '#c7d2fe',
             fontSize: '0.62rem',
-            fontWeight: 700,
-            padding: '3px 8px',
+            fontWeight: 800,
+            padding: '3px 7px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
+            gap: '3px',
             borderRadius: '0px',
-            zIndex: 10
+            letterSpacing: '0.04em',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#312e81';
+            e.currentTarget.style.borderColor = '#a855f7';
+            e.currentTarget.style.color = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#1e1b4b';
+            e.currentTarget.style.borderColor = '#6366f1';
+            e.currentTarget.style.color = '#c7d2fe';
           }}
         >
           <span>🌐</span>
-          <span>СЕТЬ</span>
+          <span>{language === 'ru' ? 'RU' : 'EN'}</span>
         </button>
-      )}
+      </div>
 
       {/* Кнопка "ВЫЙТИ" в самом верху СПРАВА (если кошелек подключен) */}
       {connectedAddress && onExit && (
         <button
           onClick={onExit}
-          title="Отключить кошелек"
+          title={t('topbar.exitTooltip')}
           style={{
             position: 'absolute',
             right: '4px',
@@ -84,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             zIndex: 10
           }}
         >
-          <span>ВЫЙТИ</span>
+          <span>{t('topbar.exitBtn')}</span>
           <span>➔</span>
         </button>
       )}
