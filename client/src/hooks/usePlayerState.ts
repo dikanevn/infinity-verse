@@ -482,14 +482,30 @@ export function usePlayerState(
         }
 
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
-          // Задаем щедрый лимит газа 1,000,000, чтобы с запасом хватало на ончейн-майнинг и проверку соседей
+          // Динамический расчет газа с безопасным запасом 25%:
+          // сбор субстанции требует ~265k gas, обычный шаг ~110k-180k gas.
+          // Фиксируем безопасный fallback 350,000, чтобы не блокировать отправку по балансу на Monad RPC.
+          let safeGasLimit = 350000n;
+          try {
+            const estimated = await publicClient.estimateContractGas({
+              address: AAA_CONTRACT_ADDRESS,
+              abi: AAA_ABI,
+              functionName: 'moveDirect',
+              args: [intX, intY],
+              account: walletClient.account
+            });
+            safeGasLimit = (estimated * 125n) / 100n;
+          } catch {
+            safeGasLimit = 350000n;
+          }
+
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
             functionName: 'moveDirect',
             args: [intX, intY],
             account: walletClient.account,
-            gas: 1000000n
+            gas: safeGasLimit
           });
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           if (receipt.status === 'reverted') {
