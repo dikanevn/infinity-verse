@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import type { CellData, PlayerData } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   SAND_PIXELS_8X8,
   STAR_PIXELS_8X8,
@@ -30,6 +31,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
   player,
   selectedCoord
 }) => {
+  const { t } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
@@ -92,8 +94,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       const originX = width / 2 + position.x;
       const originY = height / 2 + position.y;
 
-      const t = (time - startTime) / 1000;
-      const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
+      const elapsedSec = (time - startTime) / 1000;
+      const pulse = 0.5 + 0.5 * Math.sin(elapsedSec * 2.5);
 
       // ============================================================
       // 1. ПИКСЕЛЬНЫЙ РЕНДЕР КЛЕТОК МИРА (ЧЕСТНЫЕ ДИСКРЕТНЫЕ ПИКСЕЛИ)
@@ -201,7 +203,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
             // Плашка «ВЫ» над персонажем на канвасе
             if (cellSizePx >= 20) {
-              const label = 'ВЫ';
+              const label = t('common.you');
               ctx.font = `bold ${Math.max(9, Math.min(13, Math.floor(cellSizePx * 0.28)))}px monospace`;
               const metrics = ctx.measureText(label);
               const lblW = metrics.width + 6;
@@ -258,7 +260,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
             screenLeft + screenWidth,
             screenTop + screenHeight
           );
-          const hueShift = Math.sin(t * 1.5) * 20;
+          const hueShift = Math.sin(elapsedSec * 1.5) * 20;
           grad.addColorStop(0, `hsl(${270 + hueShift}, 100%, ${65 + pulse * 20}%)`);
           grad.addColorStop(0.35, `hsl(${300 + hueShift}, 100%, ${70 + pulse * 15}%)`);
           grad.addColorStop(0.7, `hsl(${260 + hueShift}, 100%, ${60 + pulse * 25}%)`);

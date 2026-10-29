@@ -83,7 +83,7 @@ export function useWorldState(
     } catch (err: any) {
       console.error(err);
       setStatusState('red');
-      setStatusText('🚨 Ошибка: межпространственная связь потеряна');
+      setStatusText(t('status.danger', { sec: 0 }));
     }
   };
 

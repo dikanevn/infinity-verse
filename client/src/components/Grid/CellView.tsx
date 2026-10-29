@@ -10,6 +10,7 @@ import {
 } from '../../config/pixelTextures';
 import { publicClient, MAIN_CONTRACT_ADDRESS, MAIN_ABI } from '../../config/contracts';
 import { hexToString } from 'viem';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const STAR_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(STAR_PIXELS_8X8);
 const OBELISK_PIXEL_SPRITE_URI = pixelMatrixToSvgUri(OBELISK_PIXELS_8X8);
@@ -41,6 +42,7 @@ export const CellView: React.FC<CellViewProps> = ({
   onDestroyPortal,
   onRefresh
 }) => {
+  const { t } = useLanguage();
   const [showTooltip, setShowTooltip] = React.useState<boolean>(false);
   const [newOwnerAddress, setNewOwnerAddress] = React.useState<string>('');
   const [portalActionLoading, setPortalActionLoading] = React.useState<boolean>(false);
@@ -52,6 +54,25 @@ export const CellView: React.FC<CellViewProps> = ({
   const hasObject = !isFog && !!cell?.object && cell.object !== 0;
   const isQuantumSubstance = hasObject && cell.object === 3;
   const oInfo = hasObject ? (OBJECT_CONFIG[cell.object] || { name: `O:${cell.object}`, icon: '' }) : { name: '—', icon: '' };
+
+  // Локализованное название ландшафта
+  const terrainName = React.useMemo(() => {
+    if (isFog) return t('grid.fog');
+    if (cell.terrain === 0) return t('grid.chaos');
+    if (cell.terrain === 1) return t('terrains.sand');
+    if (cell.terrain === 2) return t('terrains.water');
+    if (cell.terrain === 3) return t('terrains.rock');
+    return tInfo.name;
+  }, [isFog, cell?.terrain, t, tInfo.name]);
+
+  // Локализованное название объекта
+  const objectLabel = React.useMemo(() => {
+    if (!hasObject || isQuantumSubstance) return '—';
+    if (cell?.object === 1 || cell?.object === 9) return t('objects.obelisk');
+    if (cell?.object === 2) return t('objects.wall');
+    if (cell?.object === 4) return t('objects.portal');
+    return oInfo.name;
+  }, [hasObject, isQuantumSubstance, cell?.object, t, oInfo.name]);
 
   // Если это песок (terrain === 1), берем уникальную процедурную текстуру по координатам (x, y)
   const isSand = !isFog && cell.terrain === 1;
@@ -112,17 +133,17 @@ export const CellView: React.FC<CellViewProps> = ({
 
   // Название объекта для всплывающей плашки над выбранной клеткой
   const selectedObjectName = React.useMemo(() => {
-    if (isFog) return 'Туман войны';
-    if (isChaos) return 'Квантовый хаос';
-    if (!hasObject) return 'Пусто';
+    if (isFog) return t('grid.fogOfWar');
+    if (isChaos) return t('grid.quantumChaos');
+    if (!hasObject) return t('grid.empty');
     if (cell?.object === 3) {
-      return `Квантовая субстанция (${quantumTokensWeight || '0.08'} INFER-TEST)`;
+      return t('grid.substanceLabel', { amount: quantumTokensWeight || '0.08' });
     }
-    if (cell?.object === 1 || cell?.object === 9) return 'Обелиск';
-    if (cell?.object === 2) return 'Стена';
-    if (cell?.object === 4) return portalMeta ? `Портал: ${portalMeta.worldName}` : 'Портал';
-    return oInfo.name || 'Объект';
-  }, [isFog, isChaos, hasObject, cell?.object, quantumTokensWeight, portalMeta, oInfo.name]);
+    if (cell?.object === 1 || cell?.object === 9) return t('grid.obelisk');
+    if (cell?.object === 2) return t('grid.wall');
+    if (cell?.object === 4) return portalMeta ? t('grid.portalWithWorld', { name: portalMeta.worldName }) : t('grid.portal');
+    return oInfo.name || t('grid.object');
+  }, [isFog, isChaos, hasObject, cell?.object, quantumTokensWeight, portalMeta, oInfo.name, t]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -326,8 +347,8 @@ export const CellView: React.FC<CellViewProps> = ({
             marginBottom: '2px'
           }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <img src={PORTAL_PIXEL_SPRITE_URI} alt="Портал" style={{ width: '16px', height: '16px', imageRendering: 'pixelated' }} />
-              <span>Портал #{portalId}</span>
+              <img src={PORTAL_PIXEL_SPRITE_URI} alt={t('grid.portal')} style={{ width: '16px', height: '16px', imageRendering: 'pixelated' }} />
+              <span>{t('grid.portalBadge', { id: portalId })}</span>
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '0.55rem', color: '#a855f7', fontWeight: 600 }}>({coord.x}, {coord.y})</span>
@@ -346,7 +367,7 @@ export const CellView: React.FC<CellViewProps> = ({
                   cursor: 'pointer',
                   padding: '0 2px'
                 }}
-                title="Закрыть"
+                title={t('common.close')}
               >
                 ✕
               </button>
@@ -355,21 +376,21 @@ export const CellView: React.FC<CellViewProps> = ({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ color: '#94a3b8', fontSize: '0.58rem' }}>Мир:</span>
+              <span style={{ color: '#94a3b8', fontSize: '0.58rem' }}>{t('grid.worldLabel')}</span>
               <span style={{ color: '#facc15', fontWeight: 700, fontSize: '0.66rem' }}>
-                {portalMeta ? portalMeta.worldName : 'Загрузка...'}
+                {portalMeta ? portalMeta.worldName : t('common.loading')}
               </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ color: '#94a3b8', fontSize: '0.58rem' }}>Основатель:</span>
+              <span style={{ color: '#94a3b8', fontSize: '0.58rem' }}>{t('grid.founderLabel')}</span>
               <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '0.62rem' }}>
                 {portalMeta ? portalMeta.founderName : '...'}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1px' }}>
-              <span style={{ color: '#94a3b8', fontSize: '0.55rem' }}>Адрес владельца:</span>
+              <span style={{ color: '#94a3b8', fontSize: '0.55rem' }}>{t('grid.ownerAddressLabel')}</span>
               <span style={{
                 color: '#facc15',
                 fontFamily: 'monospace',
@@ -380,12 +401,12 @@ export const CellView: React.FC<CellViewProps> = ({
                 borderRadius: '3px',
                 marginTop: '1px'
               }}>
-                {portalMeta ? portalMeta.founder : 'Определяется...'}
+                {portalMeta ? portalMeta.founder : t('grid.determining')}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', marginTop: '2px', paddingTop: '2px', borderTop: '1px dashed #334155' }}>
-              <span style={{ color: '#94a3b8', fontSize: '0.55rem' }}>Адрес смарт-контракта:</span>
+              <span style={{ color: '#94a3b8', fontSize: '0.55rem' }}>{t('grid.contractAddressLabel')}</span>
               <span style={{
                 color: '#e2e8f0',
                 fontFamily: 'monospace',
@@ -396,7 +417,7 @@ export const CellView: React.FC<CellViewProps> = ({
                 borderRadius: '3px',
                 marginTop: '1px'
               }}>
-                {portalMeta ? portalMeta.targetContract : 'Определяется...'}
+                {portalMeta ? portalMeta.targetContract : t('grid.determining')}
               </span>
             </div>
 
@@ -412,7 +433,7 @@ export const CellView: React.FC<CellViewProps> = ({
               }}>
                 <div style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>👑</span>
-                  <span>УПРАВЛЕНИЕ ВЛАДЕЛЬЦА ПОРТАЛА</span>
+                  <span>{t('grid.ownerControlTitle')}</span>
                 </div>
 
                 {/* Форма передачи прав */}
@@ -424,11 +445,11 @@ export const CellView: React.FC<CellViewProps> = ({
                     try {
                       setPortalActionLoading(true);
                       await onTransferPortal(portalId, newOwnerAddress);
-                      alert('Владение порталом успешно передано!');
+                      alert(t('grid.transferSuccess'));
                       setNewOwnerAddress('');
                       if (onRefresh) await onRefresh();
                     } catch (err: any) {
-                      alert('Ошибка передачи прав: ' + (err.shortMessage || err.message));
+                      alert(t('grid.transferError', { error: err.shortMessage || err.message }));
                     } finally {
                       setPortalActionLoading(false);
                     }
@@ -437,7 +458,7 @@ export const CellView: React.FC<CellViewProps> = ({
                 >
                   <input
                     type="text"
-                    placeholder="Новый владелец (0x...)"
+                    placeholder={t('grid.newOwnerPlaceholder')}
                     value={newOwnerAddress}
                     onChange={(e) => setNewOwnerAddress(e.target.value)}
                     required
@@ -466,7 +487,7 @@ export const CellView: React.FC<CellViewProps> = ({
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    Передать
+                    {t('grid.transferBtn')}
                   </button>
                 </form>
 
@@ -477,15 +498,15 @@ export const CellView: React.FC<CellViewProps> = ({
                   onClick={async (e) => {
                     e.stopPropagation();
                     if (!onDestroyPortal) return;
-                    if (!confirm('ВНИМАНИЕ! Портал будет навсегда уничтожен, а тайл на карте исчезнет. Продолжить?')) return;
+                    if (!confirm(t('grid.destroyConfirm'))) return;
                     try {
                       setPortalActionLoading(true);
                       await onDestroyPortal(portalId, coord.x, coord.y);
-                      alert('Портал уничтожен и дематериализован.');
+                      alert(t('grid.destroySuccess'));
                       setShowTooltip(false);
                       if (onRefresh) await onRefresh();
                     } catch (err: any) {
-                      alert('Ошибка сноса портала: ' + (err.shortMessage || err.message));
+                      alert(t('grid.destroyError', { error: err.shortMessage || err.message }));
                     } finally {
                       setPortalActionLoading(false);
                     }
@@ -506,7 +527,7 @@ export const CellView: React.FC<CellViewProps> = ({
                   }}
                 >
                   <span>💥</span>
-                  <span>{portalActionLoading ? 'Выполнение...' : 'Уничтожить Портал и снести с карты'}</span>
+                  <span>{portalActionLoading ? t('grid.destroying') : t('grid.destroyPortalBtn')}</span>
                 </button>
               </div>
             )}
@@ -564,14 +585,14 @@ export const CellView: React.FC<CellViewProps> = ({
           textAlign: 'right'
         }}>
           <span style={{ fontSize: '0.52rem', color: isFog ? '#64748b' : (isChaos ? '#a78bfa' : '#fef08a'), fontWeight: 700 }}>
-            {isFog ? '🌫️ Туман' : (isChaos ? '🌀 Хаос' : tInfo.name)}
+            {terrainName}
           </span>
           <span style={{
             fontSize: '0.48rem',
             color: hasObject ? '#67e8f9' : '#64748b',
             fontWeight: hasObject ? 700 : 500
           }}>
-            {isQuantumSubstance ? '—' : hasObject ? oInfo.name : '—'}
+            {objectLabel}
           </span>
         </div>
       </div>
@@ -722,7 +743,7 @@ export const CellView: React.FC<CellViewProps> = ({
                   pointerEvents: 'none'
                 }}
               >
-                ВЫ
+                {t('common.you')}
               </div>
             )}
           </div>
