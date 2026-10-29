@@ -482,18 +482,18 @@ export function usePlayerState(
         }
 
         await EncryptedRamSigner.executeWithSigner(async (walletClient) => {
-          // Задаем явный щедрый лимит газа 250,000, чтобы не падать по Out-Of-Gas при ончейн-майнинге звезды
+          // Задаем щедрый лимит газа 1,000,000, чтобы с запасом хватало на ончейн-майнинг и проверку соседей
           const hash = await walletClient.writeContract({
             address: AAA_CONTRACT_ADDRESS,
             abi: AAA_ABI,
             functionName: 'moveDirect',
             args: [intX, intY],
             account: walletClient.account,
-            gas: 250000n
+            gas: 1000000n
           });
           const receipt = await publicClient.waitForTransactionReceipt({ hash });
           if (receipt.status === 'reverted') {
-            throw new Error(`Транзакция отменена контрактом (reverted). Проверьте препятствия на клетке (${intX}, ${intY}).`);
+            throw new Error('Транзакция отменена контрактом (reverted)');
           }
         });
       }
