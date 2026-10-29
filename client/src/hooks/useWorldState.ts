@@ -115,13 +115,13 @@ export function useWorldState(
 
       if (ageSec > CONNECTION_CONFIG.DANGER_BLOCK_AGE_SEC) {
         setStatusState('red');
-        setStatusText(`🚨 Нет сигнала (${ageSec} сек назад)`);
+        setStatusText(t('status.danger', { sec: ageSec }));
       } else if (ageSec > CONNECTION_CONFIG.WARN_BLOCK_AGE_SEC) {
         setStatusState('yellow');
-        setStatusText(`⚠️ Замедление связи (${ageSec} сек назад)`);
+        setStatusText(t('status.warning', { sec: ageSec }));
       } else {
         setStatusState('green');
-        setStatusText(`📡 Межпространственная связь (${ageSec} сек назад)`);
+        setStatusText(t('status.connected', { sec: ageSec }));
       }
     };
 
