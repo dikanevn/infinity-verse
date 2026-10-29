@@ -76,7 +76,7 @@
     "p1": "You have arrived in another universe. It is infinite — each nested level inside is larger than outside.",
     "p2": "There is not much here yet, but you can already collect test coins and build a portal to your own world.",
     "controlsTitle": "🕹 Controls: ",
-    "controlsDesc": "{wasd} keys, or {rmb}, or {doubleTap}.",
+    "controlsDesc": "{wasd} keys, or {rmb}, or {doubleTap}. Also, it's super cool to zoom all the way into infinity using your mouse wheel (or pinch zoom).",
     "wasd": "WASD",
     "rmb": "Right Mouse Button",
     "doubleTap": "Double Tap"
