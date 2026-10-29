@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { PlayerData, AuthMode } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PlayerControlsProps {
   connectedAddress: string;
@@ -29,6 +30,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onSpawn
 }) => {
   const [copied, setCopied] = useState(false);
+  const { t } = useLanguage();
 
   const handleCopyAddress = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,9 +99,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             gap: '8px'
           }}
         >
-          <span>⚡ ПОДКЛЮЧИТЬ КОШЕЛЕК</span>
+          <span>{t('controls.connectWallet')}</span>
           <span style={{ fontSize: '0.62rem', backgroundColor: '#6d28d9', padding: '2px 6px' }}>
-            {walletProvidersCount > 0 ? `${walletProvidersCount} найдено` : 'МЕНЮ'}
+            {walletProvidersCount > 0 ? t('controls.walletsFound', { count: walletProvidersCount }) : t('controls.menu')}
           </span>
         </button>
       ) : isPlayerLoading ? (
@@ -111,7 +113,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           padding: '8px 16px',
           border: '1px dashed #38bdf8'
         }}>
-          ⏳ ПОИСК ПЕРСОНАЖА В БЛОКЧЕЙНЕ...
+          {t('controls.searchingPlayer')}
         </div>
       ) : !player?.exists ? (
         <button
@@ -131,12 +133,12 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           }}
         >
           {actionPending
-            ? 'РОЖДЕНИЕ В МИРЕ...'
+            ? t('controls.spawning')
             : isMetaMaskMode
-            ? '🦊 РОДИТЬСЯ (METAMASK DIRECT)'
+            ? t('controls.spawnMetaMask')
             : isDirectSignerMode
-            ? '⚡ РОДИТЬСЯ (DIRECT)'
-            : '✨ РОДИТЬСЯ (GOOGLE GASLESS)'}
+            ? t('controls.spawnDirect')
+            : t('controls.spawnGoogle')}
         </button>
       ) : (
         <div style={{
@@ -155,7 +157,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             </span>
             <button
               onClick={handleCopyAddress}
-              title={copied ? "Скопировано в буфер!" : "Скопировать полный адрес"}
+              title={copied ? t('common.copiedTooltip') : t('common.copyTooltip')}
               style={{
                 background: copied ? 'rgba(34, 197, 94, 0.2)' : 'rgba(51, 65, 85, 0.5)',
                 border: `1px solid ${copied ? '#22c55e' : '#475569'}`,
@@ -176,7 +178,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                  <span>скопировано</span>
+                  <span>{t('common.copied')}</span>
                 </>
               ) : (
                 <>
@@ -184,7 +186,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                   </svg>
-                  <span>копия</span>
+                  <span>{t('common.copy')}</span>
                 </>
               )}
             </button>
@@ -208,3 +210,4 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     </div>
   );
 };
+

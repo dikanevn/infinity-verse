@@ -6,8 +6,10 @@
     "confirm": "Confirm",
     "save": "Save",
     "loading": "Loading...",
-    "copy": "Copy",
-    "copied": "Copied!",
+    "copy": "copy",
+    "copied": "copied",
+    "copyTooltip": "Copy full address",
+    "copiedTooltip": "Copied to clipboard!",
     "network": "NETWORK",
     "you": "YOU",
     "language": "Language",
@@ -54,25 +56,37 @@
     "detectedWallets": "Detected EIP-6963 Wallets",
     "noWallets": "No wallets detected"
   },
+  "controls": {
+    "connectWallet": "⚡ CONNECT WALLET",
+    "walletsFound": "{count} found",
+    "menu": "MENU",
+    "searchingPlayer": "⏳ SEARCHING DWELLER ON-CHAIN...",
+    "spawning": "SPAWNING IN WORLD...",
+    "spawnMetaMask": "🦊 SPAWN (METAMASK DIRECT)",
+    "spawnDirect": "⚡ SPAWN (DIRECT)",
+    "spawnGoogle": "✨ SPAWN (GOOGLE GASLESS)"
+  },
   "inspector": {
-    "cellTitle": "Cell ({x}, {y})",
-    "empty": "Quantum Void",
-    "obelisk": "Sacred Obelisk",
-    "portal": "Rainbow Portal",
-    "star": "Quantum Substance",
-    "chaos": "Quantum Chaos",
-    "crowd": "Dwellers: {count}",
-    "tokens": "Substance weight: {amount} INFER",
-    "owner": "Owner: {address}",
-    "founder": "Founder: {address}",
-    "inspectPortal": "Inspect Portal",
-    "enterPortal": "Enter Portal"
+    "title": "ON-CHAIN CELL DATA: ({x}, {y})",
+    "loading": "Loading cell data...",
+    "chaos": "chaos",
+    "chaosHint": "Quantum chaos. Requires an observer nearby for decoherence.",
+    "hex8B": "8B HEX:",
+    "evmCoords": "EVM COORDINATES (int32):",
+    "twosComplement": "Two's Complement",
+    "minus": "(minus)",
+    "hex": "HEX:",
+    "bin": "BIN:",
+    "abiEncodePacked": "abi.encodePacked(x, y) [8 bytes]:"
   },
   "actions": {
-    "teleportObelisk": "To Obelisk (0, 0)",
-    "teleportPortal": "To My Portal",
-    "createPortal": "Build Portal",
-    "claim": "Claim",
-    "move": "Move"
+    "createPortalRight": "Place portal to the right ({x}, {y})",
+    "teleportObelisk": "To Obelisk (0, -1)",
+    "teleportPortal": "To My Portal ({x}, {y})",
+    "teleportPortalNoCoords": "To My Portal",
+    "teleportPortalTitle": "Teleport to ({x}, {y})",
+    "teleportPortalDisabledTitle": "You do not have a portal in this universe yet",
+    "feedbackContacts": "😈/contacts",
+    "feedbackTooltip": "Feedback and Contacts"
   }
 }

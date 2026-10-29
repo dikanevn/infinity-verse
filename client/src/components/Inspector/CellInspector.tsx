@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { CellData } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface CellInspectorProps {
   curCell: CellData | null;
@@ -7,10 +8,12 @@ interface CellInspectorProps {
 
 export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
   const [showChaosHint, setShowChaosHint] = useState<boolean>(false);
+  const { t } = useLanguage();
+
   if (!curCell) {
     return (
       <div style={{ color: '#94a3b8', fontSize: '0.72rem', textAlign: 'center' }}>
-        Загрузка данных клетки...
+        {t('inspector.loading')}
       </div>
     );
   }
@@ -48,7 +51,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
         display: 'flex',
         justifyContent: 'space-between'
       }}>
-        <span>ДАННЫЕ БЛОКЧЕЙНА: ({curCell.x}, {curCell.y})</span>
+        <span>{t('inspector.title', { x: curCell.x, y: curCell.y })}</span>
       </div>
 
       <div style={{
@@ -72,7 +75,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
                 <span>{curCell.terrain}</span>
                 {curCell.terrain === 0 && (
                   <span style={{ color: '#c084fc', fontSize: '0.62rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                    (хаос
+                    ({t('inspector.chaos')}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -81,7 +84,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
                       }}
                       onMouseEnter={() => setShowChaosHint(true)}
                       onMouseLeave={() => setShowChaosHint(false)}
-                      title="Квантовый хаос. Для декогеренции необходим наблюдатель поблизости."
+                      title={t('inspector.chaosHint')}
                       style={{
                         width: '14px',
                         height: '14px',
@@ -132,7 +135,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
                     whiteSpace: 'normal'
                   }}
                 >
-                  Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.
+                  {t('inspector.chaosHint')}
                 </div>
               )}
             </div>
@@ -163,7 +166,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
             whiteSpace: 'nowrap',
             WebkitOverflowScrolling: 'touch'
           }}>
-            <span style={{ color: '#94a3b8' }}>8B HEX:</span>
+            <span style={{ color: '#94a3b8' }}>{t('inspector.hex8B')}</span>
             <span style={{ color: '#f8fafc', fontWeight: 700 }}>
               <span style={{ color: '#38bdf8' }}>0x</span>
               <span style={{ color: '#4ade80' }}>{curCell.terrain.toString(16).padStart(2, '0')}</span>_
@@ -189,9 +192,9 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '0.66rem' }}>
-                КООРДИНАТЫ В EVM (int32):
+                {t('inspector.evmCoords')}
               </span>
-              <span style={{ color: '#64748b', fontSize: '0.60rem' }}>Two's Complement</span>
+              <span style={{ color: '#64748b', fontSize: '0.60rem' }}>{t('inspector.twosComplement')}</span>
             </div>
 
             <div style={{
@@ -207,12 +210,12 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: curCell.x < 0 ? '#c084fc' : '#4ade80' }}>
-                  X = {curCell.x} {curCell.x < 0 ? '(минус)' : ''}:
+                  X = {curCell.x} {curCell.x < 0 ? t('inspector.minus') : ''}:
                 </span>
-                <span>HEX: <b style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex}</b></span>
+                <span>{t('inspector.hex')} <b style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex}</b></span>
               </div>
               <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
-                BIN: {xBin.slice(0, 8)} {xBin.slice(8, 16)} {xBin.slice(16, 24)} {xBin.slice(24, 32)}
+                {t('inspector.bin')} {xBin.slice(0, 8)} {xBin.slice(8, 16)} {xBin.slice(16, 24)} {xBin.slice(24, 32)}
               </div>
             </div>
 
@@ -229,12 +232,12 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: curCell.y < 0 ? '#c084fc' : '#4ade80' }}>
-                  Y = {curCell.y} {curCell.y < 0 ? '(минус)' : ''}:
+                  Y = {curCell.y} {curCell.y < 0 ? t('inspector.minus') : ''}:
                 </span>
-                <span>HEX: <b style={{ color: curCell.y < 0 ? '#c084fc' : '#38bdf8' }}>{yHex}</b></span>
+                <span>{t('inspector.hex')} <b style={{ color: curCell.y < 0 ? '#c084fc' : '#38bdf8' }}>{yHex}</b></span>
               </div>
               <div style={{ color: '#94a3b8', fontSize: '0.56rem' }}>
-                BIN: {yBin.slice(0, 8)} {yBin.slice(8, 16)} {yBin.slice(16, 24)} {yBin.slice(24, 32)}
+                {t('inspector.bin')} {yBin.slice(0, 8)} {yBin.slice(8, 16)} {yBin.slice(16, 24)} {yBin.slice(24, 32)}
               </div>
             </div>
 
@@ -245,7 +248,7 @@ export const CellInspector: React.FC<CellInspectorProps> = ({ curCell }) => {
               fontSize: '0.60rem',
               fontFamily: 'monospace'
             }}>
-              <div style={{ color: '#fbbf24' }}>abi.encodePacked(x, y) [8 байт]:</div>
+              <div style={{ color: '#fbbf24' }}>{t('inspector.abiEncodePacked')}</div>
               <div style={{ color: '#e2e8f0', wordBreak: 'break-all' }}>
                 0x<span style={{ color: curCell.x < 0 ? '#c084fc' : '#38bdf8' }}>{xHex.slice(2)}</span>
                 <span style={{ color: curCell.y < 0 ? '#c084fc' : '#a78bfa' }}>{yHex.slice(2)}</span>

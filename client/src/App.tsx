@@ -16,8 +16,10 @@ import { IdleOverlay } from './components/Modals/IdleOverlay';
 import { QuantumKissellModal } from './components/Modals/QuantumKissellModal';
 import { WelcomeModal } from './components/Modals/WelcomeModal';
 import { useIdleDetector } from './hooks/useIdleDetector';
+import { useLanguage } from './i18n/LanguageContext';
 
 function App() {
+  const { t } = useLanguage();
   const [selectedCoord, setSelectedCoord] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [connectedAddress, setConnectedAddress] = useState<string>('');
   const [walletProviders, setWalletProviders] = useState<EIP6963ProviderDetail[]>([]);
@@ -520,7 +522,7 @@ function App() {
               }}
             >
               <span>🌀</span>
-              <span>Поставить портал справа ({player.x + 1}, {player.y})</span>
+              <span>{t('actions.createPortalRight', { x: player.x + 1, y: player.y })}</span>
             </button>
 
             <button
@@ -542,7 +544,7 @@ function App() {
               }}
             >
               <span>🗿</span>
-              <span>К Обелиску (0, -1)</span>
+              <span>{t('actions.teleportObelisk')}</span>
             </button>
 
             <button
@@ -553,7 +555,7 @@ function App() {
                 }
               }}
               disabled={actionPending || !myPortalCoord}
-              title={myPortalCoord ? `Телепортация на (${myPortalCoord.x - 1}, ${myPortalCoord.y})` : 'У вас пока нет созданного портала в этом мире'}
+              title={myPortalCoord ? t('actions.teleportPortalTitle', { x: myPortalCoord.x - 1, y: myPortalCoord.y }) : t('actions.teleportPortalDisabledTitle')}
               style={{
                 backgroundColor: myPortalCoord ? '#3b0764' : '#1f2937',
                 color: myPortalCoord ? '#e879f9' : '#6b7280',
@@ -572,8 +574,8 @@ function App() {
               <span>⚡</span>
               <span>
                 {myPortalCoord
-                  ? `К своему порталу (${myPortalCoord.x - 1}, ${myPortalCoord.y})`
-                  : 'К своему порталу'}
+                  ? t('actions.teleportPortal', { x: myPortalCoord.x - 1, y: myPortalCoord.y })
+                  : t('actions.teleportPortalNoCoords')}
               </span>
             </button>
           </div>
@@ -596,7 +598,7 @@ function App() {
           <div style={{ color: '#334155' }}>|</div>
           <button
             onClick={() => setIsFeedbackModalOpen(true)}
-            title="Обратная связь и контакты"
+            title={t('actions.feedbackTooltip')}
             style={{
               background: 'transparent',
               border: 'none',
@@ -619,7 +621,7 @@ function App() {
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <span>😈/контакты</span>
+            <span>{t('actions.feedbackContacts')}</span>
             <span style={{ fontSize: '0.65rem' }}>↗</span>
           </button>
         </div>

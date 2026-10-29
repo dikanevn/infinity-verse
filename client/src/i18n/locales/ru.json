@@ -6,8 +6,10 @@
     "confirm": "Подтвердить",
     "save": "Сохранить",
     "loading": "Загрузка...",
-    "copy": "Скопировать",
-    "copied": "Скопировано!",
+    "copy": "копия",
+    "copied": "скопировано",
+    "copyTooltip": "Скопировать полный адрес",
+    "copiedTooltip": "Скопировано в буфер!",
     "network": "СЕТЬ",
     "you": "ВЫ",
     "language": "Язык",
@@ -54,25 +56,37 @@
     "detectedWallets": "Обнаруженные кошельки EIP-6963",
     "noWallets": "Кошельки не обнаружены"
   },
+  "controls": {
+    "connectWallet": "⚡ ПОДКЛЮЧИТЬ КОШЕЛЕК",
+    "walletsFound": "{count} найдено",
+    "menu": "МЕНЮ",
+    "searchingPlayer": "⏳ ПОИСК ПЕРСОНАЖА В БЛОКЧЕЙНЕ...",
+    "spawning": "РОЖДЕНИЕ В МИРЕ...",
+    "spawnMetaMask": "🦊 РОДИТЬСЯ (METAMASK DIRECT)",
+    "spawnDirect": "⚡ РОДИТЬСЯ (DIRECT)",
+    "spawnGoogle": "✨ РОДИТЬСЯ (GOOGLE GASLESS)"
+  },
   "inspector": {
-    "cellTitle": "Клетка ({x}, {y})",
-    "empty": "Квантовая пустота",
-    "obelisk": "Священный Обелиск",
-    "portal": "Радужный Портал",
-    "star": "Квантовая Субстанция",
-    "chaos": "Квантовый Хаос",
-    "crowd": "Жителей: {count}",
-    "tokens": "Вес субстанции: {amount} INFER",
-    "owner": "Владелец: {address}",
-    "founder": "Основатель: {address}",
-    "inspectPortal": "Инспектировать портал",
-    "enterPortal": "Войти в портал"
+    "title": "ДАННЫЕ БЛОКЧЕЙНА: ({x}, {y})",
+    "loading": "Загрузка данных клетки...",
+    "chaos": "хаос",
+    "chaosHint": "Квантовый хаос. Для декогеренции необходим наблюдатель поблизости.",
+    "hex8B": "8B HEX:",
+    "evmCoords": "КООРДИНАТЫ В EVM (int32):",
+    "twosComplement": "Two's Complement",
+    "minus": "(минус)",
+    "hex": "HEX:",
+    "bin": "BIN:",
+    "abiEncodePacked": "abi.encodePacked(x, y) [8 байт]:"
   },
   "actions": {
-    "teleportObelisk": "К Обелиску (0, 0)",
-    "teleportPortal": "К моему Порталу",
-    "createPortal": "Построить Портал",
-    "claim": "Собрать",
-    "move": "Идти"
+    "createPortalRight": "Поставить портал справа ({x}, {y})",
+    "teleportObelisk": "К Обелиску (0, -1)",
+    "teleportPortal": "К своему порталу ({x}, {y})",
+    "teleportPortalNoCoords": "К своему порталу",
+    "teleportPortalTitle": "Телепортация на ({x}, {y})",
+    "teleportPortalDisabledTitle": "У вас пока нет созданного портала в этом мире",
+    "feedbackContacts": "😈/контакты",
+    "feedbackTooltip": "Обратная связь и контакты"
   }
 }
