@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface IdleOverlayProps {
   isOpen: boolean;
@@ -6,6 +7,8 @@ interface IdleOverlayProps {
 }
 
 export const IdleOverlay: React.FC<IdleOverlayProps> = ({ isOpen, onResume }) => {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   return (
@@ -66,7 +69,7 @@ export const IdleOverlay: React.FC<IdleOverlayProps> = ({ isOpen, onResume }) =>
           textTransform: 'uppercase',
           margin: '0 0 10px 0'
         }}>
-          Пауза по неактивности
+          {t('idle.title')}
         </h2>
 
         <p style={{
@@ -75,7 +78,7 @@ export const IdleOverlay: React.FC<IdleOverlayProps> = ({ isOpen, onResume }) =>
           lineHeight: '1.5',
           margin: '0 0 20px 0'
         }}>
-          Связь с блокчейном приостановлена для экономии ресурсов и защиты от лишних запросов.
+          {t('idle.desc')}
         </p>
 
         <div style={{
@@ -91,7 +94,7 @@ export const IdleOverlay: React.FC<IdleOverlayProps> = ({ isOpen, onResume }) =>
           fontWeight: 600,
           boxShadow: '0 0 15px rgba(168, 85, 247, 0.2)'
         }}>
-          <span>Нажмите в любое место, чтобы продолжить</span>
+          <span>{t('idle.resume')}</span>
           <span style={{ fontSize: '0.75rem', color: '#c084fc' }}>⚡</span>
         </div>
       </div>

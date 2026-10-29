@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface WelcomeModalProps {
   isOpen: boolean;
@@ -6,6 +7,8 @@ interface WelcomeModalProps {
 }
 
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   return (
@@ -62,7 +65,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
               letterSpacing: '0.04em'
             }}
           >
-            Привет, друг!
+            {t('welcome.title')}
           </h2>
         </div>
 
@@ -78,10 +81,10 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
           }}
         >
           <p style={{ margin: 0 }}>
-            Ты оказался в другой вселенной. Она бесконечная — каждый вложенный уровень внутри больше чем снаружи.
+            {t('welcome.p1')}
           </p>
           <p style={{ margin: 0 }}>
-            Тут пока мало что есть, но уже можно собирать тестовые монетки и построить портал в свой мир.
+            {t('welcome.p2')}
           </p>
           <div
             style={{
@@ -94,8 +97,14 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
               lineHeight: '1.5'
             }}
           >
-            <span style={{ fontWeight: 700, color: '#f5d0fe' }}>🕹 Управление: </span>
-            клавиши <span style={{ color: '#67e8f9', fontWeight: 600 }}>WASD</span>, либо <span style={{ color: '#67e8f9', fontWeight: 600 }}>правой кнопкой мыши</span>, либо <span style={{ color: '#67e8f9', fontWeight: 600 }}>двойным тапом</span>.
+            <span style={{ fontWeight: 700, color: '#f5d0fe' }}>{t('welcome.controlsTitle')}</span>
+            <span>
+              {t('welcome.controlsDesc', {
+                wasd: t('welcome.wasd'),
+                rmb: t('welcome.rmb'),
+                doubleTap: t('welcome.doubleTap')
+              })}
+            </span>
           </div>
         </div>
 
@@ -130,7 +139,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            Закрыть
+            {t('common.close')}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface QuantumKissellModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ export const QuantumKissellModal: React.FC<QuantumKissellModalProps> = ({
   isOpen,
   onExit
 }) => {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   return (
@@ -53,7 +56,7 @@ export const QuantumKissellModal: React.FC<QuantumKissellModalProps> = ({
             textShadow: '0 0 20px rgba(168, 85, 247, 0.45)'
           }}
         >
-          Эта вселенная сейчас представляет собой только квантовый кисель.
+          {t('kissell.text')}
         </div>
 
         <button
@@ -85,7 +88,7 @@ export const QuantumKissellModal: React.FC<QuantumKissellModalProps> = ({
             e.currentTarget.style.transform = 'scale(1)';
           }}
         >
-          Выход
+          {t('kissell.exit')}
         </button>
       </div>
     </div>
