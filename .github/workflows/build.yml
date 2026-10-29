@@ -11,13 +11,13 @@ on:
         type: boolean
         default: true
       build_apk:
-        description: 'Build Android APK'
+        description: 'Build Android APK (Manual only)'
         type: boolean
-        default: true
+        default: false
       build_exe:
-        description: 'Build Windows Portable EXE'
+        description: 'Build Windows Portable EXE (Manual only)'
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
@@ -60,7 +60,7 @@ jobs:
 
   build-android:
     name: Build Android APK
-    if: github.event_name == 'push' || inputs.build_apk == true
+    if: github.event_name == 'workflow_dispatch' && inputs.build_apk == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -105,7 +105,7 @@ jobs:
 
   build-windows:
     name: Build Windows EXE (Tauri)
-    if: github.event_name == 'push' || inputs.build_exe == true
+    if: github.event_name == 'workflow_dispatch' && inputs.build_exe == true
     runs-on: windows-latest
     steps:
       - name: Checkout repository

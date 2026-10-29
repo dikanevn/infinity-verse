@@ -10,13 +10,13 @@ export function useWorldState(
   focusPoints: { x: number; y: number }[],
   isPaused: boolean = false
 ) {
+  const { t } = useLanguage();
   const [cells, setCells] = useState<CellData[]>([]);
   const [contractVersion, setContractVersion] = useState<string>('Main_Gb_1');
   const [lastBlockTimestamp, setLastBlockTimestamp] = useState<number | null>(null);
   const [lastBlockNumber, setLastBlockNumber] = useState<bigint | null>(null);
-  const [statusText, setStatusText] = useState<string>('Калибровка межпространственной связи...');
+  const [statusText, setStatusText] = useState<string>(t('status.calibrating'));
   const [statusState, setStatusState] = useState<'green' | 'yellow' | 'red' | 'blue'>('blue');
-  const { t } = useLanguage();
 
   const fetchState = async () => {
     try {
