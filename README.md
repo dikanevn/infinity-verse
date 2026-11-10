@@ -1,65 +1,63 @@
-Как сделать изменяемую программу на ЕВМ с бесконечной памятью. И положить в неё мультивселенные которые внутри больше чем снаружи.
+# How to Build a Mutable Blockchain Program with Infinite Memory — and Fit Multiverses Inside That Are Bigger on the Inside Than on the Outside
 
-PurplePaper
+**PurplePaper**
 
-Тут две части. философское обоснование и технические детали как устроен смарт-контракт.
+This paper has two parts: the philosophical foundation and the technical details of how the smart contract is built.
 
-1. Философское обоснование.
-   
-Я верю что наша вселенная бесконечная по времени. Уже есть теории того почему нам не страшна смерть от энтропии. И я считаю что одно из наших предназначений создавать свои бесконечные во времени и пространстве вселенные.
+---
 
-Причём в какой-то странной логике вложенные вселенные могут быть внутри больше чем снаружи.
+## 1. Philosophical Foundation
 
-Допустим мы хотим создать смарт-контракт-вселенную с возможностью бесконечно вкладывать в него вложенные вселенные.
+I believe our universe is infinite in time. There are already theories explaining why we don't need to fear heat death from entropy. And I believe one of our true purposes is to create our own universes — infinite in both time and space.
 
-Число элементарных частиц во Вселенной (10^80) больше, чем число бит в памяти одного EVM смарт-контракта (3×10^79) всего примерно в три раза. Это означает что в нашей странной логике наша смарт-контракт-вселенная всего в три раза меньше настоящей реальности 
+Moreover, by some strange logic, nested universes can be bigger on the inside than they are on the outside.
 
-Но внутри одного смарт контракта (назовём его нулевой уровень) могут располагаться ссылки на вложенные адреса смарт-контракто-вселенных первого уровня. В итоге в нашей странной логике память нашего смартконтракта вырастает в 2^160 раз а это значит наша вселенная в блокчейне становится больше нашей реальности в в: 4.38×10^47 (это четыреста тридцать восемь септиллионов ) раз.
+Suppose we want to create a "smart-contract-universe" with the ability to infinitely nest other universes inside it.
 
-А если контракты первого уровня начинают делать свои ввложенные вселенные - 2, 3 и так до бесконечности уровней - то в итоге мы получаем вложенные мультивселенные с бесконечным размером.
+The number of elementary particles in our observable Universe (10^80) is only about three times larger than the number of bits in the storage of a single EVM smart contract (3 × 10^79). In our strange logic, this means a single smart-contract-universe is only three times smaller than physical reality.
 
-плюс ко всему можно делать много вселенных 0 уровня. получится бесконечное параллельное расширение и расширение вглубь.
+However, a single smart contract (let's call it **Level 0**) can hold links to nested addresses of **Level 1** smart-contract-universes. As a result, in our strange logic, the memory of our smart contract expands by a factor of 2^160 — meaning our blockchain universe becomes larger than physical reality by **4.38 × 10^47 times** (four hundred thirty-eight quattuordecillion).
 
-Конечно скептики и пессимисты скажут что это лишь возможная память, если попытаться всю её заполнить не хватит атомов во вселенной.
+And if Level 1 contracts begin spawning their own nested universes — Level 2, Level 3, and so on into infinity — we end up with nested multiverses of infinite size.
 
-Но я бы на это ответил что и наша вселенная очень странная. За счёт квантовой природы материи, эффекта наблюдателя и прочих разных теорий я так же могу сказать что не все этомы нашей вселенной на самом деле занимают место на.. внешнем жёстком диске - назовём его так. Cовременная фундаментальная физика говорит ровно это: наша реальность работает в точности как разреженная память (sparse storage) и «ленивые вычисления» (lazy evaluation).
+On top of that, we can deploy multiple Level 0 universes, giving us both infinite parallel expansion and infinite expansion into the depths.
 
-Вполне возможно что нам тоже не доступна вся память и вычисления вселенной. Это, неверное, одно из объяснений парадокса Ферми. Может мы вообще в изолированной колбе, а всё что видят телескопы это голограма на внешней сфере.
+Of course, skeptics and pessimists will say this is merely *potential* memory — that if you tried to fill it all up, there wouldn't be enough atoms in the real universe to store it.
 
-Есть игры, например No Man Sky, где огромный космос. Но я еще не видел игры где пространство не просто большое, а бесконечное. А блокчейн даст этой идее надёжность - никто не захочет строить что-то бесконечное на централизованном сервере.
+To that, I would reply that our own universe is pretty weird, too. Because of the quantum nature of matter, the observer effect, and various other theories, we can just as easily say that not all atoms in our universe actually take up space on... let's call it the "external hard drive." Modern fundamental physics says the exact same thing: our reality operates strictly as **sparse storage** and **lazy evaluation**.
 
-Эта мысль, что мы можем создовать внутренние вселенные которые внутри больше чем снаружи, меня очень вдохновляет!
+It's entirely possible that we don't have access to all the memory and compute of our universe either. Perhaps that is one of the explanations for the Fermi Paradox. Maybe we are inside an isolated flask, and everything our telescopes see is just a hologram projected onto an outer sphere.
 
-А ещё можно сделать свой токен с бесконечным майнингом. Биткоин рассчитан на то что когда добудется последняя монета майнеры будут комиссией кормиться. Но я не верю что в далёком будущем нужно будет платить комиссии за переводы. А если сделать токен и заложить в него бесконечный халвинг это звучит прикольно. как это будет работать? да просто когда мы подходим к концу выпускается новый токен который меняется в соотношении 1/1000000000 к текущему. а когда смайнят и его - выпускается третий и так до бесконечности. поэтому любимый всеми майнинг и халвинг никогда не закончится!
+There are games like *No Man's Sky* that feature a massive cosmos. But I have never seen a game where space isn't just vast, but truly *infinite*. And the blockchain gives this idea permanence and reliability — nobody wants to build something infinite on a centralized server.
 
-Я люблю программировать. У меня мало очень мало опыта, но в душе я программист, я в 8 лет писал код на бейсике в тетрадке дома и в школе после уроков вбивал на школьном компьютере. И ещё я прошёл игру в стиме где собрал свой компьютер из транзисторов. Я уже начал вайбкодить смарт-контракт такого бесконечного жёсткого диска и тестирую его в тестнете сети Monad, кому интересно посмотреть код вот ссылка, смотрите контракт MAIN в папке контракты https://github.com/dikanevn/infinity-verse
+This thought — that we can create internal universes that are bigger on the inside than on the outside — inspires me deeply!
 
-И даже уже можно поиграть в моей вселенной 0 уровня. Там тоже в клетках где рядом не было наблюдателя сейчас квантовый хаос. И скоро будет возможность создавать свои вселенные где начиная с первого уровня вы сможете делать свои бесконечные вложенные вселенные с контролем только у вас. И ползунок масштаба можно покрутить - в нём есть внешняя граница - 10^18, но внутренней нету, ползунок крутится бесконечно! а то меня всегда огорчало что увеличение останавливается на каком то моменте. Вот ссылка https://dikanevn.github.io/infinity-verse/
+We could also create a native token with **infinite mining**. Bitcoin is designed around the idea that once the last coin is mined, miners will survive purely on transaction fees. Personally, I don't believe people will still have to pay transfer fees in the distant future. What if we create a token with an **infinite halving** built right into it? That sounds pretty cool. How would it work? Simple: whenever we approach the supply cap, a new token is minted that exchanges at a 1 : 1,000,000,000 ratio to the current one. Once that one is fully mined out, a third token launches, and so on, forever. That way, the mining and halving everyone loves will never end!
 
-Технические детали.
+I love programming. I have very, very little formal experience, but I am a programmer at heart. When I was 8 years old, I used to write BASIC code in a paper notebook at home and type it into the school computer after classes. I also beat that game on Steam (*Turing Complete*) where you build a working computer from scratch out of logic gates and transistors. I’ve already started vibe-coding the smart contract for this "infinite hard drive" and am testing it on the **Monad testnet**. If you're curious to see the code, check out the **MAIN** contract inside the **contracts** folder:
 
-Это бесконечная вселенная. Так что вечным правилом будет что при приблежении к границам чисел (миллиарды лет) и к границам возможностей подбора паролей (ускорение времени) надо обновлять всё для новых времён — увеличивать размеры ключей и переменных, переходить на квантово устойчивые алгоритмы и так далее.
+[GitHub Repository — Infinity Verse](https://github.com/dikanevn/infinity-verse)
+```url
+[https://github.com/dikanevn/infinity-verse](https://github.com/dikanevn/infinity-verse)
+```
+You can even play around in my Level 0 universe right now. In cells where no observer has been nearby, quantum chaos currently reigns. Soon, you'll be able to spawn your own universes where, starting from Level 1, you can build your own infinite nested worlds under your sole control. You can also play with the zoom slider — it has an outer boundary of 10^18, but no inner limit; the slider zooms in forever! It always used to bum me out when zooming in would eventually hit a wall. Try it here:
+Infinity Verse — Live Demo
+[https://dikanevn.github.io/infinity-verse/](https://dikanevn.github.io/infinity-verse/)
 
-самое крутое что я придумал - если мультивселенная заброшена и админ контракта неактивен год, то любой блокчейн археолог будущего может забрать этот контракт и стать админом, возродить мир и продолжить историю. это делает мультивселенную по настоящему вечной.
+2. Technical Details
+This is an infinite universe. Therefore, the eternal rule is that as we approach numerical limits (billions of years from now) or the limits of brute-force password cracking (as compute accelerates over time), the system must be upgraded for the new era — expanding key sizes and variable types, migrating to quantum-resistant algorithms, and so on.
+ * Blockchain Archaeology (Dead Man's Switch for Eternity): The coolest mechanism I came up with is this: if a multiverse is abandoned and the contract admin remains inactive for a year, any "blockchain archaeologist" of the future can claim the contract, become the new admin, revive the world, and continue its history. This makes the multiverse truly eternal.
+ * Decoupled Storage & Logic: What makes the EVM worse than newer blockchains? You can't change a contract's code after deployment. But that's solvable: we deploy a single storage contract — a "hard drive" — that holds all the state, while moving all the logic into separate, replaceable contracts. This lets us upgrade the logic contracts without ever losing data.
+ * Dual Memory Management: Uses both standard Solidity mapping and direct low-level addressing of physical storage slots via Yul (inline assembly). The first 2^180 slots are protected from low-level writes — that space is reserved for core system state and other critical data.
+ * Storage Contract Inheritance (Doubly Linked Upgrades): Even the storage contract itself can be upgraded through a contract inheritance chain — each generation knows its predecessor and successor, allowing external programs to traverse the chain and fetch the required state seamlessly.
+ * Fractal Nested Worlds: The Level 0 universe holds pointers to Level 1 universes, which in turn hold pointers to Level 2 universes, creating an infinitely scalable fractal storage architecture.
+ * Extreme Gas Optimization (Compiler): Deployed with the maximum possible optimizer setting (Runs = 4294967295) for theoretical gas savings across contract calls.
+ * Admin Recovery & Timelock Security: Features a backup admin address that can replace the primary admin if they lose their keys and remain inactive for a week. It also prevents sudden hostile takeovers — any admin transfer requires a mandatory 48-hour timelock after signalling intent.
+ * Zero-String Custom Errors: Complete elimination of require error strings in favor of 4-byte custom error selectors to save gas.
+Later on, we can figure out who is going to pay for this infinite banquet and how to compress the data inside to make it cheaper — but that's a story for another day.
+I would love to hear your comments, and especially your criticism!
+Linktree — Nikolay Dikanev
+[https://linktr.ee/dikanevn](https://linktr.ee/dikanevn)
 
-Чем евм хуже более современных блокчейнов? что в нём невозможно менять код контракта после деплоя. но это решается - мы создаём один контракт памяти, жёсткий диск, который всё хранит. А. всю логику убираем в другие контракты которые могут меняться. это позволяет нам обновлять контракты без потери данных.
+Nikolai Dikanev
 
-2 метода управления памятью. mapping и прямая низкоуровневая адресация физических слотов storage через Yul. Первые 2^180 слотов защищены от низкоуровнего изменения - там служебные данные ядра и прочие важные данные.
-
-возможность обновления самого контракта с памятью - механизм наследования контрактов - каждый знает прошлый и будущий, и программы могут по цепочке найти и вытащить нужную память.
-
-фрактальные вложенные миры - во вселенной нулевого уровня даются ссылки на вселенные 1 уровня, в них - на вселенные 2 уровня. получается бесконечное хранилище.
-
-деплой с максимальным Runs = 4294967295 для теоретической экономии газа в вызовах контракта
-
-резервный адрес админа с возможностью заменить текущего если он потерял ключ и неактивен в течении недели. невозможность резко поменять админа - лок на 48 часов после намерения это сделать.
-
-Полный отказ от строк require в пользу 4-байтных селекторов кастомных ошибок для экономии газа. 
-
-Дальше можно будет подумать о том кто будет платить за весь этот бесконечный банкет и как можно сжимать данные внутри что бы было дешевле, но это уже не сегодня.
-
-буду рад комментариям и особенно критике!
-
-https://linktr.ee/dikanevn
-
-Николай Диканёв
