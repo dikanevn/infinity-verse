@@ -8,8 +8,7 @@ AAA_CONTRACT_ADDRESS = "0xa8f635ca638caab1bb85a5db24295438b271dbf5"
 RPC_URL = "https://testnet-rpc.monad.xyz"
 CHAIN_ID = 10143
 GOOGLE_CLIENT_ID = "302988323060-edu3imkm9esfe41g4658va7gqmfd7up6.apps.googleusercontent.com"
-TG_BOT_TOKEN = "9093909103:AAETvpZbdeCstnNo1PY58JTor1rCaz4X30U"
-TG_CHAT_ID = "257047316"
+# TG_BOT_TOKEN и TG_CHAT_ID хранятся строго в Cloudflare Secrets (wrangler secret put)
 
 [[kv_namespaces]]
 binding = "GOOGLE_WALLETS"

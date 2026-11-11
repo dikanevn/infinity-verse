@@ -1,6 +1,8 @@
 # Personal & local notes
 *.env
 *.local
+.dev.vars
+.wrangler/
 node_modules/
 
 # Builds & Outputs

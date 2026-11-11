@@ -36,6 +36,34 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function isValidEthAddress(addr) {
+  return typeof addr === 'string' && /^0x[a-fA-F0-9]{40}$/.test(addr);
+}
+
+async function sendTelegramMessage(tgToken, tgChatId, htmlText) {
+  const token = typeof tgToken === 'string' ? tgToken.trim() : '';
+  const chatId = typeof tgChatId === 'string' ? tgChatId.trim() : '';
+  if (!token || !chatId) return null;
+  const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: htmlText,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    })
+  });
+  return await tgRes.json();
+}
+
 // ============================================================================
 // === КРИПТОГРАФИЯ ДЛЯ EMBEDDED КОШЕЛЬКОВ GOOGLE (AES-GCM-256) ===
 // ============================================================================
@@ -361,36 +389,31 @@ export default {
         // 0.1 Оповещение о спавне нового жителя в Telegram
         if (action === 'notify_spawn') {
           const { player: spawnedPlayer, method, email } = body;
-          const tgToken = env.TG_BOT_TOKEN;
-          const tgChatId = env.TG_CHAT_ID;
+          if (!isValidEthAddress(spawnedPlayer)) {
+            return jsonResponse({ error: 'Invalid player address' }, 400);
+          }
 
-          if (tgToken && tgChatId) {
-            const playerStr = spawnedPlayer && spawnedPlayer.startsWith('0x') ? `<code>${spawnedPlayer}</code>` : '<i>Неизвестно</i>';
-            const emailStr = email && typeof email === 'string' && email.includes('@') ? `<code>${email.trim()}</code>` : null;
-            const methodStr = method || 'Не указан';
+          const playerStr = `<code>${escapeHtml(spawnedPlayer)}</code>`;
+          const emailStr = email && typeof email === 'string' && email.includes('@')
+            ? `<code>${escapeHtml(email.trim().slice(0, 120))}</code>`
+            : null;
+          const methodStr = escapeHtml(
+            typeof method === 'string' && method.trim() ? method.trim().slice(0, 64) : 'Не указан'
+          );
 
-            let tgText = `🌟 <b>Новый житель родился во Вселенной!</b>\n\n`;
-            tgText += `👤 <b>Адрес:</b> ${playerStr}\n`;
-            if (emailStr) {
-              tgText += `📧 <b>Google:</b> ${emailStr}\n`;
-            }
-            tgText += `🔑 <b>Режим входа:</b> ${methodStr}\n`;
-            tgText += `📍 <b>Спавн:</b> (1, 0)\n`;
-            tgText += `⛓ <b>Сеть:</b> Monad Testnet (10143)`;
+          let tgText = `🌟 <b>Новый житель родился во Вселенной!</b>\n\n`;
+          tgText += `👤 <b>Адрес:</b> ${playerStr}\n`;
+          if (emailStr) {
+            tgText += `📧 <b>Google:</b> ${emailStr}\n`;
+          }
+          tgText += `🔑 <b>Режим входа:</b> ${methodStr}\n`;
+          tgText += `📍 <b>Спавн:</b> (1, 0)\n`;
+          tgText += `⛓ <b>Сеть:</b> Monad Testnet (10143)`;
 
-            try {
-              await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: tgChatId,
-                  text: tgText,
-                  parse_mode: 'HTML'
-                })
-              });
-            } catch (tgErr) {
-              console.error('Failed to send spawn TG notification:', tgErr);
-            }
+          try {
+            await sendTelegramMessage(env.TG_BOT_TOKEN, env.TG_CHAT_ID, tgText);
+          } catch (tgErr) {
+            console.error('Failed to send spawn TG notification:', tgErr);
           }
 
           return jsonResponse({ success: true });
@@ -399,40 +422,32 @@ export default {
         // Обратная связь от игроков в Telegram (Feedback) - не требует адреса кошелька и газа спонсора
         if (action === 'feedback') {
           const { message, author, coord, email } = body;
-          if (!message || typeof message !== 'string') {
+          if (!message || typeof message !== 'string' || !message.trim()) {
             return jsonResponse({ error: 'Message required' }, 400);
           }
 
-          const tgToken = env.TG_BOT_TOKEN;
-          const tgChatId = env.TG_CHAT_ID;
+          const authorStr = isValidEthAddress(author)
+            ? `<code>${escapeHtml(author)}</code>`
+            : '<i>Аноним</i>';
+          const emailStr = email && typeof email === 'string' && email.includes('@')
+            ? `<code>${escapeHtml(email.trim().slice(0, 120))}</code>`
+            : null;
+          const coordStr = coord && typeof coord.x === 'number' && typeof coord.y === 'number'
+            ? `(${Number(coord.x)}, ${Number(coord.y)})`
+            : 'не указано';
+          const cleanMsg = escapeHtml(message.trim().slice(0, 1000));
 
-          if (tgToken && tgChatId) {
-            const authorStr = author && author.startsWith('0x') ? `<code>${author}</code>` : '<i>Аноним</i>';
-            const emailStr = email && typeof email === 'string' && email.includes('@') ? `<code>${email.trim()}</code>` : null;
-            const coordStr = coord ? `(${coord.x}, ${coord.y})` : 'не указано';
-            const cleanMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          let tgText = `😈 <b>Новый отзыв в Infinity-Verse!</b>\n\n👤 <b>Игрок:</b> ${authorStr}\n`;
+          if (emailStr) {
+            tgText += `📧 <b>Почта (Google):</b> ${emailStr}\n`;
+          }
+          tgText += `📍 <b>Координаты:</b> ${coordStr}\n\n💬 <b>Сообщение:</b>\n${cleanMsg}`;
 
-            let tgText = `😈 <b>Новый отзыв в Infinity-Verse!</b>\n\n👤 <b>Игрок:</b> ${authorStr}\n`;
-            if (emailStr) {
-              tgText += `📧 <b>Почта (Google):</b> ${emailStr}\n`;
-            }
-            tgText += `📍 <b>Координаты:</b> ${coordStr}\n\n💬 <b>Сообщение:</b>\n${cleanMsg}`;
-
-            try {
-              const tgRes = await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: tgChatId,
-                  text: tgText,
-                  parse_mode: 'HTML'
-                })
-              });
-              const tgData = await tgRes.json();
-              console.log('TG result:', tgData);
-            } catch (tgErr) {
-              console.error('Failed to send TG message:', tgErr);
-            }
+          try {
+            const tgData = await sendTelegramMessage(env.TG_BOT_TOKEN, env.TG_CHAT_ID, tgText);
+            if (tgData) console.log('TG result ok:', Boolean(tgData.ok));
+          } catch (tgErr) {
+            console.error('Failed to send TG message:', tgErr);
           }
 
           return jsonResponse({ success: true });
